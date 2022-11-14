@@ -11,19 +11,10 @@ extra_javascript:
   - javascripts/mathjax.js
   - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
-  - https://cdn.jsdelivr.net/gh/rod2ik/cdn@main/mkdocs/javascripts/mkdocs-graphviz.js
+  # - https://cdn.jsdelivr.net/gh/rod2ik/cdn@main/mkdocs/javascripts/mkdocs-graphviz.js
 
 site_name: Zodiax - Equinox extension for scientific programming
 repo_url: https://github.com/LouisDesdoigts/zodiax
-
-theme:
-  palette:
-    scheme: slate
-  logo: assets/logo.jpg
-  favicon: assets/logo.jpg
-  name: material
-  icon:
-    logo: material/telescope
 
 # ===== Plugins =====
 plugins:
