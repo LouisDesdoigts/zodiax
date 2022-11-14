@@ -44,11 +44,18 @@ plugins:
             show_if_no_docstring: yes
       custom_templates: templates
 
+theme:
+  palette:
+    scheme: slate
+  name: material
+  icon:
+    logo: material/telescope
+
 # ===== Navigation =====
 nav:
     - Home: index.md
 
-    - Turorials:
+    - Tutorials:
         - Using Zodiax : notebooks/PyTree_interface.ipynb
     - Base:
         - Base:         base/base.md
