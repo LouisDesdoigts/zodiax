@@ -48,6 +48,8 @@ plugins:
 nav:
     - Home: index.md
 
+    - Turorials:
+        - Using Zodiax : notebooks/PyTree_interface.ipynb
     - Base:
         - Base:         base/base.md
         - ExtendedBase: base/extended_base.md
