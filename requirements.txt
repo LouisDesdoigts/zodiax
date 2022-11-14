@@ -1,0 +1,6 @@
+# Core
+jax
+jaxlib
+equinox
+optax
+numpyro
