@@ -1,0 +1,53 @@
+# ===== mkdocs.yml =====
+# Configuration file for the automatic generation of package
+# documentation formatted with markdown.
+
+# ===== Setup and Themes =====
+markdown_extensions:
+  # - mkdocs_graphviz
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+  - https://cdn.jsdelivr.net/gh/rod2ik/cdn@main/mkdocs/javascripts/mkdocs-graphviz.js
+
+site_name: ∂Lux - Differentiable Optical Simulation
+repo_url: https://github.com/LouisDesdoigts/dLux
+
+theme:
+  palette:
+    scheme: slate
+  logo: assets/logo.jpg
+  favicon: assets/logo.jpg
+  name: material
+  icon:
+    logo: material/telescope
+
+# ===== Plugins =====
+plugins:
+  - search
+  - mkdocs-jupyter
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          selection:
+            docstring_style: "numpy"
+          setup_commands:
+            - import sys
+            - sys.path.append("zodaix")
+          rendering:
+            show_source: false
+            show_if_no_docstring: yes
+      custom_templates: templates
+
+# ===== Navigation =====
+nav:
+    - Home: index.md
+
+    - Base:
+        - Base:         base/base.md
+        - ExtendedBase: base/extended_base.md
