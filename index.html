@@ -486,7 +486,7 @@ print(new_pytree)
 <p><code>&gt; Tree1(a=Tree2(a=1.0, b=[2, 3], c={'k1': 10}), b=[5, 6], c={'k2': 7})</code></p>
 <hr />
 <h1 id="all-methods">All methods</h1>
-<p><code>Zodaix</code> also provies as series of extra methods designed to mirror those provided by the <code>jax.Array.at[]</code> <a href="https://jax.readthedocs.io/en/latest/_autosummary/jax.numpy.ndarray.at.html?highlight=.at">method</a>:</p>
+<p><code>zodiax</code> also provies as series of extra methods designed to mirror those provided by the <code>jax.Array.at[]</code> <a href="https://jax.readthedocs.io/en/latest/_autosummary/jax.numpy.ndarray.at.html?highlight=.at">method</a>:</p>
 <ul>
 <li><code>.get(path)</code> - get the value of a leaf</li>
 <li><code>.set(path, value)</code> - set the value of a leaf</li>
@@ -511,7 +511,7 @@ print(new_pytree)
 <p>These methods are explored further in the (<code>Zodiax.ExtendedBase</code> tutorial)[dont forget to add link]</p>
 <hr />
 <h1 id="nesting">Nesting</h1>
-<p><code>Zodaix</code> also allows for paths and values to be nested, allowing for the updating of multiple leaves at once. Lets look at an example:</p>
+<p><code>zodiax</code> also allows for paths and values to be nested, allowing for the updating of multiple leaves at once. Lets look at an example:</p>
 <pre><code class="language-python">
 from zodiax import Base
 
@@ -550,9 +550,9 @@ print(pytree)
 <p><code>&gt; Tree1(a=Tree2(a=0, b=-10, c=-10), b=10, c=10)</code></p>
 <p>This nesting works with all of the methods provided by <code>Zodiax</code>!</p>
 <hr />
-<h1 id="extending-zodaix">Extending <code>Zodaix</code></h1>
+<h1 id="extending-zodiax">Extending <code>zodiax</code></h1>
 <h2 id="the-__getattr__-method">The <code>__getattr__</code> method</h2>
-<p>These <code>Zodaix</code> methods can be further extended using the <code>__getattr__</code> method, allowing users to create classes that contain a dictionary to have its keys accessed as attributes. This is done by defining a <code>__getattr__</code> method that checks if the attribute is in the dictionary, and if so returns the value. These can also be chained together in nested classes to reveal the leaves from deeply nested classes! Lets look at an example:</p>
+<p>These <code>zodiax</code> methods can be further extended using the <code>__getattr__</code> method, allowing users to create classes that contain a dictionary to have its keys accessed as attributes. This is done by defining a <code>__getattr__</code> method that checks if the attribute is in the dictionary, and if so returns the value. These can also be chained together in nested classes to reveal the leaves from deeply nested classes! Lets look at an example:</p>
 <pre><code class="language-python">from zodiax import Base
 
 # Create a simple class with a single parameter
