@@ -100,7 +100,7 @@ print(new_pytree)
 
 # All methods
 
-`Zodaix` also provies as series of extra methods designed to mirror those provided by the `jax.Array.at[]` [method](https://jax.readthedocs.io/en/latest/_autosummary/jax.numpy.ndarray.at.html?highlight=.at):
+`zodiax` also provies as series of extra methods designed to mirror those provided by the `jax.Array.at[]` [method](https://jax.readthedocs.io/en/latest/_autosummary/jax.numpy.ndarray.at.html?highlight=.at):
 
 
 - `.get(path)` - get the value of a leaf
@@ -130,7 +130,7 @@ These methods are explored further in the (`Zodiax.ExtendedBase` tutorial)[dont 
 ---
 # Nesting
 
-`Zodaix` also allows for paths and values to be nested, allowing for the updating of multiple leaves at once. Lets look at an example:
+`zodiax` also allows for paths and values to be nested, allowing for the updating of multiple leaves at once. Lets look at an example:
 
 ```python
 
@@ -180,11 +180,11 @@ This nesting works with all of the methods provided by `Zodiax`!
 
 ---
 
-# Extending `Zodaix`
+# Extending `zodiax`
 
 ## The `__getattr__` method
 
-These `Zodaix` methods can be further extended using the `__getattr__` method, allowing users to create classes that contain a dictionary to have its keys accessed as attributes. This is done by defining a `__getattr__` method that checks if the attribute is in the dictionary, and if so returns the value. These can also be chained together in nested classes to reveal the leaves from deeply nested classes! Lets look at an example:
+These `zodiax` methods can be further extended using the `__getattr__` method, allowing users to create classes that contain a dictionary to have its keys accessed as attributes. This is done by defining a `__getattr__` method that checks if the attribute is in the dictionary, and if so returns the value. These can also be chained together in nested classes to reveal the leaves from deeply nested classes! Lets look at an example:
 
 ```python
 from zodiax import Base
