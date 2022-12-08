@@ -46,7 +46,8 @@ nav:
     - Home: index.md
 
     - Tutorials:
-        - Using Zodiax : notebooks/PyTree_interface.ipynb
+        - Base : notebooks/Base.ipynb
+        - ExtendedBase : notebooks/ExtendedBase.ipynb
     - Base:
         - Base:         base/base.md
         - ExtendedBase: base/extended_base.md
