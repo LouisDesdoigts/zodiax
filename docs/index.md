@@ -1,4 +1,4 @@
-# 🌙 `Zodaix` ✨
+# 🌙 `Zodiax` ✨
 
 [![PyPI version](https://badge.fury.io/py/zodiax.svg)](https://badge.fury.io/py/zodiax)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
@@ -8,11 +8,15 @@
 Contributors: [Louis Desdoigts](https://github.com/LouisDesdoigts)
 
 
-`Zodiax` is a `Jax` and `Equinox` based package designed to to simplify working with pytrees, geared towards their use in scientific programming! It allows users to build fully diffenetiable object-oriented software in `Jax` with a simple interface and extra functionality to make working with optimisation and inference libraries like `Optax` and `Numpyro` easy! If you are unfamiliar with `Jax` and `Equinox` we strongly reccomend reading the [Jax 101 tutorials](https://jax.readthedocs.io/en/latest/jax-101/index.html) and the [Equinox docs](https://docs.kidger.site/equinox/) to get an idea. 
+`Zodiax` is a lightweight extension to the object-oriented `jax` package `equinox`, designed to to simplify working with pytrees for scientific data analysis, adding extra functionality to make working with optimisation and inference libraries like `optax` and `NumPyro` easy. If you are unfamiliar with `Jax` and `equinox` we strongly reccomend reading the [Jax 101 tutorials](https://jax.readthedocs.io/en/latest/jax-101/index.html) and the [equinox docs](https://docs.kidger.site/equinox/) to get an idea. 
 
-`Zodaix` provides classes that extend the `equinox.Module` class, allowing for user-created classes to be treated as `Jax` objects! It is built on the principle that all classes are at a fundamental level a pytree and can be represented as a series of nested lists, tuples and dictionaries. Classes built using `Zodiax` gain the full power of `Jax` & `Equinox`, plus a series of methods that make working with and optimising complex nested class structures easy!
+`Zodiax` provides classes that extend the `equinox.Module` class with a series of convenience methods that make working with and optimising complex nested class structures easy. It was built to facilitate [`dLux`](https://louisdesdoigts.github.io/dLux/), a fully differentiable optical modelling framework, and spun out into its own package to aid others in building the next generation of powerful scientific programming tools that harness automatic differentiation.
 
-`Zodiax` was build during the development of [`dLux`](https://louisdesdoigts.github.io/dLux/), a fully differentiable optical modelling framework and spun out into its own package to aid others in building the next generation of powerful scientific programming tools that harness automatic-differentiation!
+---
+
+## Citation
+
+If you use `zodiax` in your work, please cite the `dLux` paper: currently Desdoigts et al, in prep.
 
 ---
 
@@ -96,7 +100,7 @@ print(new_pytree)
 
 # All methods
 
-`Zodaix` also provies as series of extra methods designed to mirror those provided by the `jax.Array.at[]` [method](https://jax.readthedocs.io/en/latest/_autosummary/jax.numpy.ndarray.at.html?highlight=.at):
+`zodiax` also provies as series of extra methods designed to mirror those provided by the `jax.Array.at[]` [method](https://jax.readthedocs.io/en/latest/_autosummary/jax.numpy.ndarray.at.html?highlight=.at):
 
 
 - `.get(path)` - get the value of a leaf
@@ -126,7 +130,7 @@ These methods are explored further in the (`Zodiax.ExtendedBase` tutorial)[dont 
 ---
 # Nesting
 
-`Zodaix` also allows for paths and values to be nested, allowing for the updating of multiple leaves at once. Lets look at an example:
+`zodiax` also allows for paths and values to be nested, allowing for the updating of multiple leaves at once. Lets look at an example:
 
 ```python
 
@@ -176,11 +180,11 @@ This nesting works with all of the methods provided by `Zodiax`!
 
 ---
 
-# Extending `Zodaix`
+# Extending `zodiax`
 
 ## The `__getattr__` method
 
-These `Zodaix` methods can be further extended using the `__getattr__` method, allowing users to create classes that contain a dictionary to have its keys accessed as attributes. This is done by defining a `__getattr__` method that checks if the attribute is in the dictionary, and if so returns the value. These can also be chained together in nested classes to reveal the leaves from deeply nested classes! Lets look at an example:
+These `zodiax` methods can be further extended using the `__getattr__` method, allowing users to create classes that contain a dictionary to have its keys accessed as attributes. This is done by defining a `__getattr__` method that checks if the attribute is in the dictionary, and if so returns the value. These can also be chained together in nested classes to reveal the leaves from deeply nested classes! Lets look at an example:
 
 ```python
 from zodiax import Base
