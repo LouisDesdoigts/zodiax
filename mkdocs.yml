@@ -51,6 +51,8 @@ nav:
     - Home: index.md
     - PyTrees: pytree.md
     - Usage: usage.md
+    - Extending Zodiax: extending.md
+
 
     - Tutorials:
         - Base : notebooks/Base.ipynb
