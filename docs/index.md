@@ -1,4 +1,4 @@
-# 🌙 `Zodaix` ✨
+# 🌙 `Zodiax` ✨
 
 [![PyPI version](https://badge.fury.io/py/zodiax.svg)](https://badge.fury.io/py/zodiax)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
