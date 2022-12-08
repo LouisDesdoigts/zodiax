@@ -14,6 +14,12 @@ Contributors: [Louis Desdoigts](https://github.com/LouisDesdoigts)
 
 ---
 
+## Citation
+
+If you use `zodiax` in your work, please cite the `dLux` paper: currently Desdoigts et al, in prep.
+
+---
+
 # 🐍 PyTrees 🌲
 
 A pytree is a data structure used to represent hierarchical data. It is similar to a tree data structure, but instead of each node containing a single data element, each node in a pytree can have multiple children, allowing for more complex data structures to be represented. In python this is represented as a series of nested lists, tuples and dictionaries, and all classes are pytrees at the base level.
