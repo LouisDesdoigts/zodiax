@@ -44,6 +44,8 @@ theme:
 # ===== Navigation =====
 nav:
     - Home: index.md
+    - PyTrees: pytree.md
+    - Usage: usage.md
 
     - Tutorials:
         - Base : notebooks/Base.ipynb
