@@ -419,57 +419,57 @@
 <h1 id="pytrees">🐍 PyTrees 🌲</h1>
 <p>A pytree is a data structure used to represent hierarchical data. It is similar to a tree data structure, but instead of each node containing a single data element, each node in a pytree can have multiple children, allowing for more complex data structures to be represented. In python this is represented as a series of nested lists, tuples and dictionaries, and all classes are pytrees at the base level.</p>
 <p>Lets look at some exampes:</p>
-<pre><code class="language-python">tree1 = (1, (2, 3), ())
-tree2 = [1, {'k1': 2, 'k2': (3, 4)}, 5]
-tree3 = {'a': 2, 'b': (2, 3)}
-</code></pre>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">tree1</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="p">())</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">tree2</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;k1&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;k2&#39;</span><span class="p">:</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">)},</span> <span class="mi">5</span><span class="p">]</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">tree3</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)}</span>
+</code></pre></div>
 <p>Each of the leaves of these pytrees have a unique path that can be used to access the value of the leaf. For example, the path to the value <code>3</code> in <code>tree1</code> is <code>(1, 1)</code> and the path to the value <code>4</code> in <code>tree2</code> is <code>(1, 'k2', 1)</code>. </p>
 <p>These ideas also apply to classes, lets look at some examples, using <code>Zodiax</code>:</p>
-<pre><code class="language-python">from zodiax import Base
-
-class Tree1(Base):
-    a : object
-    b : list
-    c : dict
-
-    def __init__(self, a, b, c):
-        self.a = a
-        self.b = b
-        self.c = c
-
-class Tree2(Base):
-    a : float
-    b : list
-    c : dict
-
-    def __init__(self, a, b, c):
-        self.a = a
-        self.b = b
-        self.c = c
-
-sub_tree = Tree2(1., [2, 3], {'k1': 4})
-pytree = Tree1(sub_tree, [5, 6], {'k2': 7})
-print(pytree)
-</code></pre>
-<p><code>&gt; Tree1(a=Tree2(a=1.0, b=[2, 3], c={'k1': 4}), b=[5, 6], c={'k2': 7})</code></p>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span> <span class="nn">zodiax</span> <span class="kn">import</span> <span class="n">Base</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">class</span> <span class="nc">Tree1</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">a</span> <span class="p">:</span> <span class="nb">object</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">b</span> <span class="p">:</span> <span class="nb">list</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">c</span> <span class="p">:</span> <span class="nb">dict</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">a</span> <span class="o">=</span> <span class="n">a</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="n">b</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">c</span> <span class="o">=</span> <span class="n">c</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="k">class</span> <span class="nc">Tree2</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="n">a</span> <span class="p">:</span> <span class="nb">float</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>    <span class="n">b</span> <span class="p">:</span> <span class="nb">list</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    <span class="n">c</span> <span class="p">:</span> <span class="nb">dict</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">a</span> <span class="o">=</span> <span class="n">a</span>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="n">b</span>
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">c</span> <span class="o">=</span> <span class="n">c</span>
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="n">sub_tree</span> <span class="o">=</span> <span class="n">Tree2</span><span class="p">(</span><span class="mf">1.</span><span class="p">,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">{</span><span class="s1">&#39;k1&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">})</span>
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="n">pytree</span> <span class="o">=</span> <span class="n">Tree1</span><span class="p">(</span><span class="n">sub_tree</span><span class="p">,</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span> <span class="p">{</span><span class="s1">&#39;k2&#39;</span><span class="p">:</span> <span class="mi">7</span><span class="p">})</span>
+<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="nb">print</span><span class="p">(</span><span class="n">pytree</span><span class="p">)</span>
+</code></pre></div>
+<code>&gt; Tree1(a=Tree2(a=1.0, b=[2, 3], c={'k1': 4}), b=[5, 6], c={'k2': 7})</code></p>
 <p>The leaf <code>4</code> would then be accessed via the path <code>(a, c, 'k1')</code>, ie <code>pytree.a.c['k1']</code>.</p>
 <p>Within the <code>Equinox</code> framework we need to declare the variables a class will hold as class attributes, and then assign them in the <code>__init__</code> method. This is because <code>Equinox</code> uses the <code>__init__</code> method to create a new instance of the class, and the class attributes are used to determine the structure of the class. Similarly becuase <code>Jax</code> objects are immutable, all classes we create are also immutable, which in short means that we can not perform in-place updates, but instead must create a new instance of the class with the updated values.</p>
 <p><code>Zodiax</code> extends this idea of paths, using strings to point to leaves within the class structure. The path to the value <code>4</code> in the <code>Zodiax</code> framework would then be <code>a.c.k1</code>. We can then use the <code>.get(path)</code> method!</p>
-<pre><code class="language-python">path = 'a.c.k1'
-print(pytree.get('a.c.k1'))
-</code></pre>
-<p><code>&gt; 4</code></p>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">path</span> <span class="o">=</span> <span class="s1">&#39;a.c.k1&#39;</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">pytree</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;a.c.k1&#39;</span><span class="p">))</span>
+</code></pre></div>
+<code>&gt; 4</code></p>
 <p>These path objects then help to simplify the process of updating the values of leaves within a class. Within <code>Equinox</code> we would use the <code>equinox.tree_at(where, pytree, value)</code> method to update the value of a leaf, which we can still use within <code>Zodiax</code>! Say we want to update the value to 10, lets see how that would look:</p>
-<pre><code class="language-python">from equinox import tree_at
-new_pytree = tree_at(lambda tree: tree.a.c['k1'], pytree, 10)
-print(new_pytree)
-</code></pre>
-<p><code>&gt; Tree1(a=Tree2(a=1.0, b=[2, 3], c={'k1': 10}), b=[5, 6], c={'k2': 7})</code></p>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span> <span class="nn">equinox</span> <span class="kn">import</span> <span class="n">tree_at</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">new_pytree</span> <span class="o">=</span> <span class="n">tree_at</span><span class="p">(</span><span class="k">lambda</span> <span class="n">tree</span><span class="p">:</span> <span class="n">tree</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">c</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">],</span> <span class="n">pytree</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">new_pytree</span><span class="p">)</span>
+</code></pre></div>
+<code>&gt; Tree1(a=Tree2(a=1.0, b=[2, 3], c={'k1': 10}), b=[5, 6], c={'k2': 7})</code></p>
 <p>This is a bit of a mouthful, and we can simplify this using the <code>.set(path, value)</code> <code>Zodiax</code> method!</p>
-<pre><code class="language-python">new_pytree = pytree.set(path, 10)
-print(new_pytree)
-</code></pre>
-<p><code>&gt; Tree1(a=Tree2(a=1.0, b=[2, 3], c={'k1': 10}), b=[5, 6], c={'k2': 7})</code></p>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">new_pytree</span> <span class="o">=</span> <span class="n">pytree</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">new_pytree</span><span class="p">)</span>
+</code></pre></div>
+<code>&gt; Tree1(a=Tree2(a=1.0, b=[2, 3], c={'k1': 10}), b=[5, 6], c={'k2': 7})</code></p>
 
 
 
