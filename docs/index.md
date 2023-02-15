@@ -12,16 +12,17 @@ Contributors: [Louis Desdoigts](https://github.com/LouisDesdoigts)
 
 `Zodiax` provides classes that extend the `equinox.Module` class with a series of convenience methods that make working with and optimising complex nested class structures easy. It was built to facilitate [`dLux`](https://louisdesdoigts.github.io/dLux/), a fully differentiable optical modelling framework, and spun out into its own package to aid others in building the next generation of powerful scientific programming tools that harness automatic differentiation.
 
+To get started, go to the Tutorials section and have a look!
+
+---
+
 ## Installation
 
-Zodiax is hosted on PyPI, so simply pip install!
+`Zodiax` is hosted on PyPI: 
+
 ```
 pip install zodiax
 ```
-
-## Use & Documentation
-
-Documentation can be found [here](https://louisdesdoigts.github.io/zodiax/). To get started look, go to the Tutorials section and have a look!
 
 ---
 
