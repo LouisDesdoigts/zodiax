@@ -45,7 +45,10 @@ def convert_to_filter(pytree : PyTree,
 def filter_grad(params : Union[PyTree, list, str], 
                 *filter_args, **filter_kwargs) -> Callable:
     """
-    Applies the equinox filter_grad function to the input params.
+    Applies the equinox filter_grad function to the input params. The 
+    corresponding equinox docs are found [here](https://docs.kidger.site/
+    equinox/api/filtering/transformations/)
+
 
     Parameters
     ----------
@@ -60,7 +63,7 @@ def filter_grad(params : Union[PyTree, list, str],
     
     Returns
     -------
-     : Callable
+    Callable
         The wrapped function.
     """
     def wrapper(func : Callable):
@@ -84,7 +87,9 @@ def filter_grad(params : Union[PyTree, list, str],
 def filter_value_and_grad(params : Union[PyTree, list, str], 
                 *filter_args, **filter_kwargs) -> Callable:
     """
-    Applies the equinox filter_value_and_grad function to the input params.
+    Applies the equinox filter_value_and_grad function to the input params. The 
+    corresponding equinox docs are found [here](https://docs.kidger.site/
+    equinox/api/filtering/transformations/)
 
     Parameters
     ----------
@@ -99,7 +104,7 @@ def filter_value_and_grad(params : Union[PyTree, list, str],
     
     Returns
     -------
-     : Callable
+    Callable
         The wrapped function.
     """
     def wrapper(func : Callable):
