@@ -60,3 +60,6 @@ nav:
     - Base:
         - Base:         base/base.md
         - ExtendedBase: base/extended_base.md
+    - Filter:
+        - filter_grad:           filter/filter_grad.md
+        - filter_value_and_grad: filter/filter_value_and_grad.md
