@@ -2,29 +2,15 @@ import zodiax
 from functools import wraps
 from jaxtyping import PyTree
 from typing import Union, Callable
-
-# # Wrapped imports
-# from equinox import partition, combine, \
-#     filter_grad as fgrad, \
-#     filter_value_and_grad as fvgrad
-    
-# # Unwrapped import
-# from equinox import filter_jit, filter_make_jaxpr, filter_eval_shape, \
-#     filter_jvp, filter_vjp, filter_custom_jvp, filter_custom_vjp, \
-#     filter_closure_convert, filter_vmap, filter_pmap, filter_pure_callback
-
 from equinox import partition, combine
+
+# Equinox modules
 from equinox import ad
 from equinox import jit
 from equinox import make_jaxpr
 from equinox import vmap_pmap
 from equinox import callback
 from equinox import eval_shape
-
-# # Unwrapped import
-# from equinox import filter_jit as fj, filter_make_jaxpr, filter_eval_shape, \
-#     filter_jvp, filter_vjp, filter_custom_jvp, filter_custom_vjp, \
-#     filter_closure_convert, filter_vmap, filter_pmap, filter_pure_callback
 
 
 __all__ = ["filter_grad", "filter_value_and_grad", "filter_jit", 
