@@ -15,7 +15,7 @@
 - `.apply(path, fn)` - applies the function to the leaf
 - `.apply_args(path, fn, args)` - - `.apply(path, fn)` - applies the function to the leaf while also passing in the extra arguments
 
-These methods are explored further in the (`Zodiax.Base` tutorial)[dont forget to add link]
+These methods are explored further in the [`Zodiax.Base` tutorial](https://louisdesdoigts.github.io/zodiax/notebooks/Base/)
 
 On top of this there is the `Zodiax.ExtendedBase` class, that is designed to make working with the optimisation and inference libraries `Optax` and `Numpyro` much simpler!
 
