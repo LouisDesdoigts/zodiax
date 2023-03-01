@@ -1817,10 +1817,10 @@ Licensed under the Apache License, Version 2.0.
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
 <h2 id="extendedbase-optimisation-and-inference"><code>ExtendedBase</code> - Optimisation and Inference<a class="anchor-link" href="#extendedbase-optimisation-and-inference">&#182;</a></h2><p>Part of the benefit of using Jax and Equinox is the ability to use a lot a powerful optimisation and inference tools! Using these tools can sometimes be difficult, so we have also built an extended base class that is designed to simplify interfacing with <code>optax</code> and <code>numpyro</code>.</p>
 <p>If you haven't already, read through the <code>Zodiax</code> overview <a href="Insert link">here</a> and the <code>Base</code> class <a href="https://louisdesdoigts.github.io/zodiax/notebooks/Base/">tutorial</a>!</p>
-<p>There are four extra functions added:</p>
-<p>Equinox Functions</p>
+<p>There are six extra functions added:</p>
 <ul>
 <li><code>.get_args(paths)</code></li>
+<li><code>.apply_updates(updates)</code></li>
 </ul>
 <p>Optax Functions</p>
 <ul>
