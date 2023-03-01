@@ -1,10 +1,10 @@
 from __future__ import annotations
 import jax.numpy as np
 from jax.tree_util import tree_map
-from equinox import tree_at, Module, is_array, filter as eqx_filter
+from equinox import tree_at, Module, is_array, filter as eqx_filter, \
+    apply_updates
 from optax import adam, multi_transform
 from typing import Union, NewType, Any, Callable
-from abc import ABC
 
 
 __all__ = ["Base", "ExtendedBase"]
@@ -18,7 +18,7 @@ Leaf   = Any
 ###############
 ### Classes ###
 ###############
-class Base(ABC, Module):
+class Base(Module):
     """
     An abstract base class that is used to give a user-friendly API for working
     with PyTrees, specifically using Equniox. This can be thought of as
@@ -599,6 +599,32 @@ class ExtendedBase(Base):
         paths = paths if isinstance(paths, list) else [paths]
         values = len(paths) * [True]
         return args.set(paths, values, pmap)
+    
+
+    def apply_updates(self : Pytree, updates: Pytree) -> Pytree:
+        """
+        Applies the updates to the pytree. Updates must be a pytree of the
+        same structure. This simply calls the `equinox.apply_updates()` 
+        function. Each leaf of the ouptut pytree is equinovelent to:
+
+        ```python
+        if update is None:
+            return leaf
+        else:
+            return leaf + update
+        ```
+
+        Parameters
+        ----------
+        updates : Pytree
+            The pytree of updates to apply to the pytree.
+        
+        Returns
+        -------
+        pytree : Pytree
+            The pytree with the updates applied.
+        """
+        return apply_updates(self, updates)
 
 
     #######################

@@ -368,6 +368,25 @@ class TestExtendedBase(UtilityUser):
         assert args.b.param == True
 
 
+    def test_apply_updates(self):
+        """
+        tests the apply_updates method
+        """
+        # Define parameters and construct base
+        base = self.utility.construct()
+
+        # Define paths
+        p1 = 'param'
+        p2 = 'b.param'
+
+        updates = base.set([p1, p2], [1., 2.])
+        updated_base = base.apply_updates(updates)
+
+        # Test update is correct
+        assert updated_base.get(p1) == base.get(p1) + 1.
+        assert updated_base.get(p2) == base.get(p2) + 2.
+        
+
     def test_get_param_spec(self):
         """
         tests the get_param_spec method
