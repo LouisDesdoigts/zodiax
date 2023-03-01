@@ -25,7 +25,7 @@ On top of this there is the `Zodiax.ExtendedBase` class, that is designed to mak
  - `update_and_model(model_fn, path, paths, values)`
  - `apply_and_model(model_fn, paths, fns)`
 
-These methods are explored further in the (`Zodiax.ExtendedBase` tutorial)[dont forget to add link]
+These methods are explored further in the [`Zodiax.ExtendedBase` tutorial](https://louisdesdoigts.github.io/zodiax/notebooks/ExtendedBase/)
 
 
 ---
