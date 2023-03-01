@@ -61,16 +61,18 @@ nav:
         - Base:         base/base.md
         - ExtendedBase: base/extended_base.md
     - Filter:
-        - filter_grad:           filter/filter_grad.md
-        - filter_value_and_grad: filter/filter_value_and_grad.md
-        - filter_jit: filter/filter_jit.md
-        - filter_vmap: filter/filter_vmap.md
-        - filter_pmap: filter/filter_pmap.md
-        - filter_make_jaxpr: filter/filter_make_jaxpr.md
-        - filter_jvp: filter/filter_jvp.md
-        - filter_vjp: filter/filter_vjp.md
-        - filter_custom_jvp: filter/filter_custom_jvp.md
-        - filter_custom_vjp: filter/filter_custom_vjp.md
-        - filter_eval_shape: filter/filter_eval_shape.md
-        - filter_closure_convert: filter/filter_closure_convert.md
-        - filter_pure_callback: filter/filter_pure_callback.md
+        - Overview:     filter/overview.md
+        - API:
+          - filter_grad:            filter/filter_grad.md
+          - filter_value_and_grad:  filter/filter_value_and_grad.md
+          - filter_jit:             filter/filter_jit.md
+          - filter_vmap:            filter/filter_vmap.md
+          - filter_pmap:            filter/filter_pmap.md
+          - filter_make_jaxpr:      filter/filter_make_jaxpr.md
+          - filter_jvp:             filter/filter_jvp.md
+          - filter_vjp:             filter/filter_vjp.md
+          - filter_custom_jvp:      filter/filter_custom_jvp.md
+          - filter_custom_vjp:      filter/filter_custom_vjp.md
+          - filter_eval_shape:      filter/filter_eval_shape.md
+          - filter_closure_convert: filter/filter_closure_convert.md
+          - filter_pure_callback:   filter/filter_pure_callback.md
