@@ -29,3 +29,5 @@ jobs:
       # ===== Tests =====
       - name: base tests
         run: pytest --quiet tests/base.py
+      - name: filter tests
+        run: pytest --quiet tests/filter.py
