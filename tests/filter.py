@@ -1,7 +1,5 @@
 from __future__ import annotations
-from utilities import Utility, UtilityUser
-import jax.numpy as np
-from optax import GradientTransformation, MultiTransformState, adam
+from utilities import Utility
 from jax import config
 import zodiax
 config.update("jax_debug_nans", True)
