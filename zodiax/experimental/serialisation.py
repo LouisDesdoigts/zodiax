@@ -21,19 +21,16 @@ def check_node(obj      : Any,
                _print   : bool = False) -> bool:
     """
     Checks if the input object is a container or a leaf node. If the object is
-    a leaf a tuple of (False, obj) is returned. If the object is a container
-    a tuple of (True, (obj, keys, accessor)) is returned. The accessor is 
-    require to handle the different getter methods for dictionaries, lists, 
-    objects etc. Also checks that object containter types have the required
-    `_construct()` method required for deserilisation. It does not check that
-    the `_construct()` method is valid, this is required to be done by the
-    user.
+    a leaf False is returned else True.
 
     Container types:
         list, tuple, dict, zodiax.Base
     
     Leaf types:
-        ArrayLike, bool, complex, float, int, numpy.ndarray, str, None
+        jax.ArrayLike, numpy.ndarray, bool, complex, float, int, str, None
+    
+    All other types will raise an error as they are not supported, but likely
+    could be supported in future.
 
     Parameters
     ----------
@@ -50,12 +47,8 @@ def check_node(obj      : Any,
     
     Returns
     -------
-    (is_container, node) : tuple
-        is_container : bool
-            True if the object is a container, False if it is a leaf.
-        node : tuple
-            If is_container is True, the node is a tuple of (obj, keys, 
-            accessor). If is_container is False, the node is the object itself.
+    is_container : bool
+        True if the object is a container, False if it is a leaf.
     """
     t = '  ' * depth
     conatiner_types = (list, tuple, dict, zodiax.Base)
@@ -73,7 +66,8 @@ def check_node(obj      : Any,
 
     # Unknown - Raise error
     else:
-        raise ValueError(f"Unknown node '{self_key}' of type: {type(obj)}")
+        raise ValueError(f"Unknown node '{self_key}' of type: {type(obj)}. "
+            "Please raise an issue on GitHub to enable support for this type.")
     
 
 def get_accessor(obj : Any) -> tuple:
@@ -102,10 +96,6 @@ def get_accessor(obj : Any) -> tuple:
 
     # Zodaix object types
     elif isinstance(obj, zodiax.Base):
-        if not hasattr(obj, '_construct'):
-            raise ValueError(f"Object '{obj}' must have a `_construct()` "
-                "method that instanitates the class and takes no inputs.")
-        
         accessor = lambda object, x: getattr(object, x)
         keys = obj.__dataclass_fields__.keys()
         return keys, accessor
@@ -190,7 +180,10 @@ def build_node(obj    : Any,
 
 def build_leaf_node(obj : Any) -> dict:
     """
-    Builds a leaf node for the input object.
+    Builds a leaf node for the input object. Explicity handles string and array
+    types. Strings are stored directly and serialised in the structure 
+    dictionary and arrays have their shape and dtypes serialised for 
+    reconstruction using the `equinox.deserialise_tree_leaves`.
 
     Parameters
     ----------
@@ -254,13 +247,13 @@ def build_structure(obj      : Any,
      'node': {
         param1 : {'node_type' : 'container', ...}, -> If container
         param2 : {'node_type' : 'leaf',
-                  '...' : ...}, -> If leaf where '...' conatins any leaf metadata
+                  '...' : ...}, -> If leaf conatining any leaf metadata
         }
     
     Specific leaf metadata:
         Strings:
             String values are stored in the 'value' key and serialised via the
-            json
+            returned structure dictionary.
         Jax/Numpy Arrays:
             Both the array shape and dtype are stored in the 'shape' and
             'dtype' keys respectively. 
@@ -269,14 +262,9 @@ def build_structure(obj      : Any,
     individual leaf type can be made to store any arbitrarity metadata, as long
     as it can be serialised by json and used to deserialise it later.
     
-    This dictionary can then be serialised using json and then later
+    This dictionary can then be serialised using pickle and then later
     used to deserialise the object in conjunction with equinox leaf 
     serialise/deserialise methods.
-
-    NOTE: In order for the deseriaslisation proccess to be automated, all 
-    class instances must have a `_construct()` method which instantiates an
-    'empty' instance of th class, which can then be populated with the
-    deserialised parameters.
 
     NOTE: This method is not equipped to handle `equinox.static_field()` 
     parameters, as they can be arbitrary data types but do not get serialised
@@ -334,7 +322,27 @@ def build_structure(obj      : Any,
 
 def serialise(path : str, obj : Any) -> None:
     """
-    Serialises the input object to the input path.
+    Serialises the input zodiax pytree to the input path. This method works by
+    creating a dictionary detailing the structure of the object to be
+    serialised. This dictionary is then serialised using `pickle` and the 
+    pytree leaves are serialised using `equinox.serialise_tree_leaves()`. This
+    object can then be deserialised using the `deserialise()` method. 
+
+    This method is currently considered experimental for a number of reasons:
+     - Some objects can not be gaurenteed to be deserialised correctly. 
+     - User-defined classes _can_ be serialised but it is up to the user to 
+     import the class into the global namespace when deserialising. 
+     - User defined functions can not be gaurenteed to be deserialised
+     correctly.
+     - Different versions of packages can cause issues when deserialising. This
+    metadata is planned to be serialised in the future and have warnings raised
+    when deserialising.
+     - static_field() parameters are not handled correctly. Since array types
+     can be set as static_field() parameters, they are not serialised by
+     `equinox.serialise_tree_leaves()` and hence require custom serialisation
+     via this method. This is not checked for currently so will silently break.
+     This can be fixed with some pre-filtering and type checking using the
+     `.tree_flatten()` method.
 
     Parameters
     ----------
@@ -352,36 +360,16 @@ def serialise(path : str, obj : Any) -> None:
 #######################
 ### Deserialisation ###
 #######################
-def instantiate_class(cls : object) -> object:
-    """
-    Constructs an 'empty' instance of the object using the class's _construct
-    method if it exists, then tries to construct it with an empty call of the 
-    class, otherwise returns the class itself.
-    
-    Parameters
-    ----------
-    cls : object
-        The class to instantiate
-    
-    Returns
-    -------
-    object : object
-        The instantiated class
-    """
-    if hasattr(cls, '_construct'):
-        return cls._construct()
-    else:
-        try:
-            return cls()
-        except BaseException as e:
-            print(f"Error: {e}")
-            return cls
-
-
 def construct_class(modules_str : str) -> object:
     """
     Constructs an empty instance of some class from a string of the form
     'module.sub_module.class'. 
+
+    Explicitly handled types: Nones, bool, int, float, str, complex, list, 
+    tuple, dict, jax arrays, numpy arrays.
+
+    Other types are imported and attempted to be instantiated.
+
 
     Parameters
     ----------
@@ -393,15 +381,14 @@ def construct_class(modules_str : str) -> object:
     object : object
         The instantiated class
     """
-    # Regular Python types
-    try:
-        return eval(f"{modules_str}()")
-    except:
-        pass
-
     # None case
     if modules_str == 'NoneType':
         return None
+
+    # Regular python types
+    elif modules_str in ['bool', 'int', 'float', 'str', 'complex', 'list', 
+                         'tuple', 'dict']:
+        return eval(f"{modules_str}()")
 
     # Array types
     elif modules_str == 'jaxlib.xla_extension.Array':
@@ -417,11 +404,11 @@ def construct_class(modules_str : str) -> object:
         try:
             module = getattr(sys.modules['__main__'], modules[0])
             if len(modules) == 1:
-                return instantiate_class(module)
+                return module.__new__(module)
             else:
                 for sub_module in modules:
                     module = getattr(module, sub_module)
-                return instantiate_class(module)
+                return module.__new__(module)
         except AttributeError:
             raise AttributeError(f"The module/class '{'.'.join(modules)}' "
                 "originally existed in the global namespace, but does not "
@@ -440,12 +427,15 @@ def construct_class(modules_str : str) -> object:
         else:
             sub_modules = '.'.join(modules[1:-1])
             cls = getattr(im(f'{modules[0]}.{sub_modules}'), modules[-1])
-        return instantiate_class(cls)
+        return cls.__new__(cls)
 
 
 def load_container(obj : object, key : str, value : object) -> object:
     """
     Updates and return the object with the supplied key and value pair.
+
+    TODO: Check the setting of different types of containers, ie list
+     -> What about tuples which are immutable?
 
     Parameters
     ----------
@@ -466,12 +456,7 @@ def load_container(obj : object, key : str, value : object) -> object:
 
     # Object case
     if isinstance(obj, zodiax.Base):
-        
-        # Handle annoying None edge case - zodiax issue #2
-        if sub_node is None:
-            key, sub_node = [key], [sub_node]
-
-        obj = obj.set(key, sub_node)
+        object.__setattr__(obj, key, sub_node)
     
     # Dict case
     else:
