@@ -76,3 +76,11 @@ nav:
           - filter_eval_shape:      filter/filter_eval_shape.md
           - filter_closure_convert: filter/filter_closure_convert.md
           - filter_pure_callback:   filter/filter_pure_callback.md
+    - Experimental:
+        - Serialisation:
+          - Overview:     experimental/serialisation/overview.md
+          - API:
+            - serialise:       experimental/serialisation/serialise.md
+            - deserialise:     experimental/serialisation/deserialise.md
+            - load structure:  experimental/serialisation/load_structure.md
+            - build structure: experimental/serialisation/build_structure.md
