@@ -47,5 +47,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
 
-    packages = ["zodiax"]
+    packages = ["zodiax", "zodiax/experimental"],
 )

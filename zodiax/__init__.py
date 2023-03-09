@@ -9,7 +9,6 @@ from . import experimental
 # Import core functions from modules
 from .base import *
 from .filter import *
-from .experimental import *
 
 # Add to __all__
-__all__ = base.__all__ + filter.__all__ + experimental.__all__
+__all__ = base.__all__ + filter.__all__
