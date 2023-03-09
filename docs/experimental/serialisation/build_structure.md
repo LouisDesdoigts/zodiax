@@ -1,1 +1,1 @@
-::: zodiax.filter.build_structure
+::: zodiax.experimental.serialisation.build_structure
