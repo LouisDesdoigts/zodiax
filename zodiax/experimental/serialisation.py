@@ -295,8 +295,9 @@ def build_structure(obj      : Any,
     structure : dict
         The dictionary detailing the structure of the object.
     """
-    if depth == 0 and not isinstance(obj, zodiax.Base):
-        raise ValueError("Input object must be a `zodiax` object.")
+    # if depth == 0 and not isinstance(obj, zodiax.Base):
+    #     print(depth == 0, not isinstance(obj, zodiax.Base))
+    #     raise ValueError("Input object must be a `zodiax` object.")
 
     structure = {}
     is_container = check_node(obj, self_key, depth, _print=_print)
@@ -459,6 +460,12 @@ def load_container(obj : object, key : str, value : object) -> object:
     if isinstance(obj, zodiax.Base):
         object.__setattr__(obj, key, sub_node)
     
+    # List/tuple case
+    # TODO: Check this preserves order
+    # TODO: Check original input type and re-cast to tuple if necessary
+    elif isinstance(obj, list):
+        obj.append(sub_node)
+
     # Dict case
     else:
         obj[key] = sub_node
