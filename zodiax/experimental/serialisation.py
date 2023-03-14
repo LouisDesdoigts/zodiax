@@ -295,10 +295,6 @@ def build_structure(obj      : Any,
     structure : dict
         The dictionary detailing the structure of the object.
     """
-    # if depth == 0 and not isinstance(obj, zodiax.Base):
-    #     print(depth == 0, not isinstance(obj, zodiax.Base))
-    #     raise ValueError("Input object must be a `zodiax` object.")
-
     structure = {}
     is_container = check_node(obj, self_key, depth, _print=_print)
 
