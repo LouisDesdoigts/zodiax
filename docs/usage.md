@@ -27,16 +27,21 @@ import zodiax as zdx
 from jax import numpy as np, scipy as scp
 
 class Normal(zdx.Base):
+    """Basic class for modelling a normal distribution"""
     mean      : np.ndarray
     scale     : np.ndarray
     amplitude : np.ndarray
 
+
     def __init__(self, mean, scale, amplitude):
+        """Constructor for the Normal class"""
         self.mean      = np.asarray(mean,      dtype=float)
         self.scale     = np.asarray(scale,     dtype=float)
         self.amplitude = np.asarray(amplitude, dtype=float)
     
+
     def model(self, width=10):
+        """Evaluates the normal distribution"""
         xs = np.linspace(-width, width, 128)
         return self.amplitude * scp.stats.norm.pdf(xs, self.mean, self.scale)
 ```
@@ -64,25 +69,33 @@ Now we construct a class to store and model a set of multiple normals.
 
 ```python
 class NormalSet(zdx.Base):
+    """Basic class for modelling a set of normal distributions"""
     normals : dict
     width   : np.ndarray
 
+
     def __init__(self, means, scales, amplitude, names, width=10):
+        """Constructor for the NormalSet class"""
         normals = {}
         for i in range(len(names)):
             normals[names[i]] = Normal(means[i], scales[i], amplitude[i])
         self.normals = normals
         self.width = np.asarray(width, dtype=float)
     
+
     def __getattr__(self, key):
+        """Allows us to access the individual normals by their dictionary key"""
         if key in self.normals.keys():
             return self.normals[key]
         else:
             raise AttributeError(f"{key} not in {self.normals.keys()}")
     
+
     def model(self):
+        """Evaluates the set of normal distributions"""
         return np.array([normal.model(self.width) 
             for normal in self.normals.values()]).sum(0)
+
 
 sources = NormalSet([-1., 2.], [1., 2.], [2., 4.], ['alpha', 'beta'])
 ```

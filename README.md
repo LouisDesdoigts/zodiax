@@ -26,11 +26,11 @@ Zodiax is directly integrated with both Jax and Equinox, gaining all of their co
 >
 > - [Path-Based Pytree Interface](docs/usage.md): Path based indexing allows for easy interfacing with large and highly nested physical models
 >
-> - [Leaf Manipulation Methods](docs/usage.md): Extra leaf modifying methods allow for easy manipulation of Pytrees mirroring the _Jax_ Array API
-
-Installation: ```pip install zodiax```
+> - [Leaf Manipulation Methods](docs/usage.md): Inbuilt methods allow for easy manipulation of Pytrees mirroring the _Jax_ Array API
 
 Doccumentataion: [louisdesdoigts.github.io/zodiax/](https://louisdesdoigts.github.io/zodiax/)
+
+Installation: ```pip install zodiax```
 
 Contributors: [Louis Desdoigts](https://github.com/LouisDesdoigts)
 
