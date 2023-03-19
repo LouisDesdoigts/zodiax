@@ -1,13 +1,10 @@
-
 # Using Zodiax
 
-TODO: Equinox, classes (pytrees) as parameterised functions
-
-TODO: Merge this and the optimisation page
+TODO: Equinox overview, classes (pytrees) as parameterised functions
 
 ## Resources
 
-_Zodiax_ is built from both _Jax_ and _Equinox_, so if you are unfamiliar with those packages you should go through their docs and tutorials first! Here are some resources to to get you started: 
+_Zodiax_ is built from both _Jax_ and _Equinox_, so if you are unfamiliar with those packages you should go through their docs and tutorials first! Here are some resources to get you started:
 
 - [Jax 101 tutorials](https://jax.readthedocs.io/en/latest/jax-101/index.html)
 - [Jax Pytrees](https://jax.readthedocs.io/en/latest/pytrees.html)
@@ -372,8 +369,6 @@ Easy! Lets examine the results
 
 ### Fisher Inference
 
-TODO: Move the bayesian module in Zodiax??
-
 The differentiable nature of Zodiax objects also allows us to perform inference on the parameters of our model. The [Laplace approximation](https://en.wikipedia.org/wiki/Laplace%27s_approximation) assumes that the posterior distribution of our model parameters is a gaussian distribution centred on the maximum likelihood estimate of the parameters. Luckily we can use autodiff to calculate the hessian of the log likelihood function and invert it to get the covariance matrix of the posterior distribution!
 
 ??? info "Fisher and Covariance Matrices"
@@ -505,9 +500,3 @@ Fantastic now lets have a look at our posterior distributions!
     ```
 
 ![Numpyro](../assets/hmc_fit.png)
-
----
-
-## Conclusion
-
-This tutorial has covered the basics of using Zodiax for scientific programming. We have seen how we can construct fully differentiable object-oriented classes using Zodiax. We have seen how we can optimise parameters, estimate their uncertainties and how to sample from posterier distributions. Now go forth and do some science!

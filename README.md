@@ -20,13 +20,13 @@ Zodiax is directly integrated with both Jax and Equinox, gaining all of their co
 >
 > - [Automatic Vectorisation](https://jax.readthedocs.io/en/latest/jax-101/03-vectorization.html): Allows for simple parallelism across hardware and asynchronys execution
 >
-> - [Object Oriented _Jax_](https://docs.kidger.site/equinox/all-of-equinox/): Allows for differentiable classes that are recognised as a valid _Jax_ type
+> - [Object Oriented Jax](https://docs.kidger.site/equinox/all-of-equinox/): Allows for differentiable classes that are recognised as a valid _Jax_ type
 >
 > - [Inbuilt Neural Networks](https://docs.kidger.site/equinox/api/nn/linear/): Has pre-built neural network layers classes
 >
-> - User friendly interface for Pytrees: Path based indexing allows for easy interfacing with large and highly nested physical models.
+> - [Path-Based Pytree Interface](docs/usage.md): Path based indexing allows for easy interfacing with large and highly nested physical models
 >
-> - Serialization and Deserialization of Pytrees
+> - [Leaf Manipulation Methods](docs/usage.md): Extra leaf modifying methods allow for easy manipulation of Pytrees mirroring the _Jax_ Array API
 
 Installation: ```pip install zodiax```
 
