@@ -39,7 +39,7 @@ markdown_extensions:
   - admonition
   - toc:
       permalink: "¤"  # Adds a clickable permalink to each section heading
-      toc_depth: 2
+      toc_depth: 4
   - def_list
   - pymdownx.tasklist:
       custom_checkbox: true
@@ -92,7 +92,6 @@ theme:
 nav:
 - Overview: README.md
 - Using Zodiax: docs/usage.md
-- Optimisation & Inference: docs/advanced.md
 
 - API: 
   - Overview:     docs/API/api.md
@@ -102,5 +101,6 @@ nav:
   - Tree:         docs/API/tree.md
   - Serialisation: docs/API/serialisation.md
 
+- FAQ & Troubleshooting: docs/faq.md
 - Change Log: CHANGELOG.md
 - Contributing: CONTRIBUTING.md
