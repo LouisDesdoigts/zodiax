@@ -13,7 +13,7 @@ edit_uri: ""
 strict: false  # Allow warnings during the build process (change later)
 
 plugins:
-  - mkdocs-jupyter
+  # - mkdocs-jupyter
   - search
   - same-dir
   - autorefs
