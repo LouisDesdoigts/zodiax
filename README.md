@@ -34,6 +34,10 @@ Installation: ```pip install zodiax```
 
 Contributors: [Louis Desdoigts](https://github.com/LouisDesdoigts)
 
+Requires:
+ - Python 3.10+
+ - Jax 0.4.3+
+
 ---
 
 ### Quickstart
