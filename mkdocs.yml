@@ -1,86 +1,106 @@
-# ===== mkdocs.yml =====
-# Configuration file for the automatic generation of package
-# documentation formatted with markdown.
+# Great resource: https://squidfunk.github.io/mkdocs-material/setup/setting-up-navigation/#with-section-index-pages
+# https://squidfunk.github.io/mkdocs-material/reference/buttons/
 
-# ===== Setup and Themes =====
-markdown_extensions:
-  - pymdownx.arithmatex:
-      generic: true
-  - pymdownx.highlight:
-      anchor_linenums: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - pymdownx.superfences
-
-extra_javascript:
-  - javascripts/mathjax.js
-  - https://polyfill.io/v3/polyfill.min.js?features=es6
-  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
-  # - https://cdn.jsdelivr.net/gh/rod2ik/cdn@main/mkdocs/javascripts/mkdocs-graphviz.js
-
-site_name: Zodiax - Equinox extension for scientific programming
+site_name: Zodiax
+docs_dir: .
+site_description: Documentation for Zodiax.
+site_author: Louis Desdoigts
+site_url: https://louisdesdoigts.github.io/zodiax/
 repo_url: https://github.com/LouisDesdoigts/zodiax
+repo_name: louisdesdoigts/zodiax
+edit_uri: "" 
 
-# ===== Plugins =====
+strict: false  # Allow warnings during the build process (change later)
+
 plugins:
-  - search
   - mkdocs-jupyter
+  - search
+  - same-dir
+  - autorefs
+  - simple:
+      ignore_folders:
+        - tests
+        - zodiax
   - mkdocstrings:
       default_handler: python
       handlers:
         python:
-          selection:
+          options:
             docstring_style: "numpy"
-          setup_commands:
-            - import sys
-            - sys.path.append("zodaix")
-          rendering:
-            show_source: false
-            show_if_no_docstring: yes
-      custom_templates: templates
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.arithmatex:  # Render LaTeX via MathJax
+      generic: true
+  - pymdownx.snippets:  # Include one Markdown file into another
+      base_path: docs
+  - admonition
+  - toc:
+      permalink: "¤"  # Adds a clickable permalink to each section heading
+      toc_depth: 4
+  - def_list
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - attr_list # Allows images
+  - md_in_html # Allows images
+
+extra_javascript: # Used for MathJax
+  - javascripts/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
 theme:
-  palette:
-    scheme: slate
-  name: material
   icon:
-    logo: material/telescope
+    repo: fontawesome/brands/github
+    logo: fontawesome/regular/moon
+    logo: octicons/moon-16
+  name: material
+  features:
+    # - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.indexes 
+    - navigation.top
+    - content.code.copy
+    # - navigation.tabs # Adds tabs for High Level settings
+    # - navigation.tabs.sticky
+    - toc.integrate  # Table of contents is integrated on the left; does not appear separately on the right.
+    # - toc.integrate
+    # - content.action.view
+  palette:
+    # Light mode / dark mode
+    # We deliberately don't automatically use `media` to check a user's preferences. We default to light mode as
+    # (a) it looks more professional, and (b) is more obvious about the fact that it offers a (dark mode) toggle.
+    - scheme: default
+      primary: white
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: black
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+# TODO: Add a favicon
 
 # ===== Navigation =====
 nav:
-    - Home: index.md
-    - PyTrees: pytree.md
-    - Usage: usage.md
-    - Extending Zodiax: extending.md
+- Overview: README.md
+- Using Zodiax: docs/usage.md
 
+- API: 
+  - Overview:     docs/API/api.md
+  - Base:         docs/API/base.md
+  - Equinox:      docs/API/equinox.md
+  - Optimisation: docs/API/optimisation.md
+  - Tree:         docs/API/tree.md
+  - Serialisation: docs/API/serialisation.md
 
-    - Tutorials:
-        - Base : notebooks/Base.ipynb
-        - ExtendedBase : notebooks/ExtendedBase.ipynb
-    - Base:
-        - Base:         base/base.md
-        - ExtendedBase: base/extended_base.md
-    - Filter:
-        - Overview:     filter/overview.md
-        - API:
-          - filter_grad:            filter/filter_grad.md
-          - filter_value_and_grad:  filter/filter_value_and_grad.md
-          - filter_jit:             filter/filter_jit.md
-          - filter_vmap:            filter/filter_vmap.md
-          - filter_pmap:            filter/filter_pmap.md
-          - filter_make_jaxpr:      filter/filter_make_jaxpr.md
-          - filter_jvp:             filter/filter_jvp.md
-          - filter_vjp:             filter/filter_vjp.md
-          - filter_custom_jvp:      filter/filter_custom_jvp.md
-          - filter_custom_vjp:      filter/filter_custom_vjp.md
-          - filter_eval_shape:      filter/filter_eval_shape.md
-          - filter_closure_convert: filter/filter_closure_convert.md
-          - filter_pure_callback:   filter/filter_pure_callback.md
-    - Experimental:
-        - Serialisation:
-          - Overview:     experimental/serialisation/overview.md
-          - API:
-            - serialise:       experimental/serialisation/serialise.md
-            - deserialise:     experimental/serialisation/deserialise.md
-            - load structure:  experimental/serialisation/load_structure.md
-            - build structure: experimental/serialisation/build_structure.md
+- FAQ & Troubleshooting: docs/faq.md
+- Change Log: CHANGELOG.md
+- Contributing: CONTRIBUTING.md

@@ -16,10 +16,10 @@ __all__ = ['serialise', 'deserialise', 'load_structure', 'build_structure']
 #####################
 ### Serialisation ###
 #####################
-def check_node(obj      : Any, 
-               self_key : str  = None, 
-               depth    : int  = 0., 
-               _print   : bool = False) -> bool:
+def _check_node(obj      : Any, 
+                self_key : str  = None, 
+                depth    : int  = 0., 
+                _print   : bool = False) -> bool:
     """
     Checks if the input object is a container or a leaf node. If the object is
     a leaf False is returned else True.
@@ -53,7 +53,7 @@ def check_node(obj      : Any,
     """
     t = '  ' * depth
     conatiner_types = (list, tuple, dict, zodiax.Base)
-    leaf_types = (ArrayLike, bool, complex, float, int, str, type(None))
+    leaf_types = (ArrayLike, bool, complex, float, int, str, None)
 
     # Contianer node
     if isinstance(obj, conatiner_types):
@@ -71,7 +71,7 @@ def check_node(obj      : Any,
             "Please raise an issue on GitHub to enable support for this type.")
     
 
-def get_accessor(obj : Any) -> tuple:
+def _get_accessor(obj : Any) -> tuple:
     """
     Returns the keys and accessor for the input object.
 
@@ -106,7 +106,7 @@ def get_accessor(obj : Any) -> tuple:
         return obj.keys(), accessor
 
 
-def format_type(obj : Any) -> str:
+def _format_type(obj : Any) -> str:
     """
     Returns a string of the object type with the extra '< class ' and '>' 
     removed.
@@ -125,7 +125,7 @@ def format_type(obj : Any) -> str:
     return class_str[class_str.find("'")+1:class_str.rfind("'")]
 
 
-def format_dtype(dtype : onp.dtype) -> str:
+def _format_dtype(dtype : onp.dtype) -> str:
     """
     Formats the array dtype into a string. Supports boolean, integer, float 
     and complex types.
@@ -143,7 +143,7 @@ def format_dtype(dtype : onp.dtype) -> str:
     return f"{kind_map[dtype.kind]}{8*dtype.itemsize}"
 
 
-def build_node(obj    : Any, 
+def _build_node(obj    : Any, 
                key    : str  = None, 
                depth  : int  = 0, 
                _print : bool = False) -> dict:
@@ -172,14 +172,14 @@ def build_node(obj    : Any,
 
     # Container node
     if isinstance(inner_structure, dict):
-        return build_conatiner_node(obj, inner_structure)
+        return _build_conatiner_node(obj, inner_structure)
 
     # Leaf node
     else:
-        return build_leaf_node(obj)
+        return _build_leaf_node(obj)
     
 
-def build_leaf_node(obj : Any) -> dict:
+def _build_leaf_node(obj : Any) -> dict:
     """
     Builds a leaf node for the input object. Explicity handles string and array
     types. Strings are stored directly and serialised in the structure 
@@ -198,7 +198,7 @@ def build_leaf_node(obj : Any) -> dict:
     """
     # Basic info
     node_dict = {'node_type': 'leaf', 
-                 'type': format_type(obj)}
+                 'type': _format_type(obj)}
     
     # Handle string case
     if isinstance(obj, str):
@@ -207,12 +207,12 @@ def build_leaf_node(obj : Any) -> dict:
     # Append meta-data for arrays
     elif isinstance(obj, (Array, onp.ndarray)):
         node_dict['shape'] = obj.shape
-        node_dict['dtype'] = format_dtype(obj.dtype)
+        node_dict['dtype'] = _format_dtype(obj.dtype)
     
     return node_dict
 
 
-def build_conatiner_node(obj : Any, inner_structure : dict) -> dict:
+def _build_conatiner_node(obj : Any, inner_structure : dict) -> dict:
     """
     Builds a container node for the input object.
 
@@ -229,7 +229,7 @@ def build_conatiner_node(obj : Any, inner_structure : dict) -> dict:
         The dictionary detailing the type and metadata of the container.
     """
     return {'node_type': 'container', 
-            'type': format_type(obj), 
+            'type': _format_type(obj), 
             'node': inner_structure}
 
 
@@ -296,20 +296,20 @@ def build_structure(obj      : Any,
         The dictionary detailing the structure of the object.
     """
     structure = {}
-    is_container = check_node(obj, self_key, depth, _print=_print)
+    is_container = _check_node(obj, self_key, depth, _print=_print)
 
     # Recursive case
     if is_container:
-        keys, accessor = get_accessor(obj)
+        keys, accessor = _get_accessor(obj)
 
         # Iterate over parameters
         for key in keys:
             sub_obj = accessor(obj, key)
-            structure[key] = build_node(sub_obj, key, depth, _print)
+            structure[key] = _build_node(sub_obj, key, depth, _print)
                     
         # Deal with outermost container
         if depth == 0:
-            return build_conatiner_node(obj, structure)
+            return _build_conatiner_node(obj, structure)
         else:
             return structure
 
@@ -358,7 +358,7 @@ def serialise(path : str, obj : Any) -> None:
 #######################
 ### Deserialisation ###
 #######################
-def construct_class(modules_str : str) -> object:
+def _construct_class(modules_str : str) -> object:
     """
     Constructs an empty instance of some class from a string of the form
     'module.sub_module.class'. 
@@ -428,7 +428,7 @@ def construct_class(modules_str : str) -> object:
         return cls.__new__(cls)
 
 
-def load_container(obj : object, key : str, value : object) -> object:
+def _load_container(obj : object, key : str, value : object) -> object:
     """
     Updates and return the object with the supplied key and value pair.
 
@@ -469,7 +469,7 @@ def load_container(obj : object, key : str, value : object) -> object:
     return obj
 
 
-def load_leaf(obj : object, structure : dict) -> object:
+def _load_leaf(obj : object, structure : dict) -> object:
     """
     Returns the leaf value, handing the special cases of strings and arrays.
     Can be expanded to deal with mode complex cases.
@@ -513,7 +513,7 @@ def load_structure(structure : dict) -> object:
     `eqx.tree_deserialise_leaves()`.
 
 
-    Custom leaf node desrialisation is handled by the `load_leaf` function.
+    Custom leaf node desrialisation is handled by the `_load_leaf` function.
     
     Parameters
     ----------
@@ -526,19 +526,19 @@ def load_structure(structure : dict) -> object:
         The loaded structure.
     """
     # Construct the object
-    obj = construct_class(structure['type'])
+    obj = _construct_class(structure['type'])
 
     # Container Node
     if structure['node_type'] == 'container': 
         
         # Iterarte over all parameters and update the object
         for key, value in structure['node'].items():
-            obj = load_container(obj, key, value)
+            obj = _load_container(obj, key, value)
         return obj
     
     # Leaf Node
     else: 
-        return load_leaf(obj, structure)
+        return _load_leaf(obj, structure)
 
 
 def deserialise(path : str):

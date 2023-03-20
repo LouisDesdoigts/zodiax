@@ -39,3 +39,20 @@ def loss_fn(model, x):
 ```
 
 The same syntax applies to the `filter_value_and_grad` function. All other functions are just wrappers for the `equinox` functions and therfore follow the same syntax.
+
+<!-- ## API
+
+??? note "filter_grad"
+    ::: zodiax.filter.filter_grad
+
+??? note "filter_value_and_grad"
+    ::: zodiax.filter.filter_value_and_grad
+
+??? note "filter_jit"
+    ::: zodiax.filter.filter_jit
+
+??? note "filter_vmap"
+    ::: zodiax.filter.filter_vmap
+
+??? note "filter_pmap"
+    ::: zodiax.filter.filter_pmap -->

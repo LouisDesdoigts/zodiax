@@ -1,0 +1,3 @@
+# Example changelog
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit

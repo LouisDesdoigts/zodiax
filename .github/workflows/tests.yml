@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.10", "3.11"]
 
     steps:
       - name: checkout
@@ -28,6 +28,12 @@ jobs:
 
       # ===== Tests =====
       - name: base tests
-        run: pytest --quiet tests/base.py
-      - name: filter tests
-        run: pytest --quiet tests/filter.py
+        run: pytest --quiet tests/test_base.py
+      - name: equinox tests
+        run: pytest --quiet tests/test_equinox.py
+      - name: equinox tree
+        run: pytest --quiet tests/test_tree.py
+      - name: equinox optimisation
+        run: pytest --quiet tests/test_optimisation.py
+      - name: equinox serialisation
+        run: pytest --quiet tests/test_serialisation.py
