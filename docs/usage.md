@@ -227,7 +227,7 @@ Now that we have an understanding of how to construct and interact with Zodiax c
 
 **Create some fake data**
 
-Now lets take a lott at how we can recover the parameters of the model using gradient descent. To do this we need to create some fake data which we will do by modelling the normals and adding some noise.
+Now lets take a look at how we can recover the parameters of the model using gradient descent. To do this we need to create some fake data which we will do by modelling the normals and adding some noise.
 
 Then we create a new instance of the model that we will use to recover the parameters from the data!
 
@@ -413,12 +413,12 @@ def perturb(X, model):
     return model
 
 # Define Covariance function
-def calculate_covaraince(model, data):
+def calculate_covariance(model, data):
     X = np.zeros(len(parameters))
     return -np.linalg.inv(jax.hessian(chi2)(X, model, data))
 
 # Calcuate parameter variances
-covariance_matrix = calculate_covaraince(model, data)
+covariance_matrix = calculate_covariance(model, data)
 deviations = np.abs(np.diag(covariance_matrix))**0.5
 ```
 
