@@ -1,6 +1,6 @@
 # Using Zodiax
 
-TODO: Equinox overview, classes (pytrees) as parameterised functions
+---
 
 ## Resources
 
