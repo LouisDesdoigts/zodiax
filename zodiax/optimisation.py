@@ -12,7 +12,7 @@ __all__ = ["get_optimiser"]
 def get_optimiser(pytree     : PyTree,
                   paths      : Union[str, list],
                   optimisers : Union[GradientTransformation, list],
-                  pmap       : dict = None) -> tuple:
+                  ) -> tuple:
     """
     Returns an Optax.GradientTransformion object, with the optimisers
     specified by optimisers applied to the leaves specified by paths.
@@ -25,8 +25,6 @@ def get_optimiser(pytree     : PyTree,
         A optax.GradientTransformation or list of
         optax.GradientTransformation objects to be applied to the leaves
         specified by paths.
-    pmap : dict = None
-        A dictionary of paths.
 
     Returns
     -------
@@ -42,7 +40,7 @@ def get_optimiser(pytree     : PyTree,
     # Construct groups and get param_spec
     groups = [str(i) for i in range(len(optimisers))]
     param_spec = tree_map(lambda _: "null", pytree)
-    param_spec = param_spec.set(paths, groups, pmap)
+    param_spec = param_spec.set(paths, groups)
 
     # Generate optimiser dictionary
     opt_dict = dict([(groups[i], optimisers[i]) \

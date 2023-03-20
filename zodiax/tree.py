@@ -6,9 +6,7 @@ from jaxtyping import PyTree
 __all__ = ["get_args"] #, "get_param_spec"]
 
 
-def get_args(pytree: PyTree,
-             paths : Union[str, list],
-             pmap  : dict = None) -> PyTree:
+def get_args(pytree: PyTree, paths : Union[str, list]) -> PyTree:
     """
     Returns a pytree of matching structure with boolean values at the leaves.
     Leaves specified by paths will be True, all others will be False. 
@@ -17,8 +15,6 @@ def get_args(pytree: PyTree,
     ----------
     paths : Union[str, list]
         A path or list of paths or list of nested paths.
-    pmap : dict = None
-        A dictionary of paths.
 
     Returns
     -------
@@ -28,14 +24,13 @@ def get_args(pytree: PyTree,
     args = tree_map(lambda _: False, pytree)
     paths = paths if isinstance(paths, list) else [paths]
     values = len(paths) * [True]
-    return args.set(paths, values, pmap)
+    return args.set(paths, values)
 
 
 # def get_param_spec(pytree   : PyTree,
 #                    paths    : Union[str, list],
 #                    groups   : Union[str, list],
-#                    get_args : bool = False,
-#                    pmap     : dict = None) -> PyTree:
+#                    get_args : bool = False) -> PyTree:
 #     """
 #     Returns 'param_spec' object, to be used in conjunction with the
 #     Optax.multi_transform functions. The param_spec is a pytree of matching
@@ -55,8 +50,6 @@ def get_args(pytree: PyTree,
 #         corresponding leaves denoted by paths to.
 #     get_args : bool = False
 #         Return a corresponding args pytree or not.
-#     pmap : dict = None
-#         A dictionary of paths.
 
 #     Returns
 #     -------
@@ -67,4 +60,4 @@ def get_args(pytree: PyTree,
 
 
 #     return param_spec if not get_args \
-#         else (param_spec, pytree.get_args(paths, pmap))
+#         else (param_spec, pytree.get_args(paths))

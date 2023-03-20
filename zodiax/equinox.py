@@ -8,7 +8,7 @@ from types import ModuleType
 
 
 def _convert_to_filter(pytree : PyTree, 
-                      params : Union[PyTree, list, str]) -> PyTree:
+                       params : Union[PyTree, list, str]) -> PyTree:
     """
     Converts the input params to a filter spec if not already.
 

@@ -8,8 +8,10 @@ from jaxtyping import Array, PyTree
 
 __all__ = ["Base"]
 
+PathLike = Union[list[str], str]
 
-def _get_leaf(pytree : PyTree, path : Union[str, list]) -> Any:
+
+def _get_leaf(pytree : PyTree, path : PathLike) -> Any:
     """
     A hidden class desinged to recurse down a pytree following the path,
     returning the leaf at the end of the path.
@@ -27,7 +29,7 @@ def _get_leaf(pytree : PyTree, path : Union[str, list]) -> Any:
     ----------
     pytree : PyTree
         The pytee object to recurse though.
-    path : Union[str, list]
+    path : PathLike
         The path to recurse down.
 
     Returns
@@ -43,8 +45,8 @@ def _get_leaf(pytree : PyTree, path : Union[str, list]) -> Any:
     elif isinstance(pytree, (list, tuple)):
         pytree = pytree[int(key)]
     else:
-        raise ValueError("key: {} not found in object: {}".format(key,
-                                                        type(pytree)))
+        raise ValueError(
+            "key: {} not found in object: {}".format(key,type(pytree)))
 
     # Return param if at the end of path, else recurse
     return pytree if len(path) == 1 else _get_leaf(pytree, path[1:])
@@ -56,11 +58,11 @@ def _get_leaves(pytree : PyTree, paths : list) -> list:
 
     Parameters
     ----------
+    pytree : PyTree
+        The pytee object to recurse though.
     paths : list
         A list/tuple of nested paths. Note path objects can only be
         nested a single time.
-    pmap : dict = None
-        A dictionary of absolute paths.
 
     Returns
     -------
@@ -70,9 +72,7 @@ def _get_leaves(pytree : PyTree, paths : list) -> list:
     return [_get_leaf(pytree, path) for path in paths]
 
 
-def _unwrap(paths     : Union[str, list],
-            values_in : list = None,
-            pmap      : dict = None) -> list:
+def _unwrap(paths : PathLike, values_in : list = None) -> list:
     """
     Unwraps the provided paths in to the correct list-based format for the
     _get_leaves and _get_leaf methods, returning a single dimensional list
@@ -80,21 +80,16 @@ def _unwrap(paths     : Union[str, list],
 
     Parameters
     ----------
-    paths : Union[str, list]
+    paths : PathLike
         A list/tuple of nested paths to unwrap.
     values_in : list = None
         The list of values to be unwrapped.
-    pmap : dict = None
-        A dictionary of paths.
 
     Returns
     -------
     paths, values : list, list
         The list of unwrapped paths or paths and values.
     """
-    # Get keys
-    keys = pmap.keys() if pmap is not None else []
-
     # Inititalise empty lists
     paths_out, values_out = [], []
 
@@ -111,16 +106,11 @@ def _unwrap(paths     : Union[str, list],
 
         # Recurse and add in the case of list inputs
         if isinstance(path, list):
-            new_paths, new_values = _unwrap(path, [value], pmap)
+            new_paths, new_values = _unwrap(path, [value])
             paths_out  += new_paths
             values_out += new_values
 
-        # Get the absolute path and append
-        elif path in keys:
-            paths_out.append(pmap[path])
-            values_out.append(value)
-
-        # Union[str, list] must already be absolute
+        # PathLike must already be absolute
         else:
             paths_out.append(path)
             values_out.append(value)
@@ -129,22 +119,18 @@ def _unwrap(paths     : Union[str, list],
     return paths_out if values_in is None else (paths_out, values_out)
 
 
-def _format(paths  : Union[str, list],
-            values : list = None,
-            pmap   : dict = None) -> list:
+def _format(paths : PathLike, values : list = None) -> list:
     """
     Formats the provided paths in to the correct list-based format for the
     _get_leaves and _get_leaf methods, returning a single dimensional list
-    of input paths, with the 'path map' (pmap) values applied.
+    of input paths.
 
     Parameters
     ----------
-    paths : Union[str, list]
+    paths : PathLike
         A list/tuple of nested paths to unwrap.
     values : list = None
         The list of values to be unwrapped.
-    pmap : dict = None
-        A dictionary of paths.
 
     Returns
     -------
@@ -163,9 +149,9 @@ def _format(paths  : Union[str, list],
 
         # Its a list - iterate and unbind all the keys
         if values is not None:
-            flat_paths, new_values = _unwrap(paths, values, pmap)
+            flat_paths, new_values = _unwrap(paths, values)
         else:
-            flat_paths = _unwrap(paths, pmap=pmap)
+            flat_paths = _unwrap(paths)
         
         # Turn into seperate strings
         new_paths = [path.split('.') if '.' in path else [path] \
@@ -173,10 +159,6 @@ def _format(paths  : Union[str, list],
 
     # Un-nested/singular input
     else:
-        # Get from dict if it extsts
-        keys = pmap.keys() if pmap is not None else []
-        paths = pmap[paths] if paths in keys else paths
-
         # Turn into seperate strings
         new_paths = [paths.split('.') if '.' in paths else [paths]]
         new_values = [values]
@@ -194,51 +176,44 @@ class Base(Module):
     for working with pytrees by adding a series of methods used to interface
     with the leaves of the pytree using paths.
     """
-    def get(self  : PyTree,
-            paths : str,
-            pmap  : dict = None) -> Any:
+    def get(self : PyTree, paths : PathLike) -> Any:
         """
         Get the leaf specified by path.
 
         Parameters
         ----------
-        paths : Union[str, list]
+        paths : PathLike
             A list/tuple of nested paths to unwrap.
-        pmap : dict = None
-            A dictionary of paths.
 
         Returns
         -------
         leaf, leaves : Any, list
             The leaf or list of leaves specified by paths.
         """
-        new_paths = _format(paths, pmap=pmap)
+        new_paths = _format(paths)
         values = _get_leaves(self, new_paths)
         return values[0] if len(new_paths) == 1 else values
 
 
     def set(self   : PyTree,
-            paths  : Union[str, list],
-            values : Union[Any, list],
-            pmap   : dict = None) -> PyTree:
+            paths  : PathLike,
+            values : Union[list[Any], Any]) -> PyTree:
         """
         Set the leaves specified by paths with values.
 
         Parameters
         ----------
-        paths : Union[str, list]
+        paths : PathLike
             A path or list of paths or list of nested paths.
-        values : Union[Any, list]
+        values : Union[list[Any], Any]
             The list of values to set at the leaves specified by paths.
-        pmap : dict = None
-            A dictionary of paths.
 
         Returns
         -------
         pytree : PyTree
             The pytree with leaves specified by paths updated with values.
         """
-        new_paths, new_values = _format(paths, values, pmap)
+        new_paths, new_values = _format(paths, values)
 
         # Define 'where' function and update pytree
         leaves_fn = lambda pytree: _get_leaves(pytree, new_paths)
@@ -247,27 +222,24 @@ class Base(Module):
 
 
     def add(self   : PyTree,
-            paths  : Union[str, list],
-            values : Union[Any, list],
-            pmap   : dict = None) -> PyTree:
+            paths  : PathLike,
+            values : Union[list[Any], Any]) -> PyTree:
         """
         Add to the the leaves specified by paths with values.
 
         Parameters
         ----------
-        paths : Union[str, list]
+        paths : PathLike
             A path or list of paths or list of nested paths.
-        values : Union[Any, list]
+        values : Union[list[Any], Any]
             The list of values to add to the leaves specified by paths.
-        pmap : dict = None
-            A dictionary of paths.
 
         Returns
         -------
         pytree : PyTree
             The pytree with values added to leaves specified by paths.
         """
-        new_paths, new_values = _format(paths, values, pmap)
+        new_paths, new_values = _format(paths, values)
         new_values = [leaf + value for value, leaf in zip(new_values, \
                                     _get_leaves(self, new_paths))]
 
@@ -278,27 +250,24 @@ class Base(Module):
 
 
     def multiply(self   : PyTree,
-                 paths  : Union[str, list],
-                 values : Union[list, Any],
-                 pmap   : dict = None) -> PyTree:
+                 paths  : PathLike,
+                 values : Union[list[Any], Any]) -> PyTree:
         """
         Multiplies the the leaves specified by paths with values.
 
         Parameters
         ----------
-        paths : Union[str, list]
+        paths : PathLike
             A path or list of paths or list of nested paths.
-        values : Union[Any, list]
+        values : Union[list[Any], Any]
             The list of values to multiply the leaves specified by paths.
-        pmap : dict = None
-            A dictionary of paths.
 
         Returns
         -------
         pytree : PyTree
             The pytree with values multiplied by leaves specified by paths.
         """
-        new_paths, new_values = _format(paths, values, pmap)
+        new_paths, new_values = _format(paths, values)
         new_values = [leaf * value for value, leaf in zip(new_values, \
                                     _get_leaves(self, new_paths))]
 
@@ -309,27 +278,24 @@ class Base(Module):
 
 
     def divide(self   : PyTree,
-               paths  : Union[str, list],
-               values : Union[list, Any],
-               pmap   : dict = None) -> PyTree:
+               paths  : PathLike,
+               values : Union[list[Any], Any]) -> PyTree:
         """
         Divides the the leaves specified by paths with values.
 
         Parameters
         ----------
-        paths : Union[str, list]
+        paths : PathLike
             A path or list of paths or list of nested paths.
-        values : list
+        values : Union[list[Any], Any]
             The list of values to divide the leaves specified by paths.
-        pmap : dict = None
-            A dictionary of paths.
 
         Returns
         -------
         pytree : PyTree
             The pytree with values divided by leaves specified by paths.
         """
-        new_paths, new_values = _format(paths, values, pmap)
+        new_paths, new_values = _format(paths, values)
         new_values = [leaf / value for value, leaf in zip(new_values, \
                                     _get_leaves(self, new_paths))]
 
@@ -340,21 +306,18 @@ class Base(Module):
 
 
     def power(self   : PyTree,
-              paths  : Union[str, list],
-              values : Union[list, Any],
-              pmap   : dict = None) -> PyTree:
+              paths  : PathLike,
+              values : Union[list[Any], Any]) -> PyTree:
         """
         Raises th leaves specified by paths to the power of values.
 
         Parameters
         ----------
-        paths : PAth
+        paths : PathLike
             A path or list of paths or list of nested paths.
-        values : list
+        values : Union[list[Any], Any]
             The list of values to take the leaves specified by paths to the
             power of.
-        pmap : dict = None
-            A dictionary of paths.
 
         Returns
         -------
@@ -362,7 +325,7 @@ class Base(Module):
             The pytree with the leaves specified by paths raised to the power
             of values.
         """
-        new_paths, new_values = _format(paths, values, pmap)
+        new_paths, new_values = _format(paths, values)
         new_values = [leaf ** value for value, leaf in zip(new_values, \
                                     _get_leaves(self, new_paths))]
 
@@ -373,21 +336,18 @@ class Base(Module):
 
 
     def min(self   : PyTree,
-            paths  : Union[str, list],
-            values : Union[list, Any],
-            pmap   : dict = None) -> PyTree:
+            paths  : PathLike,
+            values : Union[list[Any], Any]) -> PyTree:
         """
         Updates the leaves specified by paths with the minimum value of the
         leaves and values.
 
         Parameters
         ----------
-        paths : Union[str, list]
+        paths : PathLike
             A path or list of paths or list of nested paths.
-        values : list
+        values : Union[list[Any], Any]
             The list of values to take the minimum of and the leaf.
-        pmap : dict = None
-            A dictionary of paths.
 
         Returns
         -------
@@ -395,7 +355,7 @@ class Base(Module):
             The pytree with the leaves specified by paths updated with the
             minimum value of the leaf and values.
         """
-        new_paths, new_values = _format(paths, values, pmap)
+        new_paths, new_values = _format(paths, values)
         new_values = [np.minimum(leaf, value) for value, leaf in \
                     zip(new_values, _get_leaves(self, new_paths))]
 
@@ -406,21 +366,18 @@ class Base(Module):
 
 
     def max(self   : PyTree,
-            paths  : Union[str, list],
-            values : Union[list, Any],
-            pmap   : dict = None) -> PyTree:
+            paths  : PathLike,
+            values : Union[list[Any], Any]) -> PyTree:
         """
         Updates the leaves specified by paths with the maximum value of the
         leaves and values.
 
         Parameters
         ----------
-        paths : Union[str, list]
+        paths : PathLike
             A path or list of paths or list of nested paths.
-        values : list
+        values : Union[list[Any], Any]
             The list of values to take the maximum of and the leaf.
-        pmap : dict = None
-            A dictionary of paths.
 
         Returns
         -------
@@ -428,7 +385,7 @@ class Base(Module):
             The pytree with the leaves specified by paths updated with the
             maximum value of the leaf and values.
         """
-        new_paths, new_values = _format(paths, values, pmap)
+        new_paths, new_values = _format(paths, values)
         new_values = [np.maximum(leaf, value) for value, leaf in \
                     zip(new_values, _get_leaves(self, new_paths))]
 
@@ -439,27 +396,24 @@ class Base(Module):
 
 
     def apply(self  : PyTree,
-              paths : Union[str, list],
-              fns   : Union[list, Callable],
-              pmap  : dict = None) -> PyTree:
+              paths : PathLike,
+              fns   : Union[list[Callable], Callable]) -> PyTree:
         """
         Applies the functions within fns the leaves specified by paths.
 
         Parameters
         ----------
-        paths : Union[str, list]
+        paths : PathLike
             A path or list of paths or list of nested paths.
-        fns : Union[list, Callable]
+        fns : Union[list[Callable], Callable]
             The list of functions to apply to the leaves.
-        pmap : dict = None
-            A dictionary of paths.
 
         Returns
         -------
         pytree : PyTree
             The pytree with fns applied to the leaves specified by paths.
         """
-        new_paths, new_fns = _format(paths, fns, pmap)
+        new_paths, new_fns = _format(paths, fns)
         new_values = [fn(leaf) for fn, leaf in zip(new_fns, \
                                     _get_leaves(self, new_paths))]
 
@@ -470,24 +424,21 @@ class Base(Module):
 
 
     def apply_args(self  : PyTree,
-                   paths : Union[str, list],
-                   fns   : Union[list, Any],
-                   args  : Union[list, tuple],
-                   pmap  : dict = None) -> PyTree:
+                   paths : PathLike,
+                   fns   : Union[list[Callable], Callable],
+                   args  : Union[list[Any], Any]) -> PyTree:
         """
         Applies the functions within fns the leaves specified by paths, while
         also passing in args to the function.
 
         Parameters
         ----------
-        paths : Union[str, list]
+        paths : PathLike
             A path or list of paths or list of nested paths.
-        fns : Union[list, Callable]
+        fns : Union[list[Callable], Callable]
             The list of functions to apply to the leaves.
-        args : Union[list, tuple]
+        args : Union[list[Any], Any]
             The tupe or list of tuples of extra arguments to pass into fns.
-        pmap : dict = None
-            A dictionary of paths.
 
         Returns
         -------
@@ -495,8 +446,8 @@ class Base(Module):
             The pytree with fns applied to the leaves specified by paths with
             the extra args passed in.
         """
-        new_paths, new_fns = _format(paths, fns, pmap)
-        new_paths, new_args = _format(paths, args, pmap)
+        new_paths, new_fns = _format(paths, fns)
+        new_paths, new_args = _format(paths, args)
         new_values = [fn(leaf, *args) for fn, args, leaf in zip(new_fns, \
                             new_args, _get_leaves(self, new_paths))]
 
@@ -506,11 +457,10 @@ class Base(Module):
                       is_leaf = lambda leaf: leaf is None)
 
 
-    def set_and_call(self      : PyTree,
-                     paths     : Union[str, list],
-                     values    : Union[Any, list],
-                     call_fn   : str,
-                     pmap      : dict = None,
+    def set_and_call(self    : PyTree,
+                     paths   : PathLike,
+                     values  : Union[list[Any], Any],
+                     call_fn : str,
                      **kwargs) -> Any:
         """
         Updates the leaves speficied by paths with values, and then calls the
@@ -524,28 +474,25 @@ class Base(Module):
 
         Parameters
         ----------
-        paths : Union[str, list]
+        paths : PathLike
             A path or list of paths or list of nested paths.
-        values : Union[Any, list]
+        values : Union[list[Any], Any]
             The list of values to set at the leaves specified by paths.
         call_fn : str
             A string specifying which model function to call.
-        pmap : dict = None
-            A dictionary of paths.
 
         Returns
         -------
             : Any
             Whatever object is returned by call_fn.
         """
-        return getattr(self.set(paths, values, pmap), call_fn)(**kwargs)
+        return getattr(self.set(paths, values), call_fn)(**kwargs)
 
 
-    def apply_and_call(self      : PyTree,
-                       paths     : Union[str, list],
-                       fns       : Union[Callable, list],
+    def apply_and_call(self     : PyTree,
+                       paths    : PathLike,
+                       fns      : Union[list[Callable], Callable],
                        call_fn  : str,
-                       pmap      : dict = None,
                        **kwargs) -> object:
         """
         Applies the functions specified by fns to the leaves speficied by
@@ -558,19 +505,17 @@ class Base(Module):
         ----------
         call_fn : str
             A string specifying which model function to call.
-        paths : Union[str, list]
+        paths : PathLike
             A path or list of paths or list of nested paths.
-        fns : Union[Callable, list]
+        fns : Union[list[Callable], Callable]
             The list of functions to apply to the leaves.
-        pmap : dict = None
-            A dictionary of paths.
 
         Returns
         -------
             : Any
             Whatever object is returned by call_fn.
         """
-        return getattr(self.apply(paths, fns, pmap), call_fn)(**kwargs)
+        return getattr(self.apply(paths, fns), call_fn)(**kwargs)
 
 
 """
