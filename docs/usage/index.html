@@ -760,7 +760,7 @@ Paths should not have space in them to work properly with the <code>__getattrr__
 <h2 id="optimisation-inference">Optimisation &amp; Inference<a class="headerlink" href="#optimisation-inference" title="Permanent link">¤</a></h2>
 <p>Now that we have an understanding of how to construct and interact with Zodiax classes, lets see how we can use them to perform optimisation and inference on our model. We will start with a simple example of optimising a model using gradient descent, then show how to use the good deep mind gradient processing library <a href="https://optax.readthedocs.io/en/latest/">Optax</a>, then show how to use numpy to perform inference on the data, and finally show how to use derivates to calcaulte Fisher matrices. In these examples we will use the classes we created above.</p>
 <p><strong>Create some fake data</strong></p>
-<p>Now lets take a lott at how we can recover the parameters of the model using gradient descent. To do this we need to create some fake data which we will do by modelling the normals and adding some noise.</p>
+<p>Now lets take a look at how we can recover the parameters of the model using gradient descent. To do this we need to create some fake data which we will do by modelling the normals and adding some noise.</p>
 <p>Then we create a new instance of the model that we will use to recover the parameters from the data!</p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">jax.random</span> <span class="k">as</span> <span class="nn">jr</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
@@ -919,12 +919,12 @@ Paths should not have space in them to work properly with the <code>__getattrr__
     <span class="k">return</span> <span class="n">model</span>
 
 <span class="c1"># Define Covariance function</span>
-<span class="k">def</span> <span class="nf">calculate_covaraince</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">calculate_covariance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
     <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">parameters</span><span class="p">))</span>
     <span class="k">return</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">hessian</span><span class="p">(</span><span class="n">chi2</span><span class="p">)(</span><span class="n">X</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">))</span>
 
 <span class="c1"># Calcuate parameter variances</span>
-<span class="n">covariance_matrix</span> <span class="o">=</span> <span class="n">calculate_covaraince</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+<span class="n">covariance_matrix</span> <span class="o">=</span> <span class="n">calculate_covariance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
 <span class="n">deviations</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">covariance_matrix</span><span class="p">))</span><span class="o">**</span><span class="mf">0.5</span>
 </code></pre></div>
 <p>Lets examine the results:</p>
