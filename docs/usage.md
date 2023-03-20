@@ -412,11 +412,14 @@ def perturb(X, model):
         model = model.add(parameter, x)
     return model
 
-# Calcuate the Fisher and Covariance matrix, standard deviation
-X = np.zeros(len(parameters))
-fisher_information = jax.hessian(chi2)(X, model, data)
-covaraince_matrix = np.linalg.inv(fisher_information)
-deviations = np.abs(np.diag(covaraince_matrix))**0.5
+# Define Covariance function
+def calculate_covaraince(model, data):
+    X = np.zeros(len(parameters))
+    return -np.linalg.inv(jax.hessian(chi2)(X, model, data))
+
+# Calcuate parameter variances
+covariance_matrix = calculate_covaraince(model, data)
+deviations = np.abs(np.diag(covariance_matrix))**0.5
 ```
 
 Lets examine the results:
@@ -427,8 +430,8 @@ Lets examine the results:
     recoverd_parameters = model.get(parameters)
 
     formatted = [r"$\alpha_\mu$",    r"$\beta_\mu$",
-                r"$\alpha_\sigma$", r"$\beta_\sigma$",
-                r"$\alpha_A$",      r"$\beta_A$"]
+                 r"$\alpha_\sigma$", r"$\beta_\sigma$",
+                 r"$\alpha_A$",      r"$\beta_A$"]
 
     plt.figure(figsize=(8, 4))
     xs = np.arange(len(parameters))
@@ -463,9 +466,9 @@ import numpyro.distributions as dist
 import chainconsumer as cc
 
 def sampling_fn(data, model):
-    paths = ["alpha.mean",     "beta.mean", 
-            "alpha.scale",     "beta.scale",
-            "alpha.amplitude", "beta.amplitude"]
+    paths = ["alpha.mean",      "beta.mean", 
+             "alpha.scale",     "beta.scale",
+             "alpha.amplitude", "beta.amplitude"]
 
     # Define priors
     values = [npy.sample(r"\alpha_\mu",    dist.Normal(0, 5)), 
