@@ -17,9 +17,9 @@ __all__ = ['serialise', 'deserialise', 'load_structure', 'build_structure']
 ### Serialisation ###
 #####################
 def _check_node(obj      : Any, 
-               self_key : str  = None, 
-               depth    : int  = 0., 
-               _print   : bool = False) -> bool:
+                self_key : str  = None, 
+                depth    : int  = 0., 
+                _print   : bool = False) -> bool:
     """
     Checks if the input object is a container or a leaf node. If the object is
     a leaf False is returned else True.
@@ -53,7 +53,7 @@ def _check_node(obj      : Any,
     """
     t = '  ' * depth
     conatiner_types = (list, tuple, dict, zodiax.Base)
-    leaf_types = (ArrayLike, bool, complex, float, int, str, type(None))
+    leaf_types = (ArrayLike, bool, complex, float, int, str, None)
 
     # Contianer node
     if isinstance(obj, conatiner_types):

@@ -3,7 +3,6 @@ from jax import config
 import zodiax
 from equinox import tree_equal
 import os
-# from utilities import BaseUtility
 config.update("jax_debug_nans", True)
 
 
@@ -12,6 +11,7 @@ def test_serialise_deserialise(Base_instance):
     try:
         zodiax.experimental.serialisation.serialise('test_serialisation.zdx', pytree)
         # pytree_2 = zodiax.experimental.serialisation.deserialise('test_serialisation.zdx')
+        
         os.remove('test_serialisation.zdx')
         # assert tree_equal(pytree, pytree_2)
     except Exception as e:
