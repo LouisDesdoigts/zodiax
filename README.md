@@ -10,7 +10,7 @@
 
 [_Zodiax_](https://github.com/LouisDesdoigts/zodiax) is a lightweight extension to the object-oriented [_Jax_](https://github.com/google/jax) framework [_Equinox_](https://github.com/patrick-kidger/equinox). _Equinox_ allows for **differentiable classes** that are recognised as a valid _Jax_ type and _Zodiax_ adds lightweight methods to simplify interfacing with these classes! _Zodiax_ was originially built in the development of [dLux](https://github.com/LouisDesdoigts/dLux) and was designed to make working with large nested classes structures simple and flexible.
 
-Zodiax is directly integrated with both Jax and Equinox, gaining all of their core feature:
+Zodiax is directly integrated with both Jax and Equinox, gaining all of their core features:
 
 > - [Accelerated Numpy](https://jax.readthedocs.io/en/latest/jax-101/01-jax-basics.html): a Numpy like API that can run on GPU and TPU
 >
