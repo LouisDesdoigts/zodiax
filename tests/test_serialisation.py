@@ -15,5 +15,8 @@ def test_serialise_deserialise(Base_instance):
         os.remove('test_serialisation.zdx')
         # assert tree_equal(pytree, pytree_2)
     except Exception as e:
-        os.remove('test_serialisation.zdx')
+        try:
+            os.remove('test_serialisation.zdx')
+        except FileNotFoundError:
+            pass
         raise e
