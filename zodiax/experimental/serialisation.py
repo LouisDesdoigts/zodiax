@@ -53,15 +53,19 @@ def _check_node(obj      : Any,
     """
     t = '  ' * depth
     conatiner_types = (list, tuple, dict, zodiax.Base)
-    leaf_types = (ArrayLike, bool, complex, float, int, str, None)
+    leaf_types = (ArrayLike, bool, complex, float, int, str)
 
     # Contianer node
     if isinstance(obj, conatiner_types):
         if _print: print(f"{t}Node '{self_key}' of type: {type(obj)}")
         return True
 
+    # NOTE: Checking None types in a tuple of types has some off behaviour. 
+    # There have been changes from python 3.7 - 3.8 and then 3.9-3.10.
+    # This seems to be the most robust way to check for None types.
+
     # Leaf node
-    elif isinstance(obj, leaf_types):
+    elif isinstance(obj, leaf_types) or isinstance(obj, type(None)):
         if _print: print(f"{t}Leaf '{self_key}' of type: {type(obj)}")
         return False
 
