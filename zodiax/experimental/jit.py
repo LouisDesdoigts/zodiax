@@ -2,6 +2,7 @@ import zodiax
 import jax.numpy as np
 from jax.tree_util import tree_map
 from equinox import partition, combine
+from typing import Union
 
 
 __all__ = ['get_jit_model']
@@ -17,7 +18,7 @@ def _float_from_0d(leaf):
         return leaf
 
 
-def get_jit_model(model : zodaix.Base, params : Union[list[str], str]):
+def get_jit_model(model : zodiax.base.Base, params : Union[list[str], str]):
     """
     Replaces all scalar array leaves with python floats. This allows for those
     leaves to be marked as static under jit. The arguments in the params input
