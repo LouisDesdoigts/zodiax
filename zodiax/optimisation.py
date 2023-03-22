@@ -36,6 +36,10 @@ def get_optimiser(pytree     : PyTree,
     # Pre-wrap single inputs into a list since optimisers have a length of 2
     if not isinstance(optimisers, list):
         optimisers = [optimisers]
+    
+    # Paths have to default be wrapped in a list to match optimiser
+    if isinstance(paths, str):
+        paths = [paths]
 
     # Construct groups and get param_spec
     groups = [str(i) for i in range(len(optimisers))]
