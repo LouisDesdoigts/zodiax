@@ -8,6 +8,7 @@ from jax.typing import ArrayLike
 import numpy as onp
 import jax.numpy as jnp
 from equinox import tree_serialise_leaves, tree_deserialise_leaves
+from pathlib import Path
 
 
 __all__ = ['serialise', 'deserialise', 'load_structure', 'build_structure']
@@ -354,8 +355,11 @@ def serialise(path : str, obj : Any) -> None:
         The object to serialise.
     """
     # Check path type
-    if not isinstance(path, str):
-        raise TypeError(f'path must be a string, not {type(path)}')
+    if not isinstance(path, (str, Path)):
+        raise TypeError(f'path must be a string or Path, not {type(path)}')
+    else:
+        # Convert to string in case of Path for adding .zdx extension
+        path = str(path)
     
     # Add default .zdx extension
     if len(path.split('.')) == 1:
