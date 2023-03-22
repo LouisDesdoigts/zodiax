@@ -93,30 +93,49 @@ def _unwrap(paths : PathLike, values_in : list = None) -> list:
     # Inititalise empty lists
     paths_out, values_out = [], []
 
-    # Make sure values is list
-    values = values_in if isinstance(values_in, list) else [values_in]
+    # If values are provided, apply transformation to both
+    if values_in is not None:
+        # Make sure values is list
+        values = values_in if isinstance(values_in, list) else [values_in]
 
-    # Repeat values to match length of paths
-    values = values * len(paths) if len(values) == 1 else values
-    assert len(values) == len(paths), ("Something odd has happened, this "
-    "is likely due to a missmatch between the input paths and values.")
+        # Repeat values to match length of paths
+        if len(values) == 1:
+            values = values * len(paths)
+        
+        # Ensure correct length
+        if len(values) != len(paths):
+            raise ValueError(
+                "The number of values must match the number of paths.")
 
-    # Iterate over paths and values
-    for path, value in zip(paths, values):
+        # Iterate over paths and values
+        for path, value in zip(paths, values):
 
-        # Recurse and add in the case of list inputs
-        if isinstance(path, list):
-            new_paths, new_values = _unwrap(path, [value])
-            paths_out  += new_paths
-            values_out += new_values
+            # Recurse and add in the case of list inputs
+            if isinstance(path, list):
+                new_paths, new_values = _unwrap(path, value)
+                paths_out  += new_paths
+                values_out += new_values
 
-        # PathLike must already be absolute
-        else:
-            paths_out.append(path)
-            values_out.append(value)
+            # PathLike must already be absolute
+            else:
+                paths_out.append(path)
+                values_out.append(value)
+        return paths_out, values_out
 
-    # Return
-    return paths_out if values_in is None else (paths_out, values_out)
+    # Just paths provided
+    else:
+        # Iterate over paths
+        for path in paths:
+
+            # Recurse and add in the case of list inputs
+            if isinstance(path, list):
+                new_paths = _unwrap(path)
+                paths_out += new_paths
+
+            # PathLike must already be absolute
+            else:
+                paths_out.append(path)
+        return paths_out
 
 
 def _format(paths : PathLike, values : list = None) -> list:
