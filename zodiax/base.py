@@ -213,6 +213,11 @@ class Base(Module):
         pytree : PyTree
             The pytree with leaves specified by paths updated with values.
         """
+        # Allow None inputs
+        if values is None:
+            values = [None]
+            if isinstance(paths, str):
+                paths = [paths]
         new_paths, new_values = _format(paths, values)
 
         # Define 'where' function and update pytree
