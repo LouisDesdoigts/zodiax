@@ -656,7 +656,11 @@ paths, and the initialised optimisation state.</p></td>
 <span class="normal">57</span>
 <span class="normal">58</span>
 <span class="normal">59</span>
-<span class="normal">60</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_optimiser</span><span class="p">(</span><span class="n">pytree</span>     <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_optimiser</span><span class="p">(</span><span class="n">pytree</span>     <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
                   <span class="n">paths</span>      <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">],</span>
                   <span class="n">optimisers</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">GradientTransformation</span><span class="p">,</span> <span class="nb">list</span><span class="p">],</span>
                   <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
@@ -683,6 +687,10 @@ paths, and the initialised optimisation state.</p></td>
     <span class="c1"># Pre-wrap single inputs into a list since optimisers have a length of 2</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">optimisers</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
         <span class="n">optimisers</span> <span class="o">=</span> <span class="p">[</span><span class="n">optimisers</span><span class="p">]</span>
+
+    <span class="c1"># Paths have to default be wrapped in a list to match optimiser</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">paths</span><span class="p">]</span>
 
     <span class="c1"># Construct groups and get param_spec</span>
     <span class="n">groups</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">optimisers</span><span class="p">))]</span>
