@@ -353,6 +353,15 @@ def serialise(path : str, obj : Any) -> None:
     obj : Any
         The object to serialise.
     """
+    # Check path type
+    if not isinstance(path, str):
+        raise TypeError(f'path must be a string, not {type(path)}')
+    
+    # Add default .zdx extension
+    if len(path.split('.')) == 1:
+        path += '.zdx'
+    
+    # Serialise
     structure = build_structure(obj)
     with open(path, 'wb') as f:
         pickle.dump(structure, f)
