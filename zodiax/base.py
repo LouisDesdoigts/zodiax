@@ -2,13 +2,13 @@ from __future__ import annotations
 import zodiax
 import jax.numpy as np
 from equinox import tree_at, Module
-from typing import Union, Any, Callable
+from typing import Union, Any, Callable, List
 from jaxtyping import Array, PyTree
 
 
 __all__ = ["Base"]
 
-PathLike = Union[list[str], str]
+PathLike = Union[List[str], str]
 
 
 def _get_leaf(pytree : PyTree, path : PathLike) -> Any:
@@ -216,7 +216,7 @@ class Base(Module):
 
     def set(self   : PyTree,
             paths  : PathLike,
-            values : Union[list[Any], Any]) -> PyTree:
+            values : Union[List[Any], Any]) -> PyTree:
         """
         Set the leaves specified by paths with values.
 
@@ -224,7 +224,7 @@ class Base(Module):
         ----------
         paths : PathLike
             A path or list of paths or list of nested paths.
-        values : Union[list[Any], Any]
+        values : Union[List[Any], Any]
             The list of values to set at the leaves specified by paths.
 
         Returns
@@ -247,7 +247,7 @@ class Base(Module):
 
     def add(self   : PyTree,
             paths  : PathLike,
-            values : Union[list[Any], Any]) -> PyTree:
+            values : Union[List[Any], Any]) -> PyTree:
         """
         Add to the the leaves specified by paths with values.
 
@@ -255,7 +255,7 @@ class Base(Module):
         ----------
         paths : PathLike
             A path or list of paths or list of nested paths.
-        values : Union[list[Any], Any]
+        values : Union[List[Any], Any]
             The list of values to add to the leaves specified by paths.
 
         Returns
@@ -275,7 +275,7 @@ class Base(Module):
 
     def multiply(self   : PyTree,
                  paths  : PathLike,
-                 values : Union[list[Any], Any]) -> PyTree:
+                 values : Union[List[Any], Any]) -> PyTree:
         """
         Multiplies the the leaves specified by paths with values.
 
@@ -283,7 +283,7 @@ class Base(Module):
         ----------
         paths : PathLike
             A path or list of paths or list of nested paths.
-        values : Union[list[Any], Any]
+        values : Union[List[Any], Any]
             The list of values to multiply the leaves specified by paths.
 
         Returns
@@ -303,7 +303,7 @@ class Base(Module):
 
     def divide(self   : PyTree,
                paths  : PathLike,
-               values : Union[list[Any], Any]) -> PyTree:
+               values : Union[List[Any], Any]) -> PyTree:
         """
         Divides the the leaves specified by paths with values.
 
@@ -311,7 +311,7 @@ class Base(Module):
         ----------
         paths : PathLike
             A path or list of paths or list of nested paths.
-        values : Union[list[Any], Any]
+        values : Union[List[Any], Any]
             The list of values to divide the leaves specified by paths.
 
         Returns
@@ -331,7 +331,7 @@ class Base(Module):
 
     def power(self   : PyTree,
               paths  : PathLike,
-              values : Union[list[Any], Any]) -> PyTree:
+              values : Union[List[Any], Any]) -> PyTree:
         """
         Raises th leaves specified by paths to the power of values.
 
@@ -339,7 +339,7 @@ class Base(Module):
         ----------
         paths : PathLike
             A path or list of paths or list of nested paths.
-        values : Union[list[Any], Any]
+        values : Union[List[Any], Any]
             The list of values to take the leaves specified by paths to the
             power of.
 
@@ -361,7 +361,7 @@ class Base(Module):
 
     def min(self   : PyTree,
             paths  : PathLike,
-            values : Union[list[Any], Any]) -> PyTree:
+            values : Union[List[Any], Any]) -> PyTree:
         """
         Updates the leaves specified by paths with the minimum value of the
         leaves and values.
@@ -370,7 +370,7 @@ class Base(Module):
         ----------
         paths : PathLike
             A path or list of paths or list of nested paths.
-        values : Union[list[Any], Any]
+        values : Union[List[Any], Any]
             The list of values to take the minimum of and the leaf.
 
         Returns
@@ -391,7 +391,7 @@ class Base(Module):
 
     def max(self   : PyTree,
             paths  : PathLike,
-            values : Union[list[Any], Any]) -> PyTree:
+            values : Union[List[Any], Any]) -> PyTree:
         """
         Updates the leaves specified by paths with the maximum value of the
         leaves and values.
@@ -400,7 +400,7 @@ class Base(Module):
         ----------
         paths : PathLike
             A path or list of paths or list of nested paths.
-        values : Union[list[Any], Any]
+        values : Union[List[Any], Any]
             The list of values to take the maximum of and the leaf.
 
         Returns
@@ -421,7 +421,7 @@ class Base(Module):
 
     def apply(self  : PyTree,
               paths : PathLike,
-              fns   : Union[list[Callable], Callable]) -> PyTree:
+              fns   : Union[List[Callable], Callable]) -> PyTree:
         """
         Applies the functions within fns the leaves specified by paths.
 
@@ -429,7 +429,7 @@ class Base(Module):
         ----------
         paths : PathLike
             A path or list of paths or list of nested paths.
-        fns : Union[list[Callable], Callable]
+        fns : Union[List[Callable], Callable]
             The list of functions to apply to the leaves.
 
         Returns
@@ -449,8 +449,8 @@ class Base(Module):
 
     def apply_args(self  : PyTree,
                    paths : PathLike,
-                   fns   : Union[list[Callable], Callable],
-                   args  : Union[list[Any], Any]) -> PyTree:
+                   fns   : Union[List[Callable], Callable],
+                   args  : Union[List[Any], Any]) -> PyTree:
         """
         Applies the functions within fns the leaves specified by paths, while
         also passing in args to the function.
@@ -459,9 +459,9 @@ class Base(Module):
         ----------
         paths : PathLike
             A path or list of paths or list of nested paths.
-        fns : Union[list[Callable], Callable]
+        fns : Union[List[Callable], Callable]
             The list of functions to apply to the leaves.
-        args : Union[list[Any], Any]
+        args : Union[List[Any], Any]
             The tupe or list of tuples of extra arguments to pass into fns.
 
         Returns
@@ -483,7 +483,7 @@ class Base(Module):
 
     def set_and_call(self    : PyTree,
                      paths   : PathLike,
-                     values  : Union[list[Any], Any],
+                     values  : Union[List[Any], Any],
                      call_fn : str,
                      **kwargs) -> Any:
         """
@@ -500,7 +500,7 @@ class Base(Module):
         ----------
         paths : PathLike
             A path or list of paths or list of nested paths.
-        values : Union[list[Any], Any]
+        values : Union[List[Any], Any]
             The list of values to set at the leaves specified by paths.
         call_fn : str
             A string specifying which model function to call.
@@ -515,7 +515,7 @@ class Base(Module):
 
     def apply_and_call(self     : PyTree,
                        paths    : PathLike,
-                       fns      : Union[list[Callable], Callable],
+                       fns      : Union[List[Callable], Callable],
                        call_fn  : str,
                        **kwargs) -> object:
         """
@@ -531,7 +531,7 @@ class Base(Module):
             A string specifying which model function to call.
         paths : PathLike
             A path or list of paths or list of nested paths.
-        fns : Union[list[Callable], Callable]
+        fns : Union[List[Callable], Callable]
             The list of functions to apply to the leaves.
 
         Returns

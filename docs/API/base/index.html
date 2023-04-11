@@ -1007,7 +1007,7 @@ with the leaves of the pytree using paths.</p>
 
     <span class="k">def</span> <span class="nf">set</span><span class="p">(</span><span class="bp">self</span>   <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
             <span class="n">paths</span>  <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-            <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+            <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set the leaves specified by paths with values.</span>
 
@@ -1015,7 +1015,7 @@ with the leaves of the pytree using paths.</p>
 <span class="sd">        ----------</span>
 <span class="sd">        paths : PathLike</span>
 <span class="sd">            A path or list of paths or list of nested paths.</span>
-<span class="sd">        values : Union[list[Any], Any]</span>
+<span class="sd">        values : Union[List[Any], Any]</span>
 <span class="sd">            The list of values to set at the leaves specified by paths.</span>
 
 <span class="sd">        Returns</span>
@@ -1038,7 +1038,7 @@ with the leaves of the pytree using paths.</p>
 
     <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span>   <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
             <span class="n">paths</span>  <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-            <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+            <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Add to the the leaves specified by paths with values.</span>
 
@@ -1046,7 +1046,7 @@ with the leaves of the pytree using paths.</p>
 <span class="sd">        ----------</span>
 <span class="sd">        paths : PathLike</span>
 <span class="sd">            A path or list of paths or list of nested paths.</span>
-<span class="sd">        values : Union[list[Any], Any]</span>
+<span class="sd">        values : Union[List[Any], Any]</span>
 <span class="sd">            The list of values to add to the leaves specified by paths.</span>
 
 <span class="sd">        Returns</span>
@@ -1066,7 +1066,7 @@ with the leaves of the pytree using paths.</p>
 
     <span class="k">def</span> <span class="nf">multiply</span><span class="p">(</span><span class="bp">self</span>   <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
                  <span class="n">paths</span>  <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-                 <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+                 <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Multiplies the the leaves specified by paths with values.</span>
 
@@ -1074,7 +1074,7 @@ with the leaves of the pytree using paths.</p>
 <span class="sd">        ----------</span>
 <span class="sd">        paths : PathLike</span>
 <span class="sd">            A path or list of paths or list of nested paths.</span>
-<span class="sd">        values : Union[list[Any], Any]</span>
+<span class="sd">        values : Union[List[Any], Any]</span>
 <span class="sd">            The list of values to multiply the leaves specified by paths.</span>
 
 <span class="sd">        Returns</span>
@@ -1094,7 +1094,7 @@ with the leaves of the pytree using paths.</p>
 
     <span class="k">def</span> <span class="nf">divide</span><span class="p">(</span><span class="bp">self</span>   <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
                <span class="n">paths</span>  <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-               <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+               <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Divides the the leaves specified by paths with values.</span>
 
@@ -1102,7 +1102,7 @@ with the leaves of the pytree using paths.</p>
 <span class="sd">        ----------</span>
 <span class="sd">        paths : PathLike</span>
 <span class="sd">            A path or list of paths or list of nested paths.</span>
-<span class="sd">        values : Union[list[Any], Any]</span>
+<span class="sd">        values : Union[List[Any], Any]</span>
 <span class="sd">            The list of values to divide the leaves specified by paths.</span>
 
 <span class="sd">        Returns</span>
@@ -1122,7 +1122,7 @@ with the leaves of the pytree using paths.</p>
 
     <span class="k">def</span> <span class="nf">power</span><span class="p">(</span><span class="bp">self</span>   <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
               <span class="n">paths</span>  <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-              <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+              <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Raises th leaves specified by paths to the power of values.</span>
 
@@ -1130,7 +1130,7 @@ with the leaves of the pytree using paths.</p>
 <span class="sd">        ----------</span>
 <span class="sd">        paths : PathLike</span>
 <span class="sd">            A path or list of paths or list of nested paths.</span>
-<span class="sd">        values : Union[list[Any], Any]</span>
+<span class="sd">        values : Union[List[Any], Any]</span>
 <span class="sd">            The list of values to take the leaves specified by paths to the</span>
 <span class="sd">            power of.</span>
 
@@ -1152,7 +1152,7 @@ with the leaves of the pytree using paths.</p>
 
     <span class="k">def</span> <span class="nf">min</span><span class="p">(</span><span class="bp">self</span>   <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
             <span class="n">paths</span>  <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-            <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+            <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Updates the leaves specified by paths with the minimum value of the</span>
 <span class="sd">        leaves and values.</span>
@@ -1161,7 +1161,7 @@ with the leaves of the pytree using paths.</p>
 <span class="sd">        ----------</span>
 <span class="sd">        paths : PathLike</span>
 <span class="sd">            A path or list of paths or list of nested paths.</span>
-<span class="sd">        values : Union[list[Any], Any]</span>
+<span class="sd">        values : Union[List[Any], Any]</span>
 <span class="sd">            The list of values to take the minimum of and the leaf.</span>
 
 <span class="sd">        Returns</span>
@@ -1182,7 +1182,7 @@ with the leaves of the pytree using paths.</p>
 
     <span class="k">def</span> <span class="nf">max</span><span class="p">(</span><span class="bp">self</span>   <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
             <span class="n">paths</span>  <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-            <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+            <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Updates the leaves specified by paths with the maximum value of the</span>
 <span class="sd">        leaves and values.</span>
@@ -1191,7 +1191,7 @@ with the leaves of the pytree using paths.</p>
 <span class="sd">        ----------</span>
 <span class="sd">        paths : PathLike</span>
 <span class="sd">            A path or list of paths or list of nested paths.</span>
-<span class="sd">        values : Union[list[Any], Any]</span>
+<span class="sd">        values : Union[List[Any], Any]</span>
 <span class="sd">            The list of values to take the maximum of and the leaf.</span>
 
 <span class="sd">        Returns</span>
@@ -1212,7 +1212,7 @@ with the leaves of the pytree using paths.</p>
 
     <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span>  <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
               <span class="n">paths</span> <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-              <span class="n">fns</span>   <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">Callable</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+              <span class="n">fns</span>   <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">Callable</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Applies the functions within fns the leaves specified by paths.</span>
 
@@ -1220,7 +1220,7 @@ with the leaves of the pytree using paths.</p>
 <span class="sd">        ----------</span>
 <span class="sd">        paths : PathLike</span>
 <span class="sd">            A path or list of paths or list of nested paths.</span>
-<span class="sd">        fns : Union[list[Callable], Callable]</span>
+<span class="sd">        fns : Union[List[Callable], Callable]</span>
 <span class="sd">            The list of functions to apply to the leaves.</span>
 
 <span class="sd">        Returns</span>
@@ -1240,8 +1240,8 @@ with the leaves of the pytree using paths.</p>
 
     <span class="k">def</span> <span class="nf">apply_args</span><span class="p">(</span><span class="bp">self</span>  <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
                    <span class="n">paths</span> <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-                   <span class="n">fns</span>   <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">Callable</span><span class="p">],</span>
-                   <span class="n">args</span>  <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+                   <span class="n">fns</span>   <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">Callable</span><span class="p">],</span>
+                   <span class="n">args</span>  <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Applies the functions within fns the leaves specified by paths, while</span>
 <span class="sd">        also passing in args to the function.</span>
@@ -1250,9 +1250,9 @@ with the leaves of the pytree using paths.</p>
 <span class="sd">        ----------</span>
 <span class="sd">        paths : PathLike</span>
 <span class="sd">            A path or list of paths or list of nested paths.</span>
-<span class="sd">        fns : Union[list[Callable], Callable]</span>
+<span class="sd">        fns : Union[List[Callable], Callable]</span>
 <span class="sd">            The list of functions to apply to the leaves.</span>
-<span class="sd">        args : Union[list[Any], Any]</span>
+<span class="sd">        args : Union[List[Any], Any]</span>
 <span class="sd">            The tupe or list of tuples of extra arguments to pass into fns.</span>
 
 <span class="sd">        Returns</span>
@@ -1274,7 +1274,7 @@ with the leaves of the pytree using paths.</p>
 
     <span class="k">def</span> <span class="nf">set_and_call</span><span class="p">(</span><span class="bp">self</span>    <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
                      <span class="n">paths</span>   <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-                     <span class="n">values</span>  <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">],</span>
+                     <span class="n">values</span>  <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">],</span>
                      <span class="n">call_fn</span> <span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                      <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1291,7 +1291,7 @@ with the leaves of the pytree using paths.</p>
 <span class="sd">        ----------</span>
 <span class="sd">        paths : PathLike</span>
 <span class="sd">            A path or list of paths or list of nested paths.</span>
-<span class="sd">        values : Union[list[Any], Any]</span>
+<span class="sd">        values : Union[List[Any], Any]</span>
 <span class="sd">            The list of values to set at the leaves specified by paths.</span>
 <span class="sd">        call_fn : str</span>
 <span class="sd">            A string specifying which model function to call.</span>
@@ -1306,7 +1306,7 @@ with the leaves of the pytree using paths.</p>
 
     <span class="k">def</span> <span class="nf">apply_and_call</span><span class="p">(</span><span class="bp">self</span>     <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
                        <span class="n">paths</span>    <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-                       <span class="n">fns</span>      <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">Callable</span><span class="p">],</span>
+                       <span class="n">fns</span>      <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">Callable</span><span class="p">],</span>
                        <span class="n">call_fn</span>  <span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                        <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1322,7 +1322,7 @@ with the leaves of the pytree using paths.</p>
 <span class="sd">            A string specifying which model function to call.</span>
 <span class="sd">        paths : PathLike</span>
 <span class="sd">            A path or list of paths or list of nested paths.</span>
-<span class="sd">        fns : Union[list[Callable], Callable]</span>
+<span class="sd">        fns : Union[List[Callable], Callable]</span>
 <span class="sd">            The list of functions to apply to the leaves.</span>
 
 <span class="sd">        Returns</span>
@@ -1384,7 +1384,7 @@ with the leaves of the pytree using paths.</p>
         <tr>
           <td><code>values</code></td>
           <td>
-                <code><span title="typing.Union">Union</span>[list[<span title="typing.Any">Any</span>], <span title="typing.Any">Any</span>]</code>
+                <code><span title="typing.Union">Union</span>[<span title="typing.List">List</span>[<span title="typing.Any">Any</span>], <span title="typing.Any">Any</span>]</code>
           </td>
           <td><p>The list of values to add to the leaves specified by paths.</p></td>
           <td>
@@ -1441,7 +1441,7 @@ with the leaves of the pytree using paths.</p>
 <span class="normal">272</span>
 <span class="normal">273</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span>   <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
         <span class="n">paths</span>  <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-        <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+        <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Add to the the leaves specified by paths with values.</span>
 
@@ -1449,7 +1449,7 @@ with the leaves of the pytree using paths.</p>
 <span class="sd">    ----------</span>
 <span class="sd">    paths : PathLike</span>
 <span class="sd">        A path or list of paths or list of nested paths.</span>
-<span class="sd">    values : Union[list[Any], Any]</span>
+<span class="sd">    values : Union[List[Any], Any]</span>
 <span class="sd">        The list of values to add to the leaves specified by paths.</span>
 
 <span class="sd">    Returns</span>
@@ -1509,7 +1509,7 @@ with the leaves of the pytree using paths.</p>
         <tr>
           <td><code>fns</code></td>
           <td>
-                <code><span title="typing.Union">Union</span>[list[<span title="typing.Callable">Callable</span>], <span title="typing.Callable">Callable</span>]</code>
+                <code><span title="typing.Union">Union</span>[<span title="typing.List">List</span>[<span title="typing.Callable">Callable</span>], <span title="typing.Callable">Callable</span>]</code>
           </td>
           <td><p>The list of functions to apply to the leaves.</p></td>
           <td>
@@ -1566,7 +1566,7 @@ with the leaves of the pytree using paths.</p>
 <span class="normal">446</span>
 <span class="normal">447</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span>  <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
           <span class="n">paths</span> <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-          <span class="n">fns</span>   <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">Callable</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+          <span class="n">fns</span>   <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">Callable</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Applies the functions within fns the leaves specified by paths.</span>
 
@@ -1574,7 +1574,7 @@ with the leaves of the pytree using paths.</p>
 <span class="sd">    ----------</span>
 <span class="sd">    paths : PathLike</span>
 <span class="sd">        A path or list of paths or list of nested paths.</span>
-<span class="sd">    fns : Union[list[Callable], Callable]</span>
+<span class="sd">    fns : Union[List[Callable], Callable]</span>
 <span class="sd">        The list of functions to apply to the leaves.</span>
 
 <span class="sd">    Returns</span>
@@ -1648,7 +1648,7 @@ function.</p>
         <tr>
           <td><code>fns</code></td>
           <td>
-                <code><span title="typing.Union">Union</span>[list[<span title="typing.Callable">Callable</span>], <span title="typing.Callable">Callable</span>]</code>
+                <code><span title="typing.Union">Union</span>[<span title="typing.List">List</span>[<span title="typing.Callable">Callable</span>], <span title="typing.Callable">Callable</span>]</code>
           </td>
           <td><p>The list of functions to apply to the leaves.</p></td>
           <td>
@@ -1706,7 +1706,7 @@ function.</p>
 <span class="normal">541</span>
 <span class="normal">542</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">apply_and_call</span><span class="p">(</span><span class="bp">self</span>     <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
                    <span class="n">paths</span>    <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-                   <span class="n">fns</span>      <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">Callable</span><span class="p">],</span>
+                   <span class="n">fns</span>      <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">Callable</span><span class="p">],</span>
                    <span class="n">call_fn</span>  <span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                    <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1722,7 +1722,7 @@ function.</p>
 <span class="sd">        A string specifying which model function to call.</span>
 <span class="sd">    paths : PathLike</span>
 <span class="sd">        A path or list of paths or list of nested paths.</span>
-<span class="sd">    fns : Union[list[Callable], Callable]</span>
+<span class="sd">    fns : Union[List[Callable], Callable]</span>
 <span class="sd">        The list of functions to apply to the leaves.</span>
 
 <span class="sd">    Returns</span>
@@ -1776,7 +1776,7 @@ also passing in args to the function.</p>
         <tr>
           <td><code>fns</code></td>
           <td>
-                <code><span title="typing.Union">Union</span>[list[<span title="typing.Callable">Callable</span>], <span title="typing.Callable">Callable</span>]</code>
+                <code><span title="typing.Union">Union</span>[<span title="typing.List">List</span>[<span title="typing.Callable">Callable</span>], <span title="typing.Callable">Callable</span>]</code>
           </td>
           <td><p>The list of functions to apply to the leaves.</p></td>
           <td>
@@ -1786,7 +1786,7 @@ also passing in args to the function.</p>
         <tr>
           <td><code>args</code></td>
           <td>
-                <code><span title="typing.Union">Union</span>[list[<span title="typing.Any">Any</span>], <span title="typing.Any">Any</span>]</code>
+                <code><span title="typing.Union">Union</span>[<span title="typing.List">List</span>[<span title="typing.Any">Any</span>], <span title="typing.Any">Any</span>]</code>
           </td>
           <td><p>The tupe or list of tuples of extra arguments to pass into fns.</p></td>
           <td>
@@ -1850,8 +1850,8 @@ the extra args passed in.</p></td>
 <span class="normal">480</span>
 <span class="normal">481</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">apply_args</span><span class="p">(</span><span class="bp">self</span>  <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
                <span class="n">paths</span> <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-               <span class="n">fns</span>   <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">Callable</span><span class="p">],</span>
-               <span class="n">args</span>  <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+               <span class="n">fns</span>   <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">Callable</span><span class="p">],</span>
+               <span class="n">args</span>  <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Applies the functions within fns the leaves specified by paths, while</span>
 <span class="sd">    also passing in args to the function.</span>
@@ -1860,9 +1860,9 @@ the extra args passed in.</p></td>
 <span class="sd">    ----------</span>
 <span class="sd">    paths : PathLike</span>
 <span class="sd">        A path or list of paths or list of nested paths.</span>
-<span class="sd">    fns : Union[list[Callable], Callable]</span>
+<span class="sd">    fns : Union[List[Callable], Callable]</span>
 <span class="sd">        The list of functions to apply to the leaves.</span>
-<span class="sd">    args : Union[list[Any], Any]</span>
+<span class="sd">    args : Union[List[Any], Any]</span>
 <span class="sd">        The tupe or list of tuples of extra arguments to pass into fns.</span>
 
 <span class="sd">    Returns</span>
@@ -1924,7 +1924,7 @@ the extra args passed in.</p></td>
         <tr>
           <td><code>values</code></td>
           <td>
-                <code><span title="typing.Union">Union</span>[list[<span title="typing.Any">Any</span>], <span title="typing.Any">Any</span>]</code>
+                <code><span title="typing.Union">Union</span>[<span title="typing.List">List</span>[<span title="typing.Any">Any</span>], <span title="typing.Any">Any</span>]</code>
           </td>
           <td><p>The list of values to divide the leaves specified by paths.</p></td>
           <td>
@@ -1981,7 +1981,7 @@ the extra args passed in.</p></td>
 <span class="normal">328</span>
 <span class="normal">329</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">divide</span><span class="p">(</span><span class="bp">self</span>   <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
            <span class="n">paths</span>  <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-           <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+           <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Divides the the leaves specified by paths with values.</span>
 
@@ -1989,7 +1989,7 @@ the extra args passed in.</p></td>
 <span class="sd">    ----------</span>
 <span class="sd">    paths : PathLike</span>
 <span class="sd">        A path or list of paths or list of nested paths.</span>
-<span class="sd">    values : Union[list[Any], Any]</span>
+<span class="sd">    values : Union[List[Any], Any]</span>
 <span class="sd">        The list of values to divide the leaves specified by paths.</span>
 
 <span class="sd">    Returns</span>
@@ -2147,7 +2147,7 @@ leaves and values.</p>
         <tr>
           <td><code>values</code></td>
           <td>
-                <code><span title="typing.Union">Union</span>[list[<span title="typing.Any">Any</span>], <span title="typing.Any">Any</span>]</code>
+                <code><span title="typing.Union">Union</span>[<span title="typing.List">List</span>[<span title="typing.Any">Any</span>], <span title="typing.Any">Any</span>]</code>
           </td>
           <td><p>The list of values to take the maximum of and the leaf.</p></td>
           <td>
@@ -2207,7 +2207,7 @@ maximum value of the leaf and values.</p></td>
 <span class="normal">418</span>
 <span class="normal">419</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">max</span><span class="p">(</span><span class="bp">self</span>   <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
         <span class="n">paths</span>  <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-        <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+        <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Updates the leaves specified by paths with the maximum value of the</span>
 <span class="sd">    leaves and values.</span>
@@ -2216,7 +2216,7 @@ maximum value of the leaf and values.</p></td>
 <span class="sd">    ----------</span>
 <span class="sd">    paths : PathLike</span>
 <span class="sd">        A path or list of paths or list of nested paths.</span>
-<span class="sd">    values : Union[list[Any], Any]</span>
+<span class="sd">    values : Union[List[Any], Any]</span>
 <span class="sd">        The list of values to take the maximum of and the leaf.</span>
 
 <span class="sd">    Returns</span>
@@ -2278,7 +2278,7 @@ leaves and values.</p>
         <tr>
           <td><code>values</code></td>
           <td>
-                <code><span title="typing.Union">Union</span>[list[<span title="typing.Any">Any</span>], <span title="typing.Any">Any</span>]</code>
+                <code><span title="typing.Union">Union</span>[<span title="typing.List">List</span>[<span title="typing.Any">Any</span>], <span title="typing.Any">Any</span>]</code>
           </td>
           <td><p>The list of values to take the minimum of and the leaf.</p></td>
           <td>
@@ -2338,7 +2338,7 @@ minimum value of the leaf and values.</p></td>
 <span class="normal">388</span>
 <span class="normal">389</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">min</span><span class="p">(</span><span class="bp">self</span>   <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
         <span class="n">paths</span>  <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-        <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+        <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Updates the leaves specified by paths with the minimum value of the</span>
 <span class="sd">    leaves and values.</span>
@@ -2347,7 +2347,7 @@ minimum value of the leaf and values.</p></td>
 <span class="sd">    ----------</span>
 <span class="sd">    paths : PathLike</span>
 <span class="sd">        A path or list of paths or list of nested paths.</span>
-<span class="sd">    values : Union[list[Any], Any]</span>
+<span class="sd">    values : Union[List[Any], Any]</span>
 <span class="sd">        The list of values to take the minimum of and the leaf.</span>
 
 <span class="sd">    Returns</span>
@@ -2408,7 +2408,7 @@ minimum value of the leaf and values.</p></td>
         <tr>
           <td><code>values</code></td>
           <td>
-                <code><span title="typing.Union">Union</span>[list[<span title="typing.Any">Any</span>], <span title="typing.Any">Any</span>]</code>
+                <code><span title="typing.Union">Union</span>[<span title="typing.List">List</span>[<span title="typing.Any">Any</span>], <span title="typing.Any">Any</span>]</code>
           </td>
           <td><p>The list of values to multiply the leaves specified by paths.</p></td>
           <td>
@@ -2465,7 +2465,7 @@ minimum value of the leaf and values.</p></td>
 <span class="normal">300</span>
 <span class="normal">301</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">multiply</span><span class="p">(</span><span class="bp">self</span>   <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
              <span class="n">paths</span>  <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-             <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+             <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Multiplies the the leaves specified by paths with values.</span>
 
@@ -2473,7 +2473,7 @@ minimum value of the leaf and values.</p></td>
 <span class="sd">    ----------</span>
 <span class="sd">    paths : PathLike</span>
 <span class="sd">        A path or list of paths or list of nested paths.</span>
-<span class="sd">    values : Union[list[Any], Any]</span>
+<span class="sd">    values : Union[List[Any], Any]</span>
 <span class="sd">        The list of values to multiply the leaves specified by paths.</span>
 
 <span class="sd">    Returns</span>
@@ -2533,7 +2533,7 @@ minimum value of the leaf and values.</p></td>
         <tr>
           <td><code>values</code></td>
           <td>
-                <code><span title="typing.Union">Union</span>[list[<span title="typing.Any">Any</span>], <span title="typing.Any">Any</span>]</code>
+                <code><span title="typing.Union">Union</span>[<span title="typing.List">List</span>[<span title="typing.Any">Any</span>], <span title="typing.Any">Any</span>]</code>
           </td>
           <td><p>The list of values to take the leaves specified by paths to the
 power of.</p></td>
@@ -2594,7 +2594,7 @@ of values.</p></td>
 <span class="normal">358</span>
 <span class="normal">359</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">power</span><span class="p">(</span><span class="bp">self</span>   <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
           <span class="n">paths</span>  <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-          <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+          <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Raises th leaves specified by paths to the power of values.</span>
 
@@ -2602,7 +2602,7 @@ of values.</p></td>
 <span class="sd">    ----------</span>
 <span class="sd">    paths : PathLike</span>
 <span class="sd">        A path or list of paths or list of nested paths.</span>
-<span class="sd">    values : Union[list[Any], Any]</span>
+<span class="sd">    values : Union[List[Any], Any]</span>
 <span class="sd">        The list of values to take the leaves specified by paths to the</span>
 <span class="sd">        power of.</span>
 
@@ -2664,7 +2664,7 @@ of values.</p></td>
         <tr>
           <td><code>values</code></td>
           <td>
-                <code><span title="typing.Union">Union</span>[list[<span title="typing.Any">Any</span>], <span title="typing.Any">Any</span>]</code>
+                <code><span title="typing.Union">Union</span>[<span title="typing.List">List</span>[<span title="typing.Any">Any</span>], <span title="typing.Any">Any</span>]</code>
           </td>
           <td><p>The list of values to set at the leaves specified by paths.</p></td>
           <td>
@@ -2724,7 +2724,7 @@ of values.</p></td>
 <span class="normal">244</span>
 <span class="normal">245</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">set</span><span class="p">(</span><span class="bp">self</span>   <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
         <span class="n">paths</span>  <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-        <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+        <span class="n">values</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Set the leaves specified by paths with values.</span>
 
@@ -2732,7 +2732,7 @@ of values.</p></td>
 <span class="sd">    ----------</span>
 <span class="sd">    paths : PathLike</span>
 <span class="sd">        A path or list of paths or list of nested paths.</span>
-<span class="sd">    values : Union[list[Any], Any]</span>
+<span class="sd">    values : Union[List[Any], Any]</span>
 <span class="sd">        The list of values to set at the leaves specified by paths.</span>
 
 <span class="sd">    Returns</span>
@@ -2801,7 +2801,7 @@ is used.</p>
         <tr>
           <td><code>values</code></td>
           <td>
-                <code><span title="typing.Union">Union</span>[list[<span title="typing.Any">Any</span>], <span title="typing.Any">Any</span>]</code>
+                <code><span title="typing.Union">Union</span>[<span title="typing.List">List</span>[<span title="typing.Any">Any</span>], <span title="typing.Any">Any</span>]</code>
           </td>
           <td><p>The list of values to set at the leaves specified by paths.</p></td>
           <td>
@@ -2872,7 +2872,7 @@ is used.</p>
 <span class="normal">512</span>
 <span class="normal">513</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">set_and_call</span><span class="p">(</span><span class="bp">self</span>    <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
                  <span class="n">paths</span>   <span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-                 <span class="n">values</span>  <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">],</span>
+                 <span class="n">values</span>  <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">],</span>
                  <span class="n">call_fn</span> <span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                  <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -2889,7 +2889,7 @@ is used.</p>
 <span class="sd">    ----------</span>
 <span class="sd">    paths : PathLike</span>
 <span class="sd">        A path or list of paths or list of nested paths.</span>
-<span class="sd">    values : Union[list[Any], Any]</span>
+<span class="sd">    values : Union[List[Any], Any]</span>
 <span class="sd">        The list of values to set at the leaves specified by paths.</span>
 <span class="sd">    call_fn : str</span>
 <span class="sd">        A string specifying which model function to call.</span>
