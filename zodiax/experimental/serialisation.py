@@ -4,7 +4,7 @@ import pickle
 import zodiax
 from typing import Any
 from jax import Array
-from jax.typing import ArrayLike
+# from jax.typing import ArrayLike
 import numpy as onp
 import jax.numpy as jnp
 from equinox import tree_serialise_leaves, tree_deserialise_leaves
@@ -54,7 +54,8 @@ def _check_node(obj      : Any,
     """
     t = '  ' * depth
     conatiner_types = (list, tuple, dict, zodiax.Base)
-    leaf_types = (ArrayLike, bool, complex, float, int, str)
+    leaf_types = (Array, onp.ndarray, onp.bool_, onp.number, bool, int, float,
+        complex, str)
 
     # Contianer node
     if isinstance(obj, conatiner_types):
