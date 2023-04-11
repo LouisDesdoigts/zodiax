@@ -26,7 +26,7 @@ with open('requirements.txt') as f:
 
 
 setuptools.setup(
-    python_requires='>=3.10, <4',
+    python_requires='>=3.8, <4',
     name="zodiax",
     version=find_version("zodiax", "__init__.py"),
     description="Equinox extension for scientific programming",
