@@ -14,4 +14,4 @@ paths = [
 def test_improve_jit_hash(create_base):
     pytree = create_base()
     for path in paths:
-        zodiax.jit.improve_jit_hash(pytree, path)
+        zodiax.experimental.jit.improve_jit_hash(pytree, path)
