@@ -6,8 +6,8 @@ import os
 config.update("jax_debug_nans", True)
 
 
-def test_serialise_deserialise(Base_instance):
-    pytree = Base_instance
+def test_serialise_deserialise(create_base):
+    pytree = create_base()
     try:
         zodiax.experimental.serialisation.serialise('test_serialisation.zdx', pytree)
         # pytree_2 = zodiax.experimental.serialisation.deserialise('test_serialisation.zdx')

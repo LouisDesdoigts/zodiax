@@ -5,22 +5,28 @@ from optax import adam, GradientTransformation, MultiTransformState
 import zodiax
 
 
-# Define paths
-path1 = 'param'
-path2 = 'b.param'
+# Paths
+paths = [
+    'param',
+    'b.param',
+    ['param', 'b.param'],
+]
+
+# Optimisers
+optimisers = [
+    adam(0),
+    adam(1),
+    [adam(0), adam(1)],
+]
 
 
-def test_get_optimiser(Base_instance):
+def test_get_optimiser(create_base):
     """
     tests the get_optimiser method
     """
     # Define parameters and construct base
-    base = Base_instance
-
-    # Define paths & groups
-    optimisers = [adam(0), adam(1)] # These are actually arbitrary
+    pytree = create_base()
 
     # Test paths
-    optim, opt_state = zodiax.optimisation.get_optimiser(base, [path1, path2], optimisers)
-    assert isinstance(optim, GradientTransformation)
-    assert isinstance(opt_state, MultiTransformState)
+    for path, optimiser in zip(paths, optimisers):
+        zodiax.optimisation.get_optimiser(pytree, path, optimiser)

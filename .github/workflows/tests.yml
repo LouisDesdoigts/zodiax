@@ -29,11 +29,15 @@ jobs:
       # ===== Tests =====
       - name: base tests
         run: pytest --quiet tests/test_base.py
-      - name: equinox tests
-        run: pytest --quiet tests/test_equinox.py
-      - name: equinox tree
+      - name: tree tests
         run: pytest --quiet tests/test_tree.py
-      - name: equinox optimisation
+      - name: bayes tests
+        run: pytest --quiet tests/test_bayes.py
+      - name: equinox tests
+        run: pytest --quiet tests/test_eqx.py
+      - name: optimisation tests
         run: pytest --quiet tests/test_optimisation.py
-      - name: equinox serialisation
+      - name: jit tests
+        run: pytest --quiet tests/test_jit.py
+      - name: serialisation serialisation
         run: pytest --quiet tests/test_serialisation.py

@@ -22,4 +22,4 @@ from zodiax.equinox import nn
 ```
 
 !!! info "Full API"
-    ::: zodiax.equinox
+    ::: zodiax.eqx
