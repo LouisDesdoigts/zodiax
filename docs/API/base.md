@@ -12,7 +12,6 @@ value = pytree.get(paths)
 
 ```python
 pytree = pytree.set(paths, values)
-pytree = pytree.set_and_call(paths, values, call_fn)
 ```
 
 **Arithmetic Methods**
@@ -24,14 +23,6 @@ pytree = pytree.divide(paths, values)
 pytree = pytree.power(paths, values)
 pytree = pytree.min(paths, values)
 pytree = pytree.max(paths, values)
-```
-
-**Functional Methods**
-
-```python
-pytree = pytree.apply(paths, fns)
-pytree = pytree.apply_args(paths, fns, args)
-pytree = pytree.apply_and_call(paths, fns, call_fn)
 ```
 
 !!! info "Full API"

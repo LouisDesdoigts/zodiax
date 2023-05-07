@@ -98,7 +98,7 @@ nav:
   - Base:          docs/API/base.md
   - Tree:          docs/API/tree.md
   - Bayes:         docs/API/bayes.md
-  - Equinox:       docs/API/eqx.md
+  - Equinox (eqx): docs/API/eqx.md
   - Optimisation:  docs/API/optimisation.md
   - Serialisation: docs/API/serialisation.md
 

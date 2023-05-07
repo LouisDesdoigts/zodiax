@@ -63,7 +63,7 @@ This class simply models a normal distribution with a mean, scale and amplitude,
     distribution = normal(10)
     ```
 
-    This is a matter of personal preference, *however* when using Optax if you try to optimise a class that has a `.__call__()` method, you can thrown unhelpful errors. Becuase of this I recommend avoiding `.__call__()` methods and instead using `.model()` method.
+    This is a matter of personal preference, *however* when using Optax if you try to optimise a class that has a `.__call__()` method, you can thrown unhelpful errors. Becuase of this I recommend avoiding `.__call__()` methods and instead using `.model()` method. Similarly, the `bayes` module of zodiax uses the `.model()` method to evaluate the likelihood of the model, so it is best to use this method to avoid confusion!
 
 Now we construct a class to store and model a set of multiple normals.
 
