@@ -4,14 +4,6 @@ import zodiax
 import pytest
 
 
-@pytest.fixture(scope='class')
-def Base_instance(a=1., b=2.):
-    """
-    Construct a Base instance for testing
-    """
-    yield A(a, B(b))
-
-
 class A(zodiax.base.Base):
     """
     Test subclass to test the Base methods
@@ -44,3 +36,21 @@ class B(zodiax.base.Base):
         Constructor for the Base testing class
         """
         self.param = param
+
+
+# @pytest.fixture(scope='class')
+# def create_Base(a=1., b=2.):
+@pytest.fixture
+def create_base():
+    """
+    Construct a Base instance for testing
+    """
+    def _create_base(
+        param : float = 1.,
+        b     : float = 2.,
+    ) -> zodiax.base.Base:
+        """
+        Construct a Base instance for testing
+        """
+        return A(param, B(b))
+    return _create_base

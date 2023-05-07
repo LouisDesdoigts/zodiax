@@ -12,27 +12,27 @@
         <meta name="author" content="Louis Desdoigts">
       
       
-        <link rel="canonical" href="https://louisdesdoigts.github.io/zodiax/docs/API/equinox/">
+        <link rel="canonical" href="https://louisdesdoigts.github.io/zodiax/docs/API/eqx/">
       
       
-        <link rel="prev" href="../base/">
+        <link rel="prev" href="../bayes/">
       
       
         <link rel="next" href="../optimisation/">
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.4.2, mkdocs-material-9.1.6">
+      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.9">
     
     
       
-        <title>Equinox - Zodiax</title>
+        <title>Equinox (eqx) - Zodiax</title>
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.ded33207.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.85bb2934.min.css">
       
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/palette.a0c5b2b5.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.a6bdf11c.min.css">
       
       
 
@@ -114,32 +114,38 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Equinox
+              Equinox (eqx)
             
           </span>
         </div>
       </div>
     </div>
     
-      <form class="md-header__option" data-md-component="palette">
-        
+      
+        <form class="md-header__option" data-md-component="palette">
           
-          <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+            
+            
+            
+            <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+            
+              <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3 3.19.09m3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95 2.06.05m-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31Z"/></svg>
+              </label>
+            
           
-            <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3 3.19.09m3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95 2.06.05m-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31Z"/></svg>
-            </label>
+            
+            
+            
+            <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_2">
+            
+              <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5c-.84 0-1.65.15-2.39.42L12 2M3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29L3.34 7m.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14L3.36 17M20.65 7l-1.77 3.79a7.023 7.023 0 0 0-2.38-4.15l4.15.36m-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29L20.64 17M12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44L12 22Z"/></svg>
+              </label>
+            
           
-        
-          
-          <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_2">
-          
-            <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5c-.84 0-1.65.15-2.39.42L12 2M3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29L3.34 7m.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14L3.36 17M20.65 7l-1.77 3.79a7.023 7.023 0 0 0-2.38-4.15l4.15.36m-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29L20.64 17M12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44L12 22Z"/></svg>
-            </label>
-          
-        
-      </form>
+        </form>
+      
     
     
     
@@ -299,6 +305,8 @@
         
           
         
+          
+        
       
       
         <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
@@ -345,6 +353,34 @@
               
   
   
+  
+    <li class="md-nav__item">
+      <a href="../tree/" class="md-nav__link">
+        Tree
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bayes/" class="md-nav__link">
+        Bayes
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
     
   
   
@@ -357,12 +393,12 @@
       
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
-          Equinox
+          Equinox (eqx)
           <span class="md-nav__icon md-icon"></span>
         </label>
       
       <a href="./" class="md-nav__link md-nav__link--active">
-        Equinox
+        Equinox (eqx)
       </a>
       
         
@@ -381,22 +417,29 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#zodiax.equinox" class="md-nav__link">
-    zodiax.equinox
+  <a href="#zodiax.eqx" class="md-nav__link">
+    zodiax.eqx
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#zodiax.equinox.filter_grad" class="md-nav__link">
+  <a href="#zodiax.eqx.filter_grad" class="md-nav__link">
     filter_grad()
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#zodiax.equinox.filter_value_and_grad" class="md-nav__link">
+  <a href="#zodiax.eqx.filter_value_and_grad" class="md-nav__link">
     filter_value_and_grad()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#zodiax.eqx.partition" class="md-nav__link">
+    partition()
   </a>
   
 </li>
@@ -418,20 +461,6 @@
     <li class="md-nav__item">
       <a href="../optimisation/" class="md-nav__link">
         Optimisation
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../tree/" class="md-nav__link">
-        Tree
       </a>
     </li>
   
@@ -529,8 +558,10 @@
 </code></pre></div>
 <p>Submodules in Equinox are also raised into the Zodiax namespace through the <code>zodiax.equinox</code> submodule. This is how you would import the <code>nn</code> submodule from either Equinox or Zodiax:</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">equinox</span> <span class="kn">import</span> <span class="n">nn</span>
-<span class="kn">from</span> <span class="nn">zodiax.equinox</span> <span class="kn">import</span> <span class="n">nn</span>
+<span class="kn">from</span> <span class="nn">zodiax.eqx</span> <span class="kn">import</span> <span class="n">nn</span>
 </code></pre></div>
+<hr />
+<p>There are three methods from Equinox that are overwitten to give them a path based interface. These are <code>filter_grad</code>, <code>filter_value_and_grad</code>, and <code>partition</code>. Their usage can be seen in the 'usage' tutorials.</p>
 <div class="admonition info">
 <p class="admonition-title">Full API</p>
 <div class="mkdocstrings">
@@ -538,7 +569,7 @@
 <div class="doc doc-object doc-module">
 
 
-<a id="zodiax.equinox"></a>
+<a id="zodiax.eqx"></a>
   <div class="doc doc-contents first">
 
   
@@ -557,15 +588,15 @@
 
 
 
-<h2 id="zodiax.equinox.filter_grad" class="doc doc-heading">
-<code class="highlight language-python"><span class="n">filter_grad</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="o">*</span><span class="n">filter_args</span><span class="p">,</span> <span class="o">**</span><span class="n">filter_kwargs</span><span class="p">)</span></code>
+<h2 id="zodiax.eqx.filter_grad" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">filter_grad</span><span class="p">(</span><span class="n">parameters</span><span class="p">,</span> <span class="o">*</span><span class="n">filter_args</span><span class="p">,</span> <span class="o">**</span><span class="n">filter_kwargs</span><span class="p">)</span></code>
 
-<a href="#zodiax.equinox.filter_grad" class="headerlink" title="Permanent link">¤</a></h2>
+<a href="#zodiax.eqx.filter_grad" class="headerlink" title="Permanent link">¤</a></h2>
 
 
   <div class="doc doc-contents ">
   
-      <p>Applies the equinox filter_grad function to the input params. The 
+      <p>Applies the equinox filter_grad function to the input parameters. The 
 corresponding equinox docs are found <a href="https://docs.kidger.site/
 equinox/api/filtering/transformations/">here</a></p>
 
@@ -581,13 +612,12 @@ equinox/api/filtering/transformations/">here</a></p>
     </thead>
     <tbody>
         <tr>
-          <td><code>params</code></td>
+          <td><code>parameters</code></td>
           <td>
-                <code><span title="typing.Union">Union</span>[<span title="jaxtyping.PyTree">PyTree</span>, list, str]</code>
+                <code><span title="typing.Union">Union</span>[str, <span title="typing.List">List</span>[str]]</code>
           </td>
-          <td><p>The params to filter. Can either be a single string path, a list of 
-paths, or a pytree with binary leaves denoting which argument to take
-gradients with respect to.</p></td>
+          <td><p>The parameters to filter. Can either be a single string path or a list
+of paths.</p></td>
           <td>
               <em>required</em>
           </td>
@@ -634,8 +664,26 @@ gradients with respect to.</p></td>
   </table>
 
       <details class="quote">
-        <summary>Source code in <code>zodiax/equinox.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">33</span>
+        <summary>Source code in <code>zodiax/eqx.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
 <span class="normal">34</span>
 <span class="normal">35</span>
 <span class="normal">36</span>
@@ -658,37 +706,21 @@ gradients with respect to.</p></td>
 <span class="normal">53</span>
 <span class="normal">54</span>
 <span class="normal">55</span>
-<span class="normal">56</span>
-<span class="normal">57</span>
-<span class="normal">58</span>
-<span class="normal">59</span>
-<span class="normal">60</span>
-<span class="normal">61</span>
-<span class="normal">62</span>
-<span class="normal">63</span>
-<span class="normal">64</span>
-<span class="normal">65</span>
-<span class="normal">66</span>
-<span class="normal">67</span>
-<span class="normal">68</span>
-<span class="normal">69</span>
-<span class="normal">70</span>
-<span class="normal">71</span>
-<span class="normal">72</span>
-<span class="normal">73</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">filter_grad</span><span class="p">(</span><span class="n">params</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">PyTree</span><span class="p">,</span> <span class="nb">list</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> 
-                <span class="o">*</span><span class="n">filter_args</span><span class="p">,</span> <span class="o">**</span><span class="n">filter_kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">:</span>
+<span class="normal">56</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">filter_grad</span><span class="p">(</span>
+    <span class="n">parameters</span> <span class="p">:</span> <span class="n">Params</span><span class="p">,</span> 
+    <span class="o">*</span><span class="n">filter_args</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">filter_kwargs</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Applies the equinox filter_grad function to the input params. The </span>
+<span class="sd">    Applies the equinox filter_grad function to the input parameters. The </span>
 <span class="sd">    corresponding equinox docs are found [here](https://docs.kidger.site/</span>
 <span class="sd">    equinox/api/filtering/transformations/)</span>
 
-
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    params : Union[PyTree, list, str]</span>
-<span class="sd">        The params to filter. Can either be a single string path, a list of </span>
-<span class="sd">        paths, or a pytree with binary leaves denoting which argument to take</span>
-<span class="sd">        gradients with respect to.</span>
+<span class="sd">    parameters : Union[str, List[str]]</span>
+<span class="sd">        The parameters to filter. Can either be a single string path or a list</span>
+<span class="sd">        of paths.</span>
 <span class="sd">    *filter_args : Any</span>
 <span class="sd">        The args to pass to the equinox filter_grad function.</span>
 <span class="sd">    **filter_kwargs : Any</span>
@@ -704,16 +736,16 @@ gradients with respect to.</p></td>
         <span class="nd">@wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
         <span class="k">def</span> <span class="nf">inner_wrapper</span><span class="p">(</span><span class="n">pytree</span> <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 
-            <span class="c1"># Convert params to filter spec if not already</span>
-            <span class="n">filter_spec</span> <span class="o">=</span> <span class="n">_convert_to_filter</span><span class="p">(</span><span class="n">pytree</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+            <span class="c1"># Convert parameters</span>
+            <span class="n">boolean_filter</span> <span class="o">=</span> <span class="n">zodiax</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">boolean_filter</span><span class="p">(</span><span class="n">pytree</span><span class="p">,</span> <span class="n">parameters</span><span class="p">)</span>
 
             <span class="c1"># Wrap original function</span>
             <span class="nd">@equinox</span><span class="o">.</span><span class="n">filter_grad</span><span class="p">(</span><span class="o">*</span><span class="n">filter_args</span><span class="p">,</span> <span class="o">**</span><span class="n">filter_kwargs</span><span class="p">)</span>
-            <span class="k">def</span> <span class="nf">recombine</span><span class="p">(</span><span class="n">diff</span> <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span> <span class="n">non_diff</span> <span class="p">:</span> <span class="n">PyTree</span><span class="p">):</span>
-                <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="n">combine</span><span class="p">(</span><span class="n">diff</span><span class="p">,</span> <span class="n">non_diff</span><span class="p">),</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">def</span> <span class="nf">recombine</span><span class="p">(</span><span class="n">traced</span> <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span> <span class="n">static</span> <span class="p">:</span> <span class="n">PyTree</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="n">eqx</span><span class="o">.</span><span class="n">combine</span><span class="p">(</span><span class="n">traced</span><span class="p">,</span> <span class="n">static</span><span class="p">),</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
             <span class="c1"># Return wrapped function</span>
-            <span class="k">return</span> <span class="n">recombine</span><span class="p">(</span><span class="o">*</span><span class="n">partition</span><span class="p">(</span><span class="n">pytree</span><span class="p">,</span> <span class="n">filter_spec</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">recombine</span><span class="p">(</span><span class="o">*</span><span class="n">eqx</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="n">pytree</span><span class="p">,</span> <span class="n">boolean_filter</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">inner_wrapper</span>
     <span class="k">return</span> <span class="n">wrapper</span>
 </code></pre></div></td></tr></table></div>
@@ -726,16 +758,16 @@ gradients with respect to.</p></td>
 
 
 
-<h2 id="zodiax.equinox.filter_value_and_grad" class="doc doc-heading">
-<code class="highlight language-python"><span class="n">filter_value_and_grad</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="o">*</span><span class="n">filter_args</span><span class="p">,</span> <span class="o">**</span><span class="n">filter_kwargs</span><span class="p">)</span></code>
+<h2 id="zodiax.eqx.filter_value_and_grad" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">filter_value_and_grad</span><span class="p">(</span><span class="n">parameters</span><span class="p">,</span> <span class="o">*</span><span class="n">filter_args</span><span class="p">,</span> <span class="o">**</span><span class="n">filter_kwargs</span><span class="p">)</span></code>
 
-<a href="#zodiax.equinox.filter_value_and_grad" class="headerlink" title="Permanent link">¤</a></h2>
+<a href="#zodiax.eqx.filter_value_and_grad" class="headerlink" title="Permanent link">¤</a></h2>
 
 
   <div class="doc doc-contents ">
   
-      <p>Applies the equinox filter_value_and_grad function to the input params. The 
-corresponding equinox docs are found <a href="https://docs.kidger.site/
+      <p>Applies the equinox filter_value_and_grad function to the input parameters.
+The corresponding equinox docs are found <a href="https://docs.kidger.site/
 equinox/api/filtering/transformations/">here</a></p>
 
   <p><strong>Parameters:</strong></p>
@@ -750,13 +782,12 @@ equinox/api/filtering/transformations/">here</a></p>
     </thead>
     <tbody>
         <tr>
-          <td><code>params</code></td>
+          <td><code>parameters</code></td>
           <td>
-                <code><span title="typing.Union">Union</span>[<span title="jaxtyping.PyTree">PyTree</span>, list, str]</code>
+                <code><span title="typing.Union">Union</span>[str, <span title="typing.List">List</span>[str]]</code>
           </td>
-          <td><p>The params to filter. Can either be a single string path, a list of 
-paths, or a pytree with binary leaves denoting which argument to take
-gradients with respect to.</p></td>
+          <td><p>The parameters to filter. Can either be a single string path or a list
+of paths.</p></td>
           <td>
               <em>required</em>
           </td>
@@ -803,8 +834,25 @@ gradients with respect to.</p></td>
   </table>
 
       <details class="quote">
-        <summary>Source code in <code>zodiax/equinox.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 76</span>
+        <summary>Source code in <code>zodiax/eqx.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 59</span>
+<span class="normal"> 60</span>
+<span class="normal"> 61</span>
+<span class="normal"> 62</span>
+<span class="normal"> 63</span>
+<span class="normal"> 64</span>
+<span class="normal"> 65</span>
+<span class="normal"> 66</span>
+<span class="normal"> 67</span>
+<span class="normal"> 68</span>
+<span class="normal"> 69</span>
+<span class="normal"> 70</span>
+<span class="normal"> 71</span>
+<span class="normal"> 72</span>
+<span class="normal"> 73</span>
+<span class="normal"> 74</span>
+<span class="normal"> 75</span>
+<span class="normal"> 76</span>
 <span class="normal"> 77</span>
 <span class="normal"> 78</span>
 <span class="normal"> 79</span>
@@ -828,34 +876,21 @@ gradients with respect to.</p></td>
 <span class="normal"> 97</span>
 <span class="normal"> 98</span>
 <span class="normal"> 99</span>
-<span class="normal">100</span>
-<span class="normal">101</span>
-<span class="normal">102</span>
-<span class="normal">103</span>
-<span class="normal">104</span>
-<span class="normal">105</span>
-<span class="normal">106</span>
-<span class="normal">107</span>
-<span class="normal">108</span>
-<span class="normal">109</span>
-<span class="normal">110</span>
-<span class="normal">111</span>
-<span class="normal">112</span>
-<span class="normal">113</span>
-<span class="normal">114</span>
-<span class="normal">115</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">filter_value_and_grad</span><span class="p">(</span><span class="n">params</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">PyTree</span><span class="p">,</span> <span class="nb">list</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> 
-                <span class="o">*</span><span class="n">filter_args</span><span class="p">,</span> <span class="o">**</span><span class="n">filter_kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">:</span>
+<span class="normal">100</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">filter_value_and_grad</span><span class="p">(</span>
+    <span class="n">parameters</span> <span class="p">:</span> <span class="n">Params</span><span class="p">,</span> 
+    <span class="o">*</span><span class="n">filter_args</span><span class="p">,</span> 
+    <span class="o">**</span><span class="n">filter_kwargs</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Applies the equinox filter_value_and_grad function to the input params. The </span>
-<span class="sd">    corresponding equinox docs are found [here](https://docs.kidger.site/</span>
+<span class="sd">    Applies the equinox filter_value_and_grad function to the input parameters.</span>
+<span class="sd">    The corresponding equinox docs are found [here](https://docs.kidger.site/</span>
 <span class="sd">    equinox/api/filtering/transformations/)</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    params : Union[PyTree, list, str]</span>
-<span class="sd">        The params to filter. Can either be a single string path, a list of </span>
-<span class="sd">        paths, or a pytree with binary leaves denoting which argument to take</span>
-<span class="sd">        gradients with respect to.</span>
+<span class="sd">    parameters : Union[str, List[str]]</span>
+<span class="sd">        The parameters to filter. Can either be a single string path or a list</span>
+<span class="sd">        of paths.</span>
 <span class="sd">    *filter_args : Any</span>
 <span class="sd">        The args to pass to the equinox filter_value_and_grad function.</span>
 <span class="sd">    **filter_kwargs : Any</span>
@@ -871,18 +906,191 @@ gradients with respect to.</p></td>
         <span class="nd">@wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
         <span class="k">def</span> <span class="nf">inner_wrapper</span><span class="p">(</span><span class="n">pytree</span> <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 
-            <span class="c1"># Convert params to filter spec if not already</span>
-            <span class="n">filter_spec</span> <span class="o">=</span> <span class="n">_convert_to_filter</span><span class="p">(</span><span class="n">pytree</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+            <span class="c1"># Convert parameters</span>
+            <span class="n">boolean_filter</span> <span class="o">=</span> <span class="n">zodiax</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">boolean_filter</span><span class="p">(</span><span class="n">pytree</span><span class="p">,</span> <span class="n">parameters</span><span class="p">)</span>
 
             <span class="c1"># Wrap original function</span>
             <span class="nd">@equinox</span><span class="o">.</span><span class="n">filter_value_and_grad</span><span class="p">(</span><span class="o">*</span><span class="n">filter_args</span><span class="p">,</span> <span class="o">**</span><span class="n">filter_kwargs</span><span class="p">)</span>
-            <span class="k">def</span> <span class="nf">recombine</span><span class="p">(</span><span class="n">diff</span> <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span> <span class="n">non_diff</span> <span class="p">:</span> <span class="n">PyTree</span><span class="p">):</span>
-                <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="n">combine</span><span class="p">(</span><span class="n">diff</span><span class="p">,</span> <span class="n">non_diff</span><span class="p">),</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">def</span> <span class="nf">recombine</span><span class="p">(</span><span class="n">traced</span> <span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span> <span class="n">static</span> <span class="p">:</span> <span class="n">PyTree</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="n">eqx</span><span class="o">.</span><span class="n">combine</span><span class="p">(</span><span class="n">traced</span><span class="p">,</span> <span class="n">static</span><span class="p">),</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
             <span class="c1"># Return wrapped function</span>
-            <span class="k">return</span> <span class="n">recombine</span><span class="p">(</span><span class="o">*</span><span class="n">partition</span><span class="p">(</span><span class="n">pytree</span><span class="p">,</span> <span class="n">filter_spec</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">recombine</span><span class="p">(</span><span class="o">*</span><span class="n">eqx</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="n">pytree</span><span class="p">,</span> <span class="n">boolean_filter</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">inner_wrapper</span>
     <span class="k">return</span> <span class="n">wrapper</span>
+</code></pre></div></td></tr></table></div>
+      </details>
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="zodiax.eqx.partition" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">partition</span><span class="p">(</span><span class="n">pytree</span><span class="p">,</span> <span class="n">parameters</span><span class="p">,</span> <span class="o">*</span><span class="n">partition_args</span><span class="p">,</span> <span class="o">**</span><span class="n">partition_kwargs</span><span class="p">)</span></code>
+
+<a href="#zodiax.eqx.partition" class="headerlink" title="Permanent link">¤</a></h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Wraps the equinox partition function to take in a list of parameters to
+partition. The corresponding equinox docs are found <a href="https://docs.
+kidger.site/equinox/api/filtering/transformations/">here</a></p>
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>pytree</code></td>
+          <td>
+                <code><span title="zodiax.eqx.Base">Base</span>()</code>
+          </td>
+          <td><p>The pytree to partition.</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>parameters</code></td>
+          <td>
+                <code><span title="typing.Union">Union</span>[str, <span title="typing.List">List</span>[str]]</code>
+          </td>
+          <td><p>The parameters to partition. Can either be a single string path or a
+list of paths.</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>*partition_args</code></td>
+          <td>
+                <code>Any</code>
+          </td>
+          <td><p>The args to pass to the equinox partition function.</p></td>
+          <td>
+                <code>()</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>**partition_kwargs</code></td>
+          <td>
+                <code>Any</code>
+          </td>
+          <td><p>The kwargs to pass to the equinox partition function.</p></td>
+          <td>
+                <code>{}</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+  <p><strong>Returns:</strong></p>
+  <table>
+    <thead>
+      <tr>
+<th>Name</th>        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+<td><code>pytree1</code></td>          <td>
+                <code><span title="zodiax.eqx.Base">Base</span>()</code>
+          </td>
+          <td><p>A matching pytree with Nones at all leaves not specified by the
+parameters.</p></td>
+        </tr>
+        <tr>
+<td><code>pytree2</code></td>          <td>
+                <code><span title="zodiax.eqx.Base">Base</span>()</code>
+          </td>
+          <td><p>A matching pytree with Nones at all leaves specified by the parameters.</p></td>
+        </tr>
+    </tbody>
+  </table>
+
+      <details class="quote">
+        <summary>Source code in <code>zodiax/eqx.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">partition</span><span class="p">(</span>
+    <span class="n">pytree</span> <span class="p">:</span> <span class="n">Base</span><span class="p">(),</span> 
+    <span class="n">parameters</span> <span class="p">:</span> <span class="n">Params</span><span class="p">,</span> 
+    <span class="o">*</span><span class="n">partition_args</span><span class="p">,</span> 
+    <span class="o">**</span><span class="n">partition_kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wraps the equinox partition function to take in a list of parameters to</span>
+<span class="sd">    partition. The corresponding equinox docs are found [here](https://docs.</span>
+<span class="sd">    kidger.site/equinox/api/filtering/transformations/)</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    pytree : Base()</span>
+<span class="sd">        The pytree to partition.</span>
+<span class="sd">    parameters : Union[str, List[str]]</span>
+<span class="sd">        The parameters to partition. Can either be a single string path or a</span>
+<span class="sd">        list of paths.</span>
+<span class="sd">    *partition_args : Any</span>
+<span class="sd">        The args to pass to the equinox partition function.</span>
+<span class="sd">    **partition_kwargs : Any</span>
+<span class="sd">        The kwargs to pass to the equinox partition function.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pytree1 : Base()</span>
+<span class="sd">        A matching pytree with Nones at all leaves not specified by the</span>
+<span class="sd">        parameters.</span>
+<span class="sd">    pytree2 : Base()</span>
+<span class="sd">        A matching pytree with Nones at all leaves specified by the parameters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">parameters</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="p">[</span><span class="n">parameters</span><span class="p">]</span>
+    <span class="n">boolean_filter</span> <span class="o">=</span> <span class="n">zodiax</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">boolean_filter</span><span class="p">(</span><span class="n">pytree</span><span class="p">,</span> <span class="n">parameters</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">equinox</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="n">pytree</span><span class="p">,</span> <span class="n">boolean_filter</span><span class="p">,</span> <span class="o">*</span><span class="n">partition_args</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">partition_kwargs</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
       </details>
   </div>
@@ -895,9 +1103,10 @@ gradients with respect to.</p></td>
 
   </div>
 
-</div><h2 data-role="module" id="zodiax.equinox"><a class="headerlink" href="#zodiax.equinox" title="Permanent link">¤</a></h2>
-<h2 class="doc doc-heading" data-role="function" id="zodiax.equinox.filter_grad"><a class="headerlink" href="#zodiax.equinox.filter_grad" title="Permanent link">¤</a></h2>
-<h2 class="doc doc-heading" data-role="function" id="zodiax.equinox.filter_value_and_grad"><a class="headerlink" href="#zodiax.equinox.filter_value_and_grad" title="Permanent link">¤</a></h2>
+</div><h2 data-role="module" id="zodiax.eqx"><a class="headerlink" href="#zodiax.eqx" title="Permanent link">¤</a></h2>
+<h2 class="doc doc-heading" data-role="function" id="zodiax.eqx.filter_grad"><a class="headerlink" href="#zodiax.eqx.filter_grad" title="Permanent link">¤</a></h2>
+<h2 class="doc doc-heading" data-role="function" id="zodiax.eqx.filter_value_and_grad"><a class="headerlink" href="#zodiax.eqx.filter_value_and_grad" title="Permanent link">¤</a></h2>
+<h2 class="doc doc-heading" data-role="function" id="zodiax.eqx.partition"><a class="headerlink" href="#zodiax.eqx.partition" title="Permanent link">¤</a></h2>
 </div>
 </div>
 
@@ -945,7 +1154,7 @@ gradients with respect to.</p></td>
     <script id="__config" type="application/json">{"base": "../../..", "features": ["navigation.expand", "navigation.path", "navigation.indexes", "navigation.top", "content.code.copy", "toc.integrate"], "search": "../../../assets/javascripts/workers/search.208ed371.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.51198bba.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.fac441b0.min.js"></script>
       
         <script src="../../../javascripts/mathjax.js"></script>
       
