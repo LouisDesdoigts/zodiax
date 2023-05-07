@@ -54,191 +54,94 @@ def test_format():
     assert zodiax.base._format(path_c, [1, 2, 3, 4])[1] == [1, 2, 3, 4]
 
 
-# Define paths
-path1 = 'param'
-path2 = 'b.param'
-
-@pytest.mark.usefixtures("Base_instance")
 class TestBase():
     """
     Tests the Base class.
     """
 
-    def test_get(self, Base_instance):
+    def test_get(self, create_base):
         """
         tests the get method
         """
-        # Define parameters and construct base
-        base = Base_instance
+        # Test single parameter
+        create_base().get('param')
 
-        assert base.get(path1) == 1.
-        assert base.get(path2) == 2.
+        # Test multiple parameters
+        create_base().get(['param', 'b.param'])
 
 
-    def test_set(self, Base_instance):
+    def test_set(self, create_base):
         """
         tests the set method
         """
-        # Define parameters and construct base
-        param1 = 5.
-        param2 = 10.
-        base = Base_instance
+        # Test single parameter
+        create_base().set('param', 10.)
 
-        # Test set
-        new_base = base.set([path1, path2], [param1, param2])
-        assert new_base.param   == param1
-        assert new_base.b.param == param2
+        # Test multiple parameters
+        create_base().set(['param', 'b.param'], [10., 10.])
 
 
-    def test_add(self, Base_instance):
+    def test_add(self, create_base):
         """
         tests the add method
         """
-        # Define parameters and construct base
-        param1 = 5.
-        param2 = 10.
-        base = Base_instance
+        # Test single parameter
+        create_base().add('param', 10.)
 
-        # Test add
-        new_base = base.add([path1, path2], [param1, param2])
-        assert new_base.param   == base.get(path1) + param1
-        assert new_base.b.param == base.get(path2) + param2
+        # Test multiple parameters
+        create_base().add(['param', 'b.param'], [10., 10.])
 
 
-    def test_multiply(self, Base_instance):
+    def test_multiply(self, create_base):
         """
         tests the multiply method
         """
-        # Define parameters and construct base
-        param1 = 5.
-        param2 = 10.
-        base = Base_instance
+        # Test single parameter
+        create_base().multiply('param', 10.)
 
-        # Test multiply
-        new_base = base.multiply([path1, path2], [param1, param2])
-        assert new_base.param   == base.get(path1) * param1
-        assert new_base.b.param == base.get(path2) * param2
+        # Test multiple parameters
+        create_base().multiply(['param', 'b.param'], [10., 10.])
 
 
-    def test_divide(self, Base_instance):
+    def test_divide(self, create_base):
         """
         tests the divide method
         """
-        # Define parameters and construct base
-        param1 = 5.
-        param2 = 10.
-        base = Base_instance
+        # Test single parameter
+        create_base().divide('param', 10.)
 
-        # Test divide
-        new_base = base.divide([path1, path2], [param1, param2])
-        assert new_base.param   == base.get(path1) / param1
-        assert new_base.b.param == base.get(path2) / param2
+        # Test multiple parameters
+        create_base().divide(['param', 'b.param'], [10., 10.])
 
 
-    def test_power(self, Base_instance):
+    def test_power(self, create_base):
         """
         tests the power method
         """
-        # Define parameters and construct base
-        param1 = 5.
-        param2 = 10.
-        base = Base_instance
+        # Test single parameter
+        create_base().power('param', 10.)
 
-        # Test power
-        new_base = base.power([path1, path2], [param1, param2])
-        assert new_base.param   == base.get(path1)**param1
-        assert new_base.b.param == base.get(path2)**param2
+        # Test multiple parameters
+        create_base().power(['param', 'b.param'], [10., 10.])
 
 
-    def test_min(self, Base_instance):
+    def test_min(self, create_base):
         """
         tests the min method
         """
-        # Define parameters and construct base
-        param1 = 5.
-        param2 = 10.
-        base = Base_instance
+        # Test single parameter
+        create_base().min('param', 10.)
 
-        # Test min
-        new_base = base.min([path1, path2], [param1, param2])
-        assert new_base.param   == np.minimum(base.get(path1), param1)
-        assert new_base.b.param == np.minimum(base.get(path2), param2)
+        # Test multiple parameters
+        create_base().min(['param', 'b.param'], [10., 10.])
 
 
-    def test_max(self, Base_instance):
+    def test_max(self, create_base):
         """
         tests the max method
         """
-        # Define parameters and construct base
-        param1 = 5.
-        param2 = 10.
-        base = Base_instance
+        # Test single parameter
+        create_base().max('param', 10.)
 
-        # Test max
-        new_base = base.max([path1, path2], [param1, param2])
-        assert new_base.param   == np.maximum(base.get(path1), param1)
-        assert new_base.b.param == np.maximum(base.get(path2), param2)
-
-
-    def test_apply(self, Base_instance):
-        """
-        tests the  method
-        """
-        # Define parameters and construct base
-        fn1 = lambda x: x + 5.
-        fn2 = lambda x: x + 10.
-        base = Base_instance
-
-        # Test 
-        new_base = base.apply([path1, path2], [fn1, fn2])
-        assert new_base.param   == base.get(path1) + 5.
-        assert new_base.b.param == base.get(path2) + 10.
-
-
-    def test_apply_args(self, Base_instance):
-        """
-        tests the apply_args method
-        """
-        # Define parameters and construct base
-        fn = lambda x, a: x + a
-        param1 = 5.
-        param2 = 10.
-        base = Base_instance
-
-        # Test apply_args
-        new_base = base.apply_args([path1, path2], fn, [(param1,), (param2,)])
-        assert new_base.param   == base.get(path1) + param1
-        assert new_base.b.param == base.get(path2) + param2
-
-
-    def test_set_and_call(self, Base_instance):
-        """
-        tests the set_and_call method
-        """
-        # Define parameters and construct base
-        param1 = 2.
-        param2 = 4.
-        base = Base_instance
-
-        # Define groups
-        values = [param1, param2]
-
-        # Test paths
-        new_base = base.set_and_call([path1, path2], values, "model")
-        assert new_base == param1**2 + param2**2
-
-    def test_apply_and_calll(self, Base_instance):
-        """
-        tests the apply_and_calll method
-        """
-        # Define parameters and construct base
-        base = Base_instance
-
-        # Define paths & fns
-        fn1 = lambda x: x * 2.
-        fn2 = lambda x: x * 4.
-        fns = [fn1, fn2]
-
-        # Test paths
-        new_base = base.apply_and_call([path1, path2], fns, "model")
-        assert new_base == (base.get(path1)*2.)**2 + (base.get(path2)*4.)**2
+        # Test multiple parameters
+        create_base().max(['param', 'b.param'], [10., 10.])

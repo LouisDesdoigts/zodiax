@@ -63,7 +63,7 @@ This class simply models a normal distribution with a mean, scale and amplitude,
     distribution = normal(10)
     ```
 
-    This is a matter of personal preference, *however* when using Optax if you try to optimise a class that has a `.__call__()` method, you can thrown unhelpful errors. Becuase of this I recommend avoiding `.__call__()` methods and instead using `.model()` method.
+    This is a matter of personal preference, *however* when using Optax if you try to optimise a class that has a `.__call__()` method, you can thrown unhelpful errors. Becuase of this I recommend avoiding `.__call__()` methods and instead using `.model()` method. Similarly, the `bayes` module of zodiax uses the `.model()` method to evaluate the likelihood of the model, so it is best to use this method to avoid confusion!
 
 Now we construct a class to store and model a set of multiple normals.
 
@@ -159,7 +159,7 @@ Since we have constructed the `__getattr__` method, these paths can be simplifie
 
 !!! tip "Path Uniqueness"
     Paths must be unique
-    Paths should not have space in them to work properly with the `__getattrr__`
+    Paths should not have spaces in them to work properly with the `__getattrr__`
 
 ### **Class Methods**
 
@@ -382,7 +382,7 @@ Easy! Lets examine the results
 
 ### Fisher Inference
 
-The differentiable nature of Zodiax objects also allows us to perform inference on the parameters of our model. The [Laplace approximation](https://en.wikipedia.org/wiki/Laplace%27s_approximation) assumes that the posterior distribution of our model parameters is a gaussian distribution centred on the maximum likelihood estimate of the parameters. Luckily we can use autodiff to calculate the hessian of the log likelihood function and invert it to get the covariance matrix of the posterior distribution!
+The differentiable nature of Zodiax objects also allows us to perform inference on the parameters of our model. The [Laplace approximation](https://en.wikipedia.org/wiki/Laplace%27s_approximation) assumes that the posterior distribution of our model parameters is a gaussian distribution centred on the maximum likelihood estimate of the parameters. Luckily we can use autodiff to calculate the hessian of the log likelihood function and invert it to get the covariance matrix of the posterior distribution! Zodiax has some inbuilt functions that can be used to calculate the covariance matrix of a model
 
 ??? info "Fisher and Covariance Matrices"
     The covariance matrix $\vec{\Sigma}$ describes the covariance between the parameters of a model. Under the Laplace approximation, we can calculate the covariance matrix using autodiff:
@@ -401,24 +401,9 @@ parameters = ['alpha.mean',      'beta.mean',
               'alpha.scale',     'beta.scale', 
               'alpha.amplitude', 'beta.amplitude']
 
-# Define Likelihod function
-def chi2(X, model, data, noise=1):
-    signal = perturb(X, model).model()
-    return np.log10(np.square((signal - data) / noise).sum())
-
-# Define Perturbation function
-def perturb(X, model):
-    for parameter, x in zip(parameters, X):
-        model = model.add(parameter, x)
-    return model
-
-# Define Covariance function
-def calculate_covariance(model, data):
-    X = np.zeros(len(parameters))
-    return -np.linalg.inv(jax.hessian(chi2)(X, model, data))
-
-# Calcuate parameter variances
-covariance_matrix = calculate_covariance(model, data)
+# Get the covariance matrix
+covariance_matrix = zdx.covariance_matrix(model, parameters,
+    zdx.chi2_loglike, data, noise=1/50)
 deviations = np.abs(np.diag(covariance_matrix))**0.5
 ```
 
@@ -481,12 +466,12 @@ def sampling_fn(data, model):
     # Sample from the posterior distribution
     with npy.plate("data", len(data)):
         model_sampler = dist.Normal(
-            model.set_and_call(paths, values, "model")
+            model.set(paths, values).model().flatten()
             )
-        return npy.sample("Sampler", model_sampler, obs=data)
+        return npy.sample("Sampler", model_sampler, obs=data.flatten())
 ```
 
-Numpyo requires a 'sampling' function where you assign priors to your parameters and then sample from the posterior distribution. The syntax for this can be seen above. We then sample the data using a 'plate' and define a likelihood which in this case is a normal. The `set_and_call` function is a Zodiax function that allows us to update the model parameters and then return call some method of that class. This is the function that ultimately allows a simple interface with Numpyro.
+Numpyo requires a 'sampling' function where you assign priors to your parameters and then sample from the posterior distribution. The syntax for this can be seen above. We then sample the data using a 'plate' and define a likelihood which in this case is a normal.
 
 We then need to define our sampler which in this case is the No U-Turn Sampler (NUTS). NUTS is a variant of Hamiltonian Monte Carlo (HMC) that is designed to be more efficient and robust, and takes advantage of gradients to allow high dimensional inference.
 

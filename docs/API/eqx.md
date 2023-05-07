@@ -18,8 +18,12 @@ Submodules in Equinox are also raised into the Zodiax namespace through the `zod
 
 ```python
 from equinox import nn
-from zodiax.equinox import nn
+from zodiax.eqx import nn
 ```
 
+---
+
+There are three methods from Equinox that are overwitten to give them a path based interface. These are `filter_grad`, `filter_value_and_grad`, and `partition`. Their usage can be seen in the 'usage' tutorials.
+
 !!! info "Full API"
-    ::: zodiax.equinox
+    ::: zodiax.eqx

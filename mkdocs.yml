@@ -94,11 +94,12 @@ nav:
 - Using Zodiax: docs/usage.md
 
 - API: 
-  - Overview:     docs/API/api.md
-  - Base:         docs/API/base.md
-  - Equinox:      docs/API/equinox.md
-  - Optimisation: docs/API/optimisation.md
-  - Tree:         docs/API/tree.md
+  - Overview:      docs/API/api.md
+  - Base:          docs/API/base.md
+  - Tree:          docs/API/tree.md
+  - Bayes:         docs/API/bayes.md
+  - Equinox (eqx): docs/API/eqx.md
+  - Optimisation:  docs/API/optimisation.md
   - Serialisation: docs/API/serialisation.md
 
 - FAQ & Troubleshooting: docs/faq.md
