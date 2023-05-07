@@ -466,12 +466,12 @@ def sampling_fn(data, model):
     # Sample from the posterior distribution
     with npy.plate("data", len(data)):
         model_sampler = dist.Normal(
-            model.set_and_call(paths, values, "model")
+            model.set(paths, values).model().flatten()
             )
-        return npy.sample("Sampler", model_sampler, obs=data)
+        return npy.sample("Sampler", model_sampler, obs=data.flatten())
 ```
 
-Numpyo requires a 'sampling' function where you assign priors to your parameters and then sample from the posterior distribution. The syntax for this can be seen above. We then sample the data using a 'plate' and define a likelihood which in this case is a normal. The `set_and_call` function is a Zodiax function that allows us to update the model parameters and then return call some method of that class. This is the function that ultimately allows a simple interface with Numpyro.
+Numpyo requires a 'sampling' function where you assign priors to your parameters and then sample from the posterior distribution. The syntax for this can be seen above. We then sample the data using a 'plate' and define a likelihood which in this case is a normal.
 
 We then need to define our sampler which in this case is the No U-Turn Sampler (NUTS). NUTS is a variant of Hamiltonian Monte Carlo (HMC) that is designed to be more efficient and robust, and takes advantage of gradients to allow high dimensional inference.
 
