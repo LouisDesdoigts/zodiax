@@ -5,8 +5,9 @@ from jax import hessian, lax, Array
 from typing import Union, List, Any
 
 
-__all__ = ["poiss_loglike", "chi2_loglike", "fisher_matrix",
-    "covariance_matrix", "self_fisher_matrix", "self_covariance_matrix"]
+__all__ = ["poiss_loglike", "chi2_loglike", "covaraince_entropy", 
+    "fisher_matrix", "covariance_matrix", "self_fisher_matrix", 
+    "self_covariance_matrix"]
 
 
 """
@@ -61,6 +62,24 @@ def chi2_loglike(pytree : Base(), data : Array, noise : float = 1) -> float:
         Log likelihood of the pytree given the data.
     """
     return jsp.stats.chi2.logpdf(pytree.model(), data, scale=noise).sum()
+
+
+def covaraince_entropy(covariance_matrix : Array) -> Array:
+    """
+    Calculates the entropy of a covariance matrix.
+
+    Parameters
+    ----------
+    covariance_matrix : Array
+        The covariance matrix to calculate the entropy of.
+    
+    Returns
+    -------
+    entropy : Array
+        The entropy of the covariance matrix.
+    """
+    sign, logdet = np.linalg.slogdet(covariance_matrix)
+    return 0.5 * (np.log(2 * np.pi * np.e) + (sign * logdet))
 
 
 def fisher_matrix(

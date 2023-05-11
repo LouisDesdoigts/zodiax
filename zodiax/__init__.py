@@ -1,5 +1,5 @@
 name = "zodiax"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 # Import as modules
 from . import base
