@@ -22,7 +22,11 @@ def find_version(*file_paths):
 with open('requirements.txt') as f:
     install_requires = f.read().splitlines()
 # 2. What dependencies required to run the unit tests? (i.e. `pytest --remote-data`)
-# tests_require = ['pytest', 'pytest-cov', 'pytest-remotedata']
+tests_require = ['pytest']
+docs_require = ['optax', 'matplotlib', 'jupyter', 'jupyterlab', 'tqdm',
+    'chainconsumer', 'numpyro', "mkdocs", "mkdocs-jupyter", 
+    "mkdocs-same-dir", "mkdocs-autorefs", "mkdocs-simple-plugin", 
+    "mkdocstrings-python", "jupyter_contrib_nbextensions"]
 
 
 setuptools.setup(
@@ -41,6 +45,10 @@ setuptools.setup(
     },
 
     install_requires=install_requires,
+    extras_require={
+        'docs': docs_require, 
+        'tests' : tests_require
+        },
 
     classifiers=[
         "Programming Language :: Python :: 3",

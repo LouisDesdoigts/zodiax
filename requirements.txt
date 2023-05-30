@@ -1,8 +1,7 @@
 # Core
+equinox
 jax
 jaxlib
 jaxtyping
-numpy
-equinox
-optax
-numpyro
+numpy # Needed for serialisation
+optax # Needed for optimisation
