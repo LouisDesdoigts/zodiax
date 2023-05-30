@@ -28,7 +28,7 @@ Zodiax is directly integrated with both Jax and Equinox, gaining all of their co
 >
 > - [Leaf Manipulation Methods](docs/usage.md): Inbuilt methods allow for easy manipulation of Pytrees mirroring the _Jax_ Array API
 
-Doccumentataion: [louisdesdoigts.github.io/zodiax/](https://louisdesdoigts.github.io/zodiax/)
+Documentation: [louisdesdoigts.github.io/zodiax/](https://louisdesdoigts.github.io/zodiax/)
 
 Contributors: [Louis Desdoigts](https://github.com/LouisDesdoigts)
 
