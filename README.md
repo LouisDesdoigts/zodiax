@@ -30,11 +30,15 @@ Zodiax is directly integrated with both Jax and Equinox, gaining all of their co
 
 Doccumentataion: [louisdesdoigts.github.io/zodiax/](https://louisdesdoigts.github.io/zodiax/)
 
-Installation: ```pip install zodiax```
-
 Contributors: [Louis Desdoigts](https://github.com/LouisDesdoigts)
 
 Requires: Python 3.8+, Jax 0.4.3+
+
+Installation: ```pip install zodiax```
+
+Docs installation: ```pip install "zodiax[docs]"```
+
+Test installation: ```pip install "zodiax[tests]"```
 
 ---
 
