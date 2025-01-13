@@ -46,7 +46,7 @@ def _get_leaf(pytree : Base, param : Params) -> Any:
     elif isinstance(pytree, (list, tuple)):
         pytree = pytree[int(key)]
     else:
-        raise ValueError(
+        raise KeyError(
             "key: {} not found in object: {}".format(key,type(pytree)))
 
     # Return param if at the end of param, else recurse
