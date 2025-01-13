@@ -244,6 +244,30 @@ class Base(Module):
         leaves_fn = lambda pytree: _get_leaves(pytree, new_parameters)
         return tree_at(leaves_fn, self, new_values,
                       is_leaf = lambda leaf: leaf is None)
+    
+    
+    def update(self       : Base,
+               dict       : dict) -> Base:
+        """
+        Calls the set method to update the leaves specified by the keys
+        of the dictionary with the values of the dictionary.
+
+        Parameters
+        ----------
+        dict : dict
+            The dictionary of parameters and values to update the leaves with.
+
+        Returns
+        -------
+        pytree : Base
+            The pytree with updated paramaters.
+        """
+        
+        # Grabbing the parameters and values from the dictionary
+        parameters, values = list(dict.keys()), list(dict.values())
+
+        # Calling the set method
+        return self.set(parameters, values)
 
 
     def add(self       : Base,
