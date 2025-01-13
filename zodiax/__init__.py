@@ -8,13 +8,6 @@ from . import (
     bayes,
 )
 
-# Import core functions from modules
-from .base import *
-from .tree import *
-from .optimisation import *
-from .eqx import *
-from .bayes import *
-
 name = "zodiax"
 __version__ = "0.4.2"
 
