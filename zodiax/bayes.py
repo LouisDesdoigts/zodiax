@@ -5,9 +5,15 @@ from jax import hessian, lax, Array
 from typing import Union, List, Any
 
 
-__all__ = ["poiss_loglike", "chi2_loglike", "covaraince_entropy", 
-    "fisher_matrix", "covariance_matrix", "self_fisher_matrix", 
-    "self_covariance_matrix"]
+__all__ = [
+    "poiss_loglike",
+    "chi2_loglike",
+    "covaraince_entropy",
+    "fisher_matrix",
+    "covariance_matrix",
+    "self_fisher_matrix",
+    "self_covariance_matrix",
+]
 
 
 """
@@ -18,11 +24,14 @@ TODO: Allow *args and **kwargs to be passed to pytree.model()
 """
 
 
-Base = lambda: zodiax.base.Base
+def Base():
+    return zodiax.base.Base
+
+
 Params = Union[str, List[str]]
 
 
-def poiss_loglike(pytree : Base(), data : Array) -> float:
+def poiss_loglike(pytree: Base(), data: Array) -> float:
     """
     Poissonian log likelihood of the pytree given the data. Assumes the pytree
     has a .model() function.
@@ -33,7 +42,7 @@ def poiss_loglike(pytree : Base(), data : Array) -> float:
         Pytree with a .model() function.
     data : Array
         Data to compare the model to.
-    
+
     Returns
     -------
     log_likelihood : Array
@@ -42,7 +51,7 @@ def poiss_loglike(pytree : Base(), data : Array) -> float:
     return jsp.stats.poisson.logpmf(pytree.model(), data).sum()
 
 
-def chi2_loglike(pytree : Base(), data : Array, noise : float = 1) -> float:
+def chi2_loglike(pytree: Base(), data: Array, noise: float = 1) -> float:
     """
     Chi2 log likelihood of the pytree given the data. Assumes the pytree has a
     .model() function.
@@ -55,7 +64,7 @@ def chi2_loglike(pytree : Base(), data : Array, noise : float = 1) -> float:
         Data to compare the model to.
     noise : float = 1
         The 'scale' parameter representing the noise in the data.
-    
+
     Returns
     -------
     log_likelihood : Array
@@ -64,7 +73,7 @@ def chi2_loglike(pytree : Base(), data : Array, noise : float = 1) -> float:
     return jsp.stats.chi2.logpdf(pytree.model(), data, scale=noise).sum()
 
 
-def covaraince_entropy(covariance_matrix : Array) -> Array:
+def covaraince_entropy(covariance_matrix: Array) -> Array:
     """
     Calculates the entropy of a covariance matrix.
 
@@ -72,7 +81,7 @@ def covaraince_entropy(covariance_matrix : Array) -> Array:
     ----------
     covariance_matrix : Array
         The covariance matrix to calculate the entropy of.
-    
+
     Returns
     -------
     entropy : Array
@@ -83,13 +92,13 @@ def covaraince_entropy(covariance_matrix : Array) -> Array:
 
 
 def fisher_matrix(
-        pytree           : Base(), 
-        parameters       : Params,
-        loglike_fn       : callable,
-        *loglike_args    : Any,
-        shape_dict       : dict = {},
-        **loglike_kwargs : Any,
-        ) -> Array:
+    pytree: Base(),
+    parameters: Params,
+    loglike_fn: callable,
+    *loglike_args: Any,
+    shape_dict: dict = {},
+    **loglike_kwargs: Any,
+) -> Array:
     """
     Calculates the Fisher information matrix of the pytree parameters. The
     `shaped_dict` parameter is used to specify the shape of the differentiated
@@ -113,7 +122,7 @@ def fisher_matrix(
         specific parameters.
     **loglike_kwargs : Any
         The kwargs to pass to the log likelihood function.
-    
+
     Returns
     -------
     fisher_matrix : Array
@@ -129,17 +138,18 @@ def fisher_matrix(
     def calc_fim(X):
         parametric_pytree = _perturb(X, pytree, parameters, shapes, lengths)
         return loglike_fn(parametric_pytree, *loglike_args, **loglike_kwargs)
+
     return calc_fim(X)
 
 
 def covariance_matrix(
-        pytree           : Base(), 
-        parameters       : Params,
-        loglike_fn       : callable,
-        *loglike_args    : Any,
-        shape_dict       : dict = {},
-        **loglike_kwargs : Any
-        ) -> Array:
+    pytree: Base(),
+    parameters: Params,
+    loglike_fn: callable,
+    *loglike_args: Any,
+    shape_dict: dict = {},
+    **loglike_kwargs: Any,
+) -> Array:
     """
     Calculates the covariance matrix of the pytree parameters. The
     `shaped_dict` parameter is used to specify the shape of the differentiated
@@ -163,24 +173,32 @@ def covariance_matrix(
         specific parameters.
     **loglike_kwargs : Any
         The kwargs to pass to the log likelihood function.
-    
+
     Returns
     -------
     covariance_matrix : Array
         The covariance matrix of the pytree parameters.
     """
-    return -np.linalg.inv(fisher_matrix(pytree, parameters, loglike_fn, 
-        *loglike_args, shape_dict=shape_dict, **loglike_kwargs))
+    return -np.linalg.inv(
+        fisher_matrix(
+            pytree,
+            parameters,
+            loglike_fn,
+            *loglike_args,
+            shape_dict=shape_dict,
+            **loglike_kwargs,
+        )
+    )
 
 
 def self_fisher_matrix(
-        pytree           : Base(), 
-        parameters       : Params, 
-        loglike_fn       : callable,
-        *loglike_args    : Any,
-        shape_dict       : dict = {},
-        **loglike_kwargs : Any
-        ) -> Array:
+    pytree: Base(),
+    parameters: Params,
+    loglike_fn: callable,
+    *loglike_args: Any,
+    shape_dict: dict = {},
+    **loglike_kwargs: Any,
+) -> Array:
     """
     Calculates the Fisher information matrix of the pytree parameters with
     respect to itself. This can be used to optimise the fisher information of
@@ -207,27 +225,33 @@ def self_fisher_matrix(
         specific parameters.
     **loglike_kwargs : Any
         The kwargs to pass to the log likelihood function.
-    
+
     Returns
     -------
     fisher_matrix : Array
         The Fisher information matrix of the pytree parameters.
     """
     # Build X vec and get data
-    data = pytree.model()
+    pytree.model()
     loglike_args = [pytree.model()] + list(loglike_args)
-    return fisher_matrix(pytree, parameters, loglike_fn, *loglike_args, 
-        shape_dict=shape_dict, **loglike_kwargs)
+    return fisher_matrix(
+        pytree,
+        parameters,
+        loglike_fn,
+        *loglike_args,
+        shape_dict=shape_dict,
+        **loglike_kwargs,
+    )
 
 
 def self_covariance_matrix(
-        pytree           : Base(), 
-        parameters       : Params, 
-        loglike_fn       : callable,
-        *loglike_args    : Any,
-        shape_dict       : dict = {},
-        **loglike_kwargs : Any
-        ) -> Array:
+    pytree: Base(),
+    parameters: Params,
+    loglike_fn: callable,
+    *loglike_args: Any,
+    shape_dict: dict = {},
+    **loglike_kwargs: Any,
+) -> Array:
     """
     Calculates the covariance matrix of the pytree parameters with respect to
     itself. This can be used to optimise the fisher information of the pytree
@@ -254,25 +278,27 @@ def self_covariance_matrix(
         specific parameters.
     **loglike_kwargs : Any
         The kwargs to pass to the log likelihood function.
-    
+
     Returns
     -------
     covariance_matrix : Array
         The covariance matrix of the pytree parameters.
     """
-    data = pytree.model()
+    pytree.model()
     loglike_args = [pytree.model()] + list(loglike_args)
-    return covariance_matrix(pytree, parameters, loglike_fn, *loglike_args, 
-        shape_dict=shape_dict, **loglike_kwargs)
+    return covariance_matrix(
+        pytree,
+        parameters,
+        loglike_fn,
+        *loglike_args,
+        shape_dict=shape_dict,
+        **loglike_kwargs,
+    )
 
 
 def _perturb(
-        X          : Array, 
-        pytree     : Base(), 
-        parameters : Params, 
-        shapes     : list, 
-        lengths    : list
-        ) -> Base():
+    X: Array, pytree: Base(), parameters: Params, shapes: list, lengths: list
+) -> Base():
     """
     Perturbs the pytree parameters by the values in X, automatically setting
     up the correct sizes based on each parameter.
@@ -289,7 +315,7 @@ def _perturb(
         A list of the shapes of the parameters.
     lengths : list
         A list of the lengths of the parameters.
-    
+
     Returns
     -------
     pytree : Base
@@ -302,16 +328,16 @@ def _perturb(
     indexes = range(len(parameters))
     for i, param, shape, length in zip(indexes, parameters, shapes, lengths):
         if length == 1:
-            xs.append(X[i+n])
+            xs.append(X[i + n])
         else:
-            xs.append(lax.dynamic_slice(X, (i+n,), (length,)).reshape(shape))
+            xs.append(lax.dynamic_slice(X, (i + n,), (length,)).reshape(shape))
             n += length
     return pytree.add(parameters, xs)
 
 
 # Functions for calculating lengths and shapes for 'dynamically' generated X
 # Vectors for the hessian calculation.
-def _lengths_to_N(lengths : list, N : int = 0) -> int:
+def _lengths_to_N(lengths: list, N: int = 0) -> int:
     """
     Converts an list of shapes into a single length.
 
@@ -327,7 +353,7 @@ def _lengths_to_N(lengths : list, N : int = 0) -> int:
     return _lengths_to_N(lengths[1:], N=lengths[0] + N)
 
 
-def _shape_to_length(shape : Union[tuple, int], length : int = 0) -> int:
+def _shape_to_length(shape: Union[tuple, int], length: int = 0) -> int:
     """
     Converts a shape into a single length.
 
@@ -347,13 +373,12 @@ def _shape_to_length(shape : Union[tuple, int], length : int = 0) -> int:
         return shape
     elif len(shape) == 1:
         return shape[0]
-    return _shape_to_length(shape[1:], length=shape[0]*length)
+    return _shape_to_length(shape[1:], length=shape[0] * length)
 
 
 def _get_shape(
-        pytree     : Base(), 
-        parameter  : str, 
-        shape_dict : dict = {}) -> Union[tuple, int]:
+    pytree: Base(), parameter: str, shape_dict: dict = {}
+) -> Union[tuple, int]:
     """
     Gets the shape of a parameter in the pytree. If the parameter is in the
     shape_dict, then the shape is taken from there. Otherwise, the shape is
@@ -368,7 +393,7 @@ def _get_shape(
     shape_dict : dict = {}
         A dictionary specifying the shape of the differentiated vector for
         specific parameters.
-    
+
     Returns
     -------
     shape : Union[tuple, int]
@@ -381,9 +406,8 @@ def _get_shape(
 
 
 def _shapes_and_lengths(
-        pytree     : Base(), 
-        parameters : Params, 
-        shape_dict : dict = {}) -> tuple:
+    pytree: Base(), parameters: Params, shape_dict: dict = {}
+) -> tuple:
     """
     Calculates the shapes and lenths of the parameters in the pytree. If the
     parameter is in the shape_dict, then the shape is taken from there.
@@ -397,7 +421,7 @@ def _shapes_and_lengths(
         A path or list of paths or list of nested paths.
     shape_dict : dict = {}
         A dictionary specifying the shape of the differentiated vector for
-    
+
     Returns
     -------
     shapes : list

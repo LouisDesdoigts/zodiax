@@ -2,26 +2,24 @@ import zodiax
 import jax.numpy as np
 import jax.tree_util as jtu
 from jax import Array
-from jaxtyping import PyTree
 from typing import Union, List, Any
-from equinox import partition, combine
 
 
-__all__ = ['boolean_filter', 'set_array']
+__all__ = ["boolean_filter", "set_array"]
 
 
-Base = lambda: zodiax.base.Base
+def Base():
+    return zodiax.base.Base
+
+
 Params = Union[str, List[str]]
 
 
 # Boolean
-def boolean_filter(
-    pytree     : Base(), 
-    parameters : Params, 
-    inverse    : bool = False) -> Base():
+def boolean_filter(pytree: Base(), parameters: Params, inverse: bool = False) -> Base():
     """
     Returns a pytree of matching structure with boolean values at the leaves.
-    Leaves specified by paths will be True, all others will be False. 
+    Leaves specified by paths will be True, all others will be False.
 
     TODO: Possibly improve by setting both true and false simultaneously.
     Maybe do this with jax keypaths?
@@ -50,15 +48,16 @@ def boolean_filter(
 
 
 # Array
-def _to_array(leaf : Any):
+def _to_array(leaf: Any):
     if not isinstance(leaf, Array):
         return np.asarray(leaf, dtype=float)
     else:
         return leaf
 
-def set_array(pytree : Base(), parameters : Params) -> Base():
+
+def set_array(pytree: Base(), parameters: Params) -> Base():
     """
-    Converts all leaves specified by parameters in the pytree to arrays to 
+    Converts all leaves specified by parameters in the pytree to arrays to
     ensure they have a .shape property for static dimensionality and size
     checks. This allows for 'dynamicly generated' array shapes from the path
     based `parameters` input. This is used for dynamically generating the
@@ -71,7 +70,7 @@ def set_array(pytree : Base(), parameters : Params) -> Base():
         The pytree to be converted.
     parameters : Params
         The leaves to be converted to arrays.
-    
+
     Returns
     -------
     pytree : Base()

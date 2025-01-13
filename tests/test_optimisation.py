@@ -1,15 +1,17 @@
 from __future__ import annotations
-from jax import config
-config.update("jax_debug_nans", True)
-from optax import adam, GradientTransformation, MultiTransformState
 import zodiax
+from optax import adam
+
+from jax import config
+
+config.update("jax_debug_nans", True)
 
 
 # Paths
 paths = [
-    'param',
-    'b.param',
-    ['param', 'b.param'],
+    "param",
+    "b.param",
+    ["param", "b.param"],
 ]
 
 # Optimisers
