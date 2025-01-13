@@ -1,13 +1,16 @@
 from __future__ import annotations
-from jax import config
-config.update("jax_debug_nans", True)
 import zodiax
 
+from jax import config
+
+config.update("jax_debug_nans", True)
+
 paths = [
-    'param',
-    'b.param',
-    ['param', 'b.param'],
+    "param",
+    "b.param",
+    ["param", "b.param"],
 ]
+
 
 def fn(pytree):
     return pytree.param * pytree.b.param
