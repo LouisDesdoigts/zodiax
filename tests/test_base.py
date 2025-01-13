@@ -81,6 +81,17 @@ class TestBase():
         create_base().set(['param', 'b.param'], [10., 10.])
 
 
+    def test_update(self, create_base):
+        """
+        tests the update method
+        """
+        # Test single parameter
+        create_base().update({'param': 10.})
+
+        # Test multiple parameters
+        create_base().update({'param': 10., 'b.param': 10.})
+
+
     def test_add(self, create_base):
         """
         tests the add method
