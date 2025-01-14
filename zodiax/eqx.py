@@ -4,7 +4,6 @@ from functools import wraps
 from jaxtyping import PyTree
 from typing import Union, Callable, List
 
-# from equinox import partition, combine
 import equinox as eqx
 from types import ModuleType
 
@@ -146,34 +145,43 @@ replaced_dict = {
 
 # Use the __all__ attribute of the external package to get a list of all
 # public functions
-external_functions = [
+external_api = [
     func_name for func_name in dir(equinox) if not func_name.startswith("_")
 ]
 
 
-# Create a dictionary of wrapper functions that simply call the corresponding
-# function from the external package
-functions = {}
-functions = []
-for func_name in external_functions:
-    param = getattr(equinox, func_name)
+# Create a dictionary of API wrappers that simply point to the
+# corresponding function/class/module from the equinox
+wrappers = {}
 
-    # Import functions in the equinox namespace and push them to zodiax namespace
-    if callable(param):
-        if func_name in replaced_dict.keys():
-            functions[func_name] = replaced_dict[func_name]
+for api_element in external_api:
+
+    # Get the object corresponding to the api_element name
+    api_obj = getattr(equinox, api_element)
+
+    # Functions and classes
+    if callable(api_obj):
+
+        # if it is rewritten in zodiax, use the rewritten version
+        if api_element in replaced_dict.keys():
+            wrappers[api_element] = replaced_dict[api_element]
+
+        # otherwise, just use the original equinox function
         else:
-            functions[func_name] = getattr(equinox, func_name)
+            wrappers[api_element] = getattr(equinox, api_element)
 
-    # If it is a module import it as a submodule
-    elif isinstance(param, ModuleType):
-        functions[func_name] = getattr(equinox, func_name)
+    # Modules
+    elif isinstance(api_obj, ModuleType):
+        wrappers[api_element] = getattr(equinox, api_element)
 
     # The rest of these should just be custom types that we dont need
     else:
         pass
 
-# Export the wrapper functions from the module
-# __all__ contains all public equinox functions where the functions
-# specified in replaced_dict are replaced by the zodiax versions
-__all__ = functions
+
+# Push the wrappers to the global namespace
+globals().update(wrappers)
+
+# Adding the equinox public API to the __all__ attribute
+# with zodiax rewrites
+__all__ = list(wrappers.keys())
