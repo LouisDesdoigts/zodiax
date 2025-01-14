@@ -1,19 +1,21 @@
 import zodiax
-import jax.numpy as np
 import jax.tree_util as jtu
 from jax import Array
 from typing import Union, List, Any
 
 
-__all__ = ['improve_jit_hash']
+__all__ = ["improve_jit_hash"]
 
 
-Base = lambda: zodiax.base.Base
+def Base():
+    return zodiax.base.Base
+
+
 Params = Union[str, List[str]]
 
 
 # Improved jit pytree
-def _float_from_0d(leaf : Any):
+def _float_from_0d(leaf: Any):
     """
     Turns a 0d array into a float for hashing under jit.
     """
@@ -22,10 +24,11 @@ def _float_from_0d(leaf : Any):
     else:
         return leaf
 
-def improve_jit_hash(pytree : Base(), parameters : Params):
+
+def improve_jit_hash(pytree: Base(), parameters: Params):
     """
     # TODO: Cast all leaves not specified by parameters to a numpy (not jax)
-    array and all 0d arrays to floats, plus any other possile non-jax types. 
+    array and all 0d arrays to floats, plus any other possile non-jax types.
     This could improve performance under jit since this apparently changes the
     jaxpr under the hood, and could potentially result in them being treated
     as static values. This is currently not used since it is not clear if it
@@ -47,7 +50,7 @@ def improve_jit_hash(pytree : Base(), parameters : Params):
         The pytree to be jitted.
     parameters : Union[List[str], str]
         The arguments to be optimised under the jit compilation.
-    
+
     Returns
     -------
     pytree : zodiax.Base
