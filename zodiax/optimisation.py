@@ -3,21 +3,24 @@ from jax.tree_util import tree_map
 from equinox import is_array, filter as eqx_filter
 from optax import adam, multi_transform, GradientTransformation
 from typing import Union, List
-from jaxtyping import PyTree
 
 
 __all__ = ["get_optimiser"]
 
 
-Base = lambda: zodiax.base.Base
+def Base():
+    return zodiax.base.Base
+
+
 Params = Union[str, List[str]]
 Optimisers = Union[GradientTransformation, list]
 
 
-def get_optimiser(pytree     : Base(),
-                  parameters : Params,
-                  optimisers : Optimisers,
-                  ) -> tuple:
+def get_optimiser(
+    pytree: Base(),
+    parameters: Params,
+    optimisers: Optimisers,
+) -> tuple:
     """
     Returns an Optax.GradientTransformion object, with the optimisers
     specified by optimisers applied to the leaves specified by parameters.
@@ -45,7 +48,7 @@ def get_optimiser(pytree     : Base(),
     # Pre-wrap single inputs into a list since optimisers have a length of 2
     if not isinstance(optimisers, list):
         optimisers = [optimisers]
-    
+
     # parameters have to default be wrapped in a list to match optimiser
     if isinstance(parameters, str):
         parameters = [parameters]
@@ -56,8 +59,7 @@ def get_optimiser(pytree     : Base(),
     param_spec = param_spec.set(parameters, groups)
 
     # Generate optimiser dictionary and Assign the null group
-    opt_dict = dict([(groups[i], optimisers[i]) \
-                        for i in range(len(groups))])
+    opt_dict = dict([(groups[i], optimisers[i]) for i in range(len(groups))])
     opt_dict["null"] = adam(0.0)
 
     # Get optimiser object and filtered optimiser
