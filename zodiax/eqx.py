@@ -151,34 +151,29 @@ external_functions = [
 ]
 
 
-# Define what function we want to overwrite
-replace = list(replaced_dict.keys())
-
-
 # Create a dictionary of wrapper functions that simply call the corresponding
 # function from the external package
-wrapper_functions = {}
-replaced_functions = []
+functions = {}
+functions = []
 for func_name in external_functions:
     param = getattr(equinox, func_name)
 
-    # Import functions in the namespace and push them to zodiax namespace
+    # Import functions in the equinox namespace and push them to zodiax namespace
     if callable(param):
-        replaced_functions.append(func_name)
         if func_name in replaced_dict.keys():
-            wrapper_functions[func_name] = replaced_dict[func_name]
+            functions[func_name] = replaced_dict[func_name]
         else:
-            wrapper_functions[func_name] = getattr(equinox, func_name)
+            functions[func_name] = getattr(equinox, func_name)
 
     # If it is a module import it as a submodule
     elif isinstance(param, ModuleType):
-        wrapper_functions[func_name] = getattr(equinox, func_name)
+        functions[func_name] = getattr(equinox, func_name)
 
     # The rest of these should just be custom types that we dont need
     else:
         pass
 
-
 # Export the wrapper functions from the module
-__all__ = replaced_functions
-globals().update(wrapper_functions)
+# __all__ contains all public equinox functions where the functions
+# specified in replaced_dict are replaced by the zodiax versions
+__all__ = functions
