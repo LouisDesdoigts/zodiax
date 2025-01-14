@@ -50,7 +50,7 @@ def test_covariance_matrix(create_base):
         )
 
 
-def test_covaraince_entropy(create_base):
+def test_covariance_entropy(create_base):
     pytree = create_base()
     data = pytree.model()
     loglike_fn = zodiax.bayes.poiss_loglike
@@ -59,7 +59,7 @@ def test_covaraince_entropy(create_base):
         cov = zodiax.bayes.covariance_matrix(
             pytree, param, loglike_fn, data, shape_dict=shape_dict
         )
-        zodiax.bayes.covaraince_entropy(cov)
+        zodiax.bayes.covariance_entropy(cov)
 
 
 def test_self_fisher_matrix(create_base):
