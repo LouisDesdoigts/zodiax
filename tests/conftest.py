@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 # from abc import ABC, abstractmethod
 import zodiax
 import pytest
@@ -8,8 +9,9 @@ class A(zodiax.base.Base):
     """
     Test subclass to test the Base methods
     """
-    param : float
-    b     : B
+
+    param: float
+    b: B
 
     def __init__(self, param, b):
         """
@@ -29,7 +31,8 @@ class B(zodiax.base.Base):
     """
     Test subclass to test the Base methods
     """
-    param : float
+
+    param: float
 
     def __init__(self, param):
         """
@@ -45,12 +48,14 @@ def create_base():
     """
     Construct a Base instance for testing
     """
+
     def _create_base(
-        param : float = 1.,
-        b     : float = 2.,
+        param: float = 1.0,
+        b: float = 2.0,
     ) -> zodiax.base.Base:
         """
         Construct a Base instance for testing
         """
         return A(param, B(b))
+
     return _create_base

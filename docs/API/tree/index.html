@@ -687,7 +687,7 @@
     <div class="doc doc-contents ">
 
         <p>Returns a pytree of matching structure with boolean values at the leaves.
-Leaves specified by paths will be True, all others will be False. </p>
+Leaves specified by paths will be True, all others will be False.</p>
 <p>TODO: Possibly improve by setting both true and false simultaneously.
 Maybe do this with jax keypaths?</p>
 
@@ -708,7 +708,7 @@ Maybe do this with jax keypaths?</p>
                 <code>pytree</code>
             </td>
             <td>
-                  <code><span title="jaxtyping.PyTree">PyTree</span></code>
+                  <code>PyTree</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -766,7 +766,7 @@ Maybe do this with jax keypaths?</p>
       <tbody>
           <tr class="doc-section-item">
 <td><code>args</code></td>            <td>
-                  <code><span title="jaxtyping.PyTree">PyTree</span></code>
+                  <code>PyTree</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -779,8 +779,7 @@ Maybe do this with jax keypaths?</p>
 
             <details class="quote">
               <summary>Source code in <code>zodiax/tree.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">18</span>
-<span class="normal">19</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">19</span>
 <span class="normal">20</span>
 <span class="normal">21</span>
 <span class="normal">22</span>
@@ -808,15 +807,10 @@ Maybe do this with jax keypaths?</p>
 <span class="normal">44</span>
 <span class="normal">45</span>
 <span class="normal">46</span>
-<span class="normal">47</span>
-<span class="normal">48</span>
-<span class="normal">49</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">boolean_filter</span><span class="p">(</span>
-    <span class="n">pytree</span>     <span class="p">:</span> <span class="n">Base</span><span class="p">(),</span> 
-    <span class="n">parameters</span> <span class="p">:</span> <span class="n">Params</span><span class="p">,</span> 
-    <span class="n">inverse</span>    <span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Base</span><span class="p">():</span>
+<span class="normal">47</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">boolean_filter</span><span class="p">(</span><span class="n">pytree</span><span class="p">:</span> <span class="n">Base</span><span class="p">(),</span> <span class="n">parameters</span><span class="p">:</span> <span class="n">Params</span><span class="p">,</span> <span class="n">inverse</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Base</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Returns a pytree of matching structure with boolean values at the leaves.</span>
-<span class="sd">    Leaves specified by paths will be True, all others will be False. </span>
+<span class="sd">    Leaves specified by paths will be True, all others will be False.</span>
 
 <span class="sd">    TODO: Possibly improve by setting both true and false simultaneously.</span>
 <span class="sd">    Maybe do this with jax keypaths?</span>
@@ -859,7 +853,7 @@ Maybe do this with jax keypaths?</p>
 
     <div class="doc doc-contents ">
 
-        <p>Converts all leaves specified by parameters in the pytree to arrays to 
+        <p>Converts all leaves specified by parameters in the pytree to arrays to
 ensure they have a .shape property for static dimensionality and size
 checks. This allows for 'dynamicly generated' array shapes from the path
 based <code>parameters</code> input. This is used for dynamically generating the
@@ -938,7 +932,8 @@ hessian.</p>
 
             <details class="quote">
               <summary>Source code in <code>zodiax/tree.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">59</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">58</span>
+<span class="normal">59</span>
 <span class="normal">60</span>
 <span class="normal">61</span>
 <span class="normal">62</span>
@@ -959,10 +954,9 @@ hessian.</p>
 <span class="normal">77</span>
 <span class="normal">78</span>
 <span class="normal">79</span>
-<span class="normal">80</span>
-<span class="normal">81</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">set_array</span><span class="p">(</span><span class="n">pytree</span> <span class="p">:</span> <span class="n">Base</span><span class="p">(),</span> <span class="n">parameters</span> <span class="p">:</span> <span class="n">Params</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Base</span><span class="p">():</span>
+<span class="normal">80</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">set_array</span><span class="p">(</span><span class="n">pytree</span><span class="p">:</span> <span class="n">Base</span><span class="p">(),</span> <span class="n">parameters</span><span class="p">:</span> <span class="n">Params</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Base</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Converts all leaves specified by parameters in the pytree to arrays to </span>
+<span class="sd">    Converts all leaves specified by parameters in the pytree to arrays to</span>
 <span class="sd">    ensure they have a .shape property for static dimensionality and size</span>
 <span class="sd">    checks. This allows for &#39;dynamicly generated&#39; array shapes from the path</span>
 <span class="sd">    based `parameters` input. This is used for dynamically generating the</span>

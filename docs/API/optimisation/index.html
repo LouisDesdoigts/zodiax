@@ -781,9 +781,7 @@ parameters, and the initialised optimisation state.</p>
 
             <details class="quote">
               <summary>Source code in <code>zodiax/optimisation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">17</span>
-<span class="normal">18</span>
-<span class="normal">19</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">19</span>
 <span class="normal">20</span>
 <span class="normal">21</span>
 <span class="normal">22</span>
@@ -832,10 +830,13 @@ parameters, and the initialised optimisation state.</p>
 <span class="normal">65</span>
 <span class="normal">66</span>
 <span class="normal">67</span>
-<span class="normal">68</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_optimiser</span><span class="p">(</span><span class="n">pytree</span>     <span class="p">:</span> <span class="n">Base</span><span class="p">(),</span>
-                  <span class="n">parameters</span> <span class="p">:</span> <span class="n">Params</span><span class="p">,</span>
-                  <span class="n">optimisers</span> <span class="p">:</span> <span class="n">Optimisers</span><span class="p">,</span>
-                  <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_optimiser</span><span class="p">(</span>
+    <span class="n">pytree</span><span class="p">:</span> <span class="n">Base</span><span class="p">(),</span>
+    <span class="n">parameters</span><span class="p">:</span> <span class="n">Params</span><span class="p">,</span>
+    <span class="n">optimisers</span><span class="p">:</span> <span class="n">Optimisers</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Returns an Optax.GradientTransformion object, with the optimisers</span>
 <span class="sd">    specified by optimisers applied to the leaves specified by parameters.</span>
@@ -874,8 +875,7 @@ parameters, and the initialised optimisation state.</p>
     <span class="n">param_spec</span> <span class="o">=</span> <span class="n">param_spec</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">parameters</span><span class="p">,</span> <span class="n">groups</span><span class="p">)</span>
 
     <span class="c1"># Generate optimiser dictionary and Assign the null group</span>
-    <span class="n">opt_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([(</span><span class="n">groups</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">optimisers</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> \
-                        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">groups</span><span class="p">))])</span>
+    <span class="n">opt_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([(</span><span class="n">groups</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">optimisers</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">groups</span><span class="p">))])</span>
     <span class="n">opt_dict</span><span class="p">[</span><span class="s2">&quot;null&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">adam</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
 
     <span class="c1"># Get optimiser object and filtered optimiser</span>

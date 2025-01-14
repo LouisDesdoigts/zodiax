@@ -761,7 +761,7 @@
 
     <div class="doc doc-contents ">
 
-        <p>Recursively iterates over the input object in order to return a dictionary 
+        <p>Recursively iterates over the input object in order to return a dictionary
 detailing the strucutre of the of the object. Each node can be either a
 conainter node or leaf node. Each node is a dictionary with the following
 structure:</p>
@@ -778,20 +778,20 @@ structure:</p>
         returned structure dictionary.
     Jax/Numpy Arrays:
         Both the array shape and dtype are stored in the 'shape' and
-        'dtype' keys respectively. </p>
+        'dtype' keys respectively.</p>
 <p>This method can be developed further to support more leaf types, since each
 individual leaf type can be made to store any arbitrarity metadata, as long
 as it can be serialised by json and used to deserialise it later.</p>
 <p>This dictionary can then be serialised using pickle and then later
-used to deserialise the object in conjunction with equinox leaf 
+used to deserialise the object in conjunction with equinox leaf
 serialise/deserialise methods.</p>
-<p>NOTE: This method is not equipped to handle <code>equinox.static_field()</code> 
+<p>NOTE: This method is not equipped to handle <code>equinox.static_field()</code>
 parameters, as they can be arbitrary data types but do not get serialised
-by the  <code>equinox.serialise_tree_leaves()</code> methods and hence require custom 
+by the  <code>equinox.serialise_tree_leaves()</code> methods and hence require custom
 serialisation via this method. Therefore this method currently does not
 handle this case correctly. This is not checked for currently so will
 silently break or result in unexpected behaviour.</p>
-<p>TODO: Serialise package versions in order to raise warnings when 
+<p>TODO: Serialise package versions in order to raise warnings when
 deserialising about inconsistent versions.</p>
 
 
@@ -900,25 +900,7 @@ for debugging.</p>
 
             <details class="quote">
               <summary>Source code in <code>zodiax/experimental/serialisation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">242</span>
-<span class="normal">243</span>
-<span class="normal">244</span>
-<span class="normal">245</span>
-<span class="normal">246</span>
-<span class="normal">247</span>
-<span class="normal">248</span>
-<span class="normal">249</span>
-<span class="normal">250</span>
-<span class="normal">251</span>
-<span class="normal">252</span>
-<span class="normal">253</span>
-<span class="normal">254</span>
-<span class="normal">255</span>
-<span class="normal">256</span>
-<span class="normal">257</span>
-<span class="normal">258</span>
-<span class="normal">259</span>
-<span class="normal">260</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">260</span>
 <span class="normal">261</span>
 <span class="normal">262</span>
 <span class="normal">263</span>
@@ -982,12 +964,28 @@ for debugging.</p>
 <span class="normal">321</span>
 <span class="normal">322</span>
 <span class="normal">323</span>
-<span class="normal">324</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">build_structure</span><span class="p">(</span><span class="n">obj</span>      <span class="p">:</span> <span class="n">Any</span><span class="p">,</span> 
-                    <span class="n">self_key</span> <span class="p">:</span> <span class="nb">str</span>  <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
-                    <span class="n">depth</span>    <span class="p">:</span> <span class="nb">int</span>  <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-                    <span class="n">_print</span>   <span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="normal">324</span>
+<span class="normal">325</span>
+<span class="normal">326</span>
+<span class="normal">327</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span>
+<span class="normal">339</span>
+<span class="normal">340</span>
+<span class="normal">341</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">build_structure</span><span class="p">(</span>
+    <span class="n">obj</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">self_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">depth</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">_print</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Recursively iterates over the input object in order to return a dictionary </span>
+<span class="sd">    Recursively iterates over the input object in order to return a dictionary</span>
 <span class="sd">    detailing the strucutre of the of the object. Each node can be either a</span>
 <span class="sd">    conainter node or leaf node. Each node is a dictionary with the following</span>
 <span class="sd">    structure:</span>
@@ -1006,24 +1004,24 @@ for debugging.</p>
 <span class="sd">            returned structure dictionary.</span>
 <span class="sd">        Jax/Numpy Arrays:</span>
 <span class="sd">            Both the array shape and dtype are stored in the &#39;shape&#39; and</span>
-<span class="sd">            &#39;dtype&#39; keys respectively. </span>
+<span class="sd">            &#39;dtype&#39; keys respectively.</span>
 
 <span class="sd">    This method can be developed further to support more leaf types, since each</span>
 <span class="sd">    individual leaf type can be made to store any arbitrarity metadata, as long</span>
 <span class="sd">    as it can be serialised by json and used to deserialise it later.</span>
 
 <span class="sd">    This dictionary can then be serialised using pickle and then later</span>
-<span class="sd">    used to deserialise the object in conjunction with equinox leaf </span>
+<span class="sd">    used to deserialise the object in conjunction with equinox leaf</span>
 <span class="sd">    serialise/deserialise methods.</span>
 
-<span class="sd">    NOTE: This method is not equipped to handle `equinox.static_field()` </span>
+<span class="sd">    NOTE: This method is not equipped to handle `equinox.static_field()`</span>
 <span class="sd">    parameters, as they can be arbitrary data types but do not get serialised</span>
-<span class="sd">    by the  `equinox.serialise_tree_leaves()` methods and hence require custom </span>
+<span class="sd">    by the  `equinox.serialise_tree_leaves()` methods and hence require custom</span>
 <span class="sd">    serialisation via this method. Therefore this method currently does not</span>
 <span class="sd">    handle this case correctly. This is not checked for currently so will</span>
 <span class="sd">    silently break or result in unexpected behaviour.</span>
 
-<span class="sd">    TODO: Serialise package versions in order to raise warnings when </span>
+<span class="sd">    TODO: Serialise package versions in order to raise warnings when</span>
 <span class="sd">    deserialising about inconsistent versions.</span>
 
 <span class="sd">    Parameters</span>
@@ -1062,7 +1060,7 @@ for debugging.</p>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">structure</span>
 
-    <span class="c1"># Base case    </span>
+    <span class="c1"># Base case</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">obj</span>
 </code></pre></div></td></tr></table></div>
@@ -1140,25 +1138,25 @@ for debugging.</p>
 
             <details class="quote">
               <summary>Source code in <code>zodiax/experimental/serialisation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">562</span>
-<span class="normal">563</span>
-<span class="normal">564</span>
-<span class="normal">565</span>
-<span class="normal">566</span>
-<span class="normal">567</span>
-<span class="normal">568</span>
-<span class="normal">569</span>
-<span class="normal">570</span>
-<span class="normal">571</span>
-<span class="normal">572</span>
-<span class="normal">573</span>
-<span class="normal">574</span>
-<span class="normal">575</span>
-<span class="normal">576</span>
-<span class="normal">577</span>
-<span class="normal">578</span>
-<span class="normal">579</span>
-<span class="normal">580</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">deserialise</span><span class="p">(</span><span class="n">path</span> <span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">591</span>
+<span class="normal">592</span>
+<span class="normal">593</span>
+<span class="normal">594</span>
+<span class="normal">595</span>
+<span class="normal">596</span>
+<span class="normal">597</span>
+<span class="normal">598</span>
+<span class="normal">599</span>
+<span class="normal">600</span>
+<span class="normal">601</span>
+<span class="normal">602</span>
+<span class="normal">603</span>
+<span class="normal">604</span>
+<span class="normal">605</span>
+<span class="normal">606</span>
+<span class="normal">607</span>
+<span class="normal">608</span>
+<span class="normal">609</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">deserialise</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Deserialises the input object at the input path.</span>
 
@@ -1172,7 +1170,7 @@ for debugging.</p>
 <span class="sd">    obj : Any</span>
 <span class="sd">        The deserialised object.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">structure</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
         <span class="n">like</span> <span class="o">=</span> <span class="n">load_structure</span><span class="p">(</span><span class="n">structure</span><span class="p">)</span>
         <span class="n">obj</span> <span class="o">=</span> <span class="n">tree_deserialise_leaves</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">like</span><span class="p">)</span>
@@ -1254,38 +1252,37 @@ for debugging.</p>
 
             <details class="quote">
               <summary>Source code in <code>zodiax/experimental/serialisation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">528</span>
-<span class="normal">529</span>
-<span class="normal">530</span>
-<span class="normal">531</span>
-<span class="normal">532</span>
-<span class="normal">533</span>
-<span class="normal">534</span>
-<span class="normal">535</span>
-<span class="normal">536</span>
-<span class="normal">537</span>
-<span class="normal">538</span>
-<span class="normal">539</span>
-<span class="normal">540</span>
-<span class="normal">541</span>
-<span class="normal">542</span>
-<span class="normal">543</span>
-<span class="normal">544</span>
-<span class="normal">545</span>
-<span class="normal">546</span>
-<span class="normal">547</span>
-<span class="normal">548</span>
-<span class="normal">549</span>
-<span class="normal">550</span>
-<span class="normal">551</span>
-<span class="normal">552</span>
-<span class="normal">553</span>
-<span class="normal">554</span>
-<span class="normal">555</span>
-<span class="normal">556</span>
-<span class="normal">557</span>
-<span class="normal">558</span>
-<span class="normal">559</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load_structure</span><span class="p">(</span><span class="n">structure</span> <span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">558</span>
+<span class="normal">559</span>
+<span class="normal">560</span>
+<span class="normal">561</span>
+<span class="normal">562</span>
+<span class="normal">563</span>
+<span class="normal">564</span>
+<span class="normal">565</span>
+<span class="normal">566</span>
+<span class="normal">567</span>
+<span class="normal">568</span>
+<span class="normal">569</span>
+<span class="normal">570</span>
+<span class="normal">571</span>
+<span class="normal">572</span>
+<span class="normal">573</span>
+<span class="normal">574</span>
+<span class="normal">575</span>
+<span class="normal">576</span>
+<span class="normal">577</span>
+<span class="normal">578</span>
+<span class="normal">579</span>
+<span class="normal">580</span>
+<span class="normal">581</span>
+<span class="normal">582</span>
+<span class="normal">583</span>
+<span class="normal">584</span>
+<span class="normal">585</span>
+<span class="normal">586</span>
+<span class="normal">587</span>
+<span class="normal">588</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load_structure</span><span class="p">(</span><span class="n">structure</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Load a structure from a dictionary to later be used in conjuction with</span>
 <span class="sd">    `eqx.tree_deserialise_leaves()`.</span>
@@ -1304,18 +1301,17 @@ for debugging.</p>
 <span class="sd">        The loaded structure.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Construct the object</span>
-    <span class="n">obj</span> <span class="o">=</span> <span class="n">_construct_class</span><span class="p">(</span><span class="n">structure</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">])</span>
+    <span class="n">obj</span> <span class="o">=</span> <span class="n">_construct_class</span><span class="p">(</span><span class="n">structure</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">])</span>
 
     <span class="c1"># Container Node</span>
-    <span class="k">if</span> <span class="n">structure</span><span class="p">[</span><span class="s1">&#39;node_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;container&#39;</span><span class="p">:</span> 
-
+    <span class="k">if</span> <span class="n">structure</span><span class="p">[</span><span class="s2">&quot;node_type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;container&quot;</span><span class="p">:</span>
         <span class="c1"># Iterarte over all parameters and update the object</span>
-        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">structure</span><span class="p">[</span><span class="s1">&#39;node&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">structure</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="n">obj</span> <span class="o">=</span> <span class="n">_load_container</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">obj</span>
 
     <span class="c1"># Leaf Node</span>
-    <span class="k">else</span><span class="p">:</span> 
+    <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">_load_leaf</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">structure</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -1336,13 +1332,13 @@ for debugging.</p>
 
         <p>Serialises the input zodiax pytree to the input path. This method works by
 creating a dictionary detailing the structure of the object to be
-serialised. This dictionary is then serialised using <code>pickle</code> and the 
+serialised. This dictionary is then serialised using <code>pickle</code> and the
 pytree leaves are serialised using <code>equinox.serialise_tree_leaves()</code>. This
-object can then be deserialised using the <code>deserialise()</code> method. </p>
+object can then be deserialised using the <code>deserialise()</code> method.</p>
 <p>This method is currently considered experimental for a number of reasons:
- - Some objects can not be gaurenteed to be deserialised correctly. 
- - User-defined classes <em>can</em> be serialised but it is up to the user to 
- import the class into the global namespace when deserialising. 
+ - Some objects can not be gaurenteed to be deserialised correctly.
+ - User-defined classes <em>can</em> be serialised but it is up to the user to
+ import the class into the global namespace when deserialising.
  - User defined functions can not be gaurenteed to be deserialised
  correctly.
  - Different versions of packages can cause issues when deserialising. This
@@ -1404,24 +1400,7 @@ when deserialising.
 
             <details class="quote">
               <summary>Source code in <code>zodiax/experimental/serialisation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">327</span>
-<span class="normal">328</span>
-<span class="normal">329</span>
-<span class="normal">330</span>
-<span class="normal">331</span>
-<span class="normal">332</span>
-<span class="normal">333</span>
-<span class="normal">334</span>
-<span class="normal">335</span>
-<span class="normal">336</span>
-<span class="normal">337</span>
-<span class="normal">338</span>
-<span class="normal">339</span>
-<span class="normal">340</span>
-<span class="normal">341</span>
-<span class="normal">342</span>
-<span class="normal">343</span>
-<span class="normal">344</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">344</span>
 <span class="normal">345</span>
 <span class="normal">346</span>
 <span class="normal">347</span>
@@ -1450,18 +1429,35 @@ when deserialising.
 <span class="normal">370</span>
 <span class="normal">371</span>
 <span class="normal">372</span>
-<span class="normal">373</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">serialise</span><span class="p">(</span><span class="n">path</span> <span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">obj</span> <span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">373</span>
+<span class="normal">374</span>
+<span class="normal">375</span>
+<span class="normal">376</span>
+<span class="normal">377</span>
+<span class="normal">378</span>
+<span class="normal">379</span>
+<span class="normal">380</span>
+<span class="normal">381</span>
+<span class="normal">382</span>
+<span class="normal">383</span>
+<span class="normal">384</span>
+<span class="normal">385</span>
+<span class="normal">386</span>
+<span class="normal">387</span>
+<span class="normal">388</span>
+<span class="normal">389</span>
+<span class="normal">390</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">serialise</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">obj</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Serialises the input zodiax pytree to the input path. This method works by</span>
 <span class="sd">    creating a dictionary detailing the structure of the object to be</span>
-<span class="sd">    serialised. This dictionary is then serialised using `pickle` and the </span>
+<span class="sd">    serialised. This dictionary is then serialised using `pickle` and the</span>
 <span class="sd">    pytree leaves are serialised using `equinox.serialise_tree_leaves()`. This</span>
-<span class="sd">    object can then be deserialised using the `deserialise()` method. </span>
+<span class="sd">    object can then be deserialised using the `deserialise()` method.</span>
 
 <span class="sd">    This method is currently considered experimental for a number of reasons:</span>
-<span class="sd">     - Some objects can not be gaurenteed to be deserialised correctly. </span>
-<span class="sd">     - User-defined classes _can_ be serialised but it is up to the user to </span>
-<span class="sd">     import the class into the global namespace when deserialising. </span>
+<span class="sd">     - Some objects can not be gaurenteed to be deserialised correctly.</span>
+<span class="sd">     - User-defined classes _can_ be serialised but it is up to the user to</span>
+<span class="sd">     import the class into the global namespace when deserialising.</span>
 <span class="sd">     - User defined functions can not be gaurenteed to be deserialised</span>
 <span class="sd">     correctly.</span>
 <span class="sd">     - Different versions of packages can cause issues when deserialising. This</span>
@@ -1483,18 +1479,18 @@ when deserialising.
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Check path type</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">)):</span>
-        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;path must be a string or Path, not </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;path must be a string or Path, not </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="c1"># Convert to string in case of Path for adding .zdx extension</span>
         <span class="n">path</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 
     <span class="c1"># Add default .zdx extension</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">))</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="n">path</span> <span class="o">+=</span> <span class="s1">&#39;.zdx&#39;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">))</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">path</span> <span class="o">+=</span> <span class="s2">&quot;.zdx&quot;</span>
 
     <span class="c1"># Serialise</span>
     <span class="n">structure</span> <span class="o">=</span> <span class="n">build_structure</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">structure</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
         <span class="n">tree_serialise_leaves</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>

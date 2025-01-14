@@ -1,9 +1,7 @@
 from __future__ import annotations
-import zodiax
 import jax.numpy as np
 from equinox import tree_at, Module
-from typing import Union, Any, Callable, List
-from jaxtyping import Array
+from typing import Union, Any, List
 
 
 __all__ = ["Base"]
@@ -12,7 +10,7 @@ __all__ = ["Base"]
 Params = Union[str, List[str]]
 
 
-def _get_leaf(pytree : Base, param : Params) -> Any:
+def _get_leaf(pytree: Base, param: Params) -> Any:
     """
     A hidden class desinged to recurse down a pytree following the param,
     returning the leaf at the end of the param.
@@ -46,14 +44,13 @@ def _get_leaf(pytree : Base, param : Params) -> Any:
     elif isinstance(pytree, (list, tuple)):
         pytree = pytree[int(key)]
     else:
-        raise KeyError(
-            "key: {} not found in object: {}".format(key,type(pytree)))
+        raise KeyError("key: {} not found in object: {}".format(key, type(pytree)))
 
     # Return param if at the end of param, else recurse
     return pytree if len(param) == 1 else _get_leaf(pytree, param[1:])
 
 
-def _get_leaves(pytree : Base, parameters : list) -> list:
+def _get_leaves(pytree: Base, parameters: list) -> list:
     """
     Returns a list of leaves specified by the parameters.
 
@@ -73,7 +70,7 @@ def _get_leaves(pytree : Base, parameters : list) -> list:
     return [_get_leaf(pytree, param) for param in parameters]
 
 
-def _unwrap(parameters : Params, values_in : list = None) -> list:
+def _unwrap(parameters: Params, values_in: list = None) -> list:
     """
     Unwraps the provided parameters in to the correct list-based format for the
     _get_leaves and _get_leaf methods, returning a single dimensional list
@@ -102,19 +99,19 @@ def _unwrap(parameters : Params, values_in : list = None) -> list:
         # Repeat values to match length of parameters
         if len(values) == 1:
             values = values * len(parameters)
-        
+
         # Ensure correct length
         if len(values) != len(parameters):
             raise ValueError(
-                "The number of values must match the number of parameters.")
+                "The number of values must match the number of parameters."
+            )
 
         # Iterate over parameters and values
         for param, value in zip(parameters, values):
-
             # Recurse and add in the case of list inputs
             if isinstance(param, list):
                 new_parameters, new_values = _unwrap(param, value)
-                parameters_out  += new_parameters
+                parameters_out += new_parameters
                 values_out += new_values
 
             # Params must already be absolute
@@ -127,7 +124,6 @@ def _unwrap(parameters : Params, values_in : list = None) -> list:
     else:
         # Iterate over parameters
         for param in parameters:
-
             # Recurse and add in the case of list inputs
             if isinstance(param, list):
                 new_parameters = _unwrap(param)
@@ -139,7 +135,7 @@ def _unwrap(parameters : Params, values_in : list = None) -> list:
         return parameters_out
 
 
-def _format(parameters : Params, values : list = None) -> list:
+def _format(parameters: Params, values: list = None) -> list:
     """
     Formats the provided parameters in to the correct list-based format for the
     _get_leaves and _get_leaf methods, returning a single dimensional list
@@ -159,28 +155,32 @@ def _format(parameters : Params, values : list = None) -> list:
     """
     # Nested/multiple inputs
     if isinstance(parameters, list):
-
         # If there is nesting, ensure correct dis
-        if len(parameters) > 1 and values is not None \
-            and True in [isinstance(p, list) for p in parameters]:
-            assert isinstance(values, list) and len(values) == len(parameters), \
-            ("If a list of parameters is provided, the list of values must be "
-                "of equal length.")
+        if (
+            len(parameters) > 1
+            and values is not None
+            and True in [isinstance(p, list) for p in parameters]
+        ):
+            assert isinstance(values, list) and len(values) == len(parameters), (
+                "If a list of parameters is provided, the list of values must be "
+                "of equal length."
+            )
 
         # Its a list - iterate and unbind all the keys
         if values is not None:
             flat_parameters, new_values = _unwrap(parameters, values)
         else:
             flat_parameters = _unwrap(parameters)
-        
+
         # Turn into seperate strings
-        new_parameters = [param.split('.') if '.' in param else [param] \
-                        for param in flat_parameters]
+        new_parameters = [
+            param.split(".") if "." in param else [param] for param in flat_parameters
+        ]
 
     # Un-nested/singular input
     else:
         # Turn into seperate strings
-        new_parameters = [parameters.split('.') if '.' in parameters else [parameters]]
+        new_parameters = [parameters.split(".") if "." in parameters else [parameters]]
         new_values = [values]
 
     # Return
@@ -196,7 +196,8 @@ class Base(Module):
     for working with pytrees by adding a series of methods used to interface
     with the leaves of the pytree using parameters.
     """
-    def get(self : Base, parameters : Params) -> Any:
+
+    def get(self: Base, parameters: Params) -> Any:
         """
         Get the leaf specified by param.
 
@@ -214,10 +215,7 @@ class Base(Module):
         values = _get_leaves(self, new_parameters)
         return values[0] if len(new_parameters) == 1 else values
 
-
-    def set(self       : Base,
-            parameters : Params,
-            values     : Union[List[Any], Any]) -> Base:
+    def set(self: Base, parameters: Params, values: Union[List[Any], Any]) -> Base:
         """
         Set the leaves specified by parameters with values.
 
@@ -241,14 +239,34 @@ class Base(Module):
         new_parameters, new_values = _format(parameters, values)
 
         # Define 'where' function and update pytree
-        leaves_fn = lambda pytree: _get_leaves(pytree, new_parameters)
-        return tree_at(leaves_fn, self, new_values,
-                      is_leaf = lambda leaf: leaf is None)
+        def leaves_fn(pytree):
+            return _get_leaves(pytree, new_parameters)
 
+        return tree_at(leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None)
 
-    def add(self       : Base,
-            parameters : Params,
-            values     : Union[List[Any], Any]) -> Base:
+    def update(self: Base, dict: dict) -> Base:
+        """
+        Calls the set method to update the leaves specified by the keys
+        of the dictionary with the values of the dictionary.
+
+        Parameters
+        ----------
+        dict : dict
+            The dictionary of parameters and values to update the leaves with.
+
+        Returns
+        -------
+        pytree : Base
+            The pytree with updated paramaters.
+        """
+
+        # Grabbing the parameters and values from the dictionary
+        parameters, values = list(dict.keys()), list(dict.values())
+
+        # Calling the set method
+        return self.set(parameters, values)
+
+    def add(self: Base, parameters: Params, values: Union[List[Any], Any]) -> Base:
         """
         Add to the the leaves specified by parameters with values.
 
@@ -265,18 +283,18 @@ class Base(Module):
             The pytree with values added to leaves specified by parameters.
         """
         new_parameters, new_values = _format(parameters, values)
-        new_values = [leaf + value for value, leaf in zip(new_values, \
-                                    _get_leaves(self, new_parameters))]
+        new_values = [
+            leaf + value
+            for value, leaf in zip(new_values, _get_leaves(self, new_parameters))
+        ]
 
         # Define 'where' function and update pytree
-        leaves_fn = lambda pytree: _get_leaves(pytree, new_parameters)
-        return tree_at(leaves_fn, self, new_values,
-                      is_leaf = lambda leaf: leaf is None)
+        def leaves_fn(pytree):
+            return _get_leaves(pytree, new_parameters)
 
+        return tree_at(leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None)
 
-    def multiply(self       : Base,
-                 parameters : Params,
-                 values     : Union[List[Any], Any]) -> Base:
+    def multiply(self: Base, parameters: Params, values: Union[List[Any], Any]) -> Base:
         """
         Multiplies the the leaves specified by parameters with values.
 
@@ -293,18 +311,18 @@ class Base(Module):
             The pytree with values multiplied by leaves specified by parameters.
         """
         new_parameters, new_values = _format(parameters, values)
-        new_values = [leaf * value for value, leaf in zip(new_values, \
-                                    _get_leaves(self, new_parameters))]
+        new_values = [
+            leaf * value
+            for value, leaf in zip(new_values, _get_leaves(self, new_parameters))
+        ]
 
         # Define 'where' function and update pytree
-        leaves_fn = lambda pytree: _get_leaves(pytree, new_parameters)
-        return tree_at(leaves_fn, self, new_values,
-                      is_leaf = lambda leaf: leaf is None)
+        def leaves_fn(pytree):
+            return _get_leaves(pytree, new_parameters)
 
+        return tree_at(leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None)
 
-    def divide(self       : Base,
-               parameters : Params,
-               values     : Union[List[Any], Any]) -> Base:
+    def divide(self: Base, parameters: Params, values: Union[List[Any], Any]) -> Base:
         """
         Divides the the leaves specified by parameters with values.
 
@@ -321,18 +339,18 @@ class Base(Module):
             The pytree with values divided by leaves specified by parameters.
         """
         new_parameters, new_values = _format(parameters, values)
-        new_values = [leaf / value for value, leaf in zip(new_values, \
-                                    _get_leaves(self, new_parameters))]
+        new_values = [
+            leaf / value
+            for value, leaf in zip(new_values, _get_leaves(self, new_parameters))
+        ]
 
         # Define 'where' function and update pytree
-        leaves_fn = lambda pytree: _get_leaves(pytree, new_parameters)
-        return tree_at(leaves_fn, self, new_values,
-                      is_leaf = lambda leaf: leaf is None)
+        def leaves_fn(pytree):
+            return _get_leaves(pytree, new_parameters)
 
+        return tree_at(leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None)
 
-    def power(self       : Base,
-              parameters : Params,
-              values     : Union[List[Any], Any]) -> Base:
+    def power(self: Base, parameters: Params, values: Union[List[Any], Any]) -> Base:
         """
         Raises th leaves specified by parameters to the power of values.
 
@@ -351,18 +369,18 @@ class Base(Module):
             of values.
         """
         new_parameters, new_values = _format(parameters, values)
-        new_values = [leaf ** value for value, leaf in zip(new_values, \
-                                    _get_leaves(self, new_parameters))]
+        new_values = [
+            leaf**value
+            for value, leaf in zip(new_values, _get_leaves(self, new_parameters))
+        ]
 
         # Define 'where' function and update pytree
-        leaves_fn = lambda pytree: _get_leaves(pytree, new_parameters)
-        return tree_at(leaves_fn, self, new_values,
-                      is_leaf = lambda leaf: leaf is None)
+        def leaves_fn(pytree):
+            return _get_leaves(pytree, new_parameters)
 
+        return tree_at(leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None)
 
-    def min(self       : Base,
-            parameters : Params,
-            values     : Union[List[Any], Any]) -> Base:
+    def min(self: Base, parameters: Params, values: Union[List[Any], Any]) -> Base:
         """
         Updates the leaves specified by parameters with the minimum value of the
         leaves and values.
@@ -381,18 +399,18 @@ class Base(Module):
             minimum value of the leaf and values.
         """
         new_parameters, new_values = _format(parameters, values)
-        new_values = [np.minimum(leaf, value) for value, leaf in \
-                    zip(new_values, _get_leaves(self, new_parameters))]
+        new_values = [
+            np.minimum(leaf, value)
+            for value, leaf in zip(new_values, _get_leaves(self, new_parameters))
+        ]
 
         # Define 'where' function and update pytree
-        leaves_fn = lambda pytree: _get_leaves(pytree, new_parameters)
-        return tree_at(leaves_fn, self, new_values,
-                      is_leaf = lambda leaf: leaf is None)
+        def leaves_fn(pytree):
+            return _get_leaves(pytree, new_parameters)
 
+        return tree_at(leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None)
 
-    def max(self       : Base,
-            parameters : Params,
-            values     : Union[List[Any], Any]) -> Base:
+    def max(self: Base, parameters: Params, values: Union[List[Any], Any]) -> Base:
         """
         Updates the leaves specified by parameters with the maximum value of the
         leaves and values.
@@ -412,13 +430,16 @@ class Base(Module):
             maximum value of the leaf and values.
         """
         new_parameters, new_values = _format(parameters, values)
-        new_values = [np.maximum(leaf, value) for value, leaf in \
-                    zip(new_values, _get_leaves(self, new_parameters))]
+        new_values = [
+            np.maximum(leaf, value)
+            for value, leaf in zip(new_values, _get_leaves(self, new_parameters))
+        ]
 
         # Define 'where' function and update pytree
-        leaves_fn = lambda pytree: _get_leaves(pytree, new_parameters)
-        return tree_at(leaves_fn, self, new_values,
-                      is_leaf = lambda leaf: leaf is None)
+        def leaves_fn(pytree):
+            return _get_leaves(pytree, new_parameters)
+
+        return tree_at(leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None)
 
 
 """
