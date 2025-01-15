@@ -1,18 +1,13 @@
 import zodiax
 import jax.numpy as np
-import jax.scipy as jsp
 from jax import hessian, lax, Array
 from typing import Union, List, Any
 
 
 __all__ = [
-    "poiss_loglike",
-    "chi2_loglike",
-    "covariance_entropy",
+    "calc_entropy",
     "fisher_matrix",
     "covariance_matrix",
-    "self_fisher_matrix",
-    "self_covariance_matrix",
 ]
 
 
@@ -31,55 +26,13 @@ def Base():
 Params = Union[str, List[str]]
 
 
-def poiss_loglike(pytree: Base(), data: Array) -> float:
-    """
-    Poissonian log likelihood of the pytree given the data. Assumes the pytree
-    has a .model() function.
-
-    Parameters
-    ----------
-    pytree : Base
-        Pytree with a .model() function.
-    data : Array
-        Data to compare the model to.
-
-    Returns
-    -------
-    log_likelihood : Array
-        Log likelihood of the pytree given the data.
-    """
-    return jsp.stats.poisson.logpmf(pytree.model(), data).sum()
-
-
-def chi2_loglike(pytree: Base(), data: Array, noise: float = 1) -> float:
-    """
-    Chi2 log likelihood of the pytree given the data. Assumes the pytree has a
-    .model() function.
-
-    Parameters
-    ----------
-    pytree : Base
-        Pytree with a .model() function.
-    data : Array
-        Data to compare the model to.
-    noise : float = 1
-        The 'scale' parameter representing the noise in the data.
-
-    Returns
-    -------
-    log_likelihood : Array
-        Log likelihood of the pytree given the data.
-    """
-    return jsp.stats.chi2.logpdf(pytree.model(), data, scale=noise).sum()
-
-
-def covariance_entropy(covariance_matrix: Array) -> Array:
+def calc_entropy(cov_matrix: Array) -> Array:
     """
     Calculates the entropy of a covariance matrix.
 
     Parameters
     ----------
-    covariance_matrix : Array
+    cov_matrix : Array
         The covariance matrix to calculate the entropy of.
 
     Returns
@@ -87,7 +40,7 @@ def covariance_entropy(covariance_matrix: Array) -> Array:
     entropy : Array
         The entropy of the covariance matrix.
     """
-    sign, logdet = np.linalg.slogdet(covariance_matrix)
+    sign, logdet = np.linalg.slogdet(cov_matrix)
     return 0.5 * (np.log(2 * np.pi * np.e) + (sign * logdet))
 
 
@@ -188,111 +141,6 @@ def covariance_matrix(
             shape_dict=shape_dict,
             **loglike_kwargs,
         )
-    )
-
-
-def self_fisher_matrix(
-    pytree: Base(),
-    parameters: Params,
-    loglike_fn: callable,
-    *loglike_args: Any,
-    shape_dict: dict = {},
-    **loglike_kwargs: Any,
-) -> Array:
-    """
-    Calculates the Fisher information matrix of the pytree parameters with
-    respect to itself. This can be used to optimise the fisher information of
-    the pytree model. Simply calcluates the data from the `.model()` method and
-    passes it to the `fisher_matrix` function. The `shaped_dict` parameter is
-    used to specify the shape of the differentiated vector for specific
-    parameters. For example, if the parameter `param` is a 1D array of shape
-    (5,) and we wanted to calculate the covariance matrix of the mean, we can
-    pass in `shape_dict={'param': (1,)}`. This will differentiate the log
-    likelihood with respect to the mean of the parameters.
-
-    Parameters
-    ----------
-    pytree : Base
-        Pytree with a .model() function.
-    parameters : Union[str, list]
-        A path or list of paths or list of nested paths.
-    loglike_fn : callable
-        The log likelihood function to differentiate.
-    *loglike_args : Any
-        The args to pass to the log likelihood function.
-    shape_dict : dict = {}
-        A dictionary specifying the shape of the differentiated vector for
-        specific parameters.
-    **loglike_kwargs : Any
-        The kwargs to pass to the log likelihood function.
-
-    Returns
-    -------
-    fisher_matrix : Array
-        The Fisher information matrix of the pytree parameters.
-    """
-    # Build X vec and get data
-    pytree.model()
-    loglike_args = [pytree.model()] + list(loglike_args)
-    return fisher_matrix(
-        pytree,
-        parameters,
-        loglike_fn,
-        *loglike_args,
-        shape_dict=shape_dict,
-        **loglike_kwargs,
-    )
-
-
-def self_covariance_matrix(
-    pytree: Base(),
-    parameters: Params,
-    loglike_fn: callable,
-    *loglike_args: Any,
-    shape_dict: dict = {},
-    **loglike_kwargs: Any,
-) -> Array:
-    """
-    Calculates the covariance matrix of the pytree parameters with respect to
-    itself. This can be used to optimise the fisher information of the pytree
-    model. Simply calcluates the data from the `.model()` method and passes it
-    to the `covariance_matrix` function. The `shaped_dict` parameter is used to
-    specify the shape of the differentiated vector for specific parameters. For
-    example, if the parameter `param` is a 1D array of shape (5,) and we wanted
-    to calculate the covariance matrix of the mean, we can pass in
-    `shape_dict={'param': (1,)}`. This will differentiate the log likelihood
-    with respect to the mean of the parameters.
-
-    Parameters
-    ----------
-    pytree : Base
-        Pytree with a .model() function.
-    parameters : Union[str, list]
-        A path or list of paths or list of nested paths.
-    loglike_fn : callable
-        The log likelihood function to differentiate.
-    *loglike_args : Any
-        The args to pass to the log likelihood function.
-    shape_dict : dict = {}
-        A dictionary specifying the shape of the differentiated vector for
-        specific parameters.
-    **loglike_kwargs : Any
-        The kwargs to pass to the log likelihood function.
-
-    Returns
-    -------
-    covariance_matrix : Array
-        The covariance matrix of the pytree parameters.
-    """
-    pytree.model()
-    loglike_args = [pytree.model()] + list(loglike_args)
-    return covariance_matrix(
-        pytree,
-        parameters,
-        loglike_fn,
-        *loglike_args,
-        shape_dict=shape_dict,
-        **loglike_kwargs,
     )
 
 
