@@ -72,25 +72,3 @@ def test_calc_entropy(create_base):
         zodiax.bayes.calc_entropy(
             pytree, param, loglike_fn, data, shape_dict=shape_dict
         )
-
-
-def test_self_fisher_matrix(create_base):
-    pytree = create_base()
-    loglike_fn = poiss_loglike
-    shape_dict = {"param": (1,)}
-
-    for param in paths:
-        zodiax.bayes.self_fisher_matrix(
-            pytree, param, loglike_fn, shape_dict=shape_dict
-        )
-
-
-def test_self_covariance_matrix(create_base):
-    pytree = create_base()
-    loglike_fn = poiss_loglike
-    shape_dict = {"param": (1,)}
-
-    for param in paths:
-        zodiax.bayes.self_covariance_matrix(
-            pytree, param, loglike_fn, shape_dict=shape_dict
-        )

@@ -46,7 +46,7 @@ def calc_entropy(cov_matrix: Array) -> Array:
 
 def hessian(
     pytree: Base(),
-    parameters: list | str,
+    parameters: Params,
     loglike_fn: callable,
     shape_dict: dict = {},
     save_memory: bool = False,
@@ -107,7 +107,7 @@ def hessian(
 
 def fisher_matrix(
     pytree: Base(),
-    parameters: list | str,
+    parameters: Params,
     loglike_fn: callable,
     shape_dict: dict = {},
     save_memory: bool = False,
