@@ -49,8 +49,8 @@ def hessian(
     parameters: Params,
     loglike_fn: callable,
     shape_dict: dict = {},
-    save_memory: bool = False,
     *loglike_args,
+    save_memory: bool = False,
     **loglike_kwargs,
 ) -> Array:
     """
@@ -110,8 +110,8 @@ def fisher_matrix(
     parameters: Params,
     loglike_fn: callable,
     shape_dict: dict = {},
-    save_memory: bool = False,
     *loglike_args,
+    save_memory: bool = False,
     **loglike_kwargs,
 ) -> Array:
     """
@@ -136,8 +136,8 @@ def covariance_matrix(
     parameters: Params,
     loglike_fn: callable,
     shape_dict: dict = {},
-    save_memory: bool = False,
     *loglike_args: Any,
+    save_memory: bool = False,
     **loglike_kwargs: Any,
 ) -> Array:
     """
