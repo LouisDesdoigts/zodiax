@@ -1,7 +1,7 @@
 from __future__ import annotations
 import jax
 import jax.numpy as np
-import zodiax
+import equinox as eqx
 from equinox import tree_at, Module
 from typing import Union, Any, List
 
@@ -444,7 +444,7 @@ class Base(Module):
         return tree_at(leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None)
 
 
-class BaseModeller(zodiax.Base):
+class BaseModeller(Base):
     # TODO proper documentation
 
     """
@@ -594,7 +594,7 @@ class ModelHistory(ModelParams):
         history = {}
         for param in tracked:
             leaf = model.get(param)
-            if not zodiax.is_array_like(leaf):
+            if not eqx.is_array_like(leaf):
                 history[param] = jax.tree_map(lambda sub_leaf: [sub_leaf], leaf)
             else:
                 history[param] = [leaf]
@@ -610,7 +610,7 @@ class ModelHistory(ModelParams):
                 new_leaf = model.get(param)
 
             # Tree-like case
-            if not zodiax.is_array_like(new_leaf):
+            if not eqx.is_array_like(new_leaf):
 
                 def append_fn(history, value):
                     return history + [value]
