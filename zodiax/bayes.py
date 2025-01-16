@@ -173,7 +173,7 @@ def covariance_matrix(
     covariance_matrix : Array
         The covariance matrix of the pytree parameters.
     """
-    return -np.linalg.inv(
+    return np.linalg.inv(
         fisher_matrix(
             pytree,
             parameters,
