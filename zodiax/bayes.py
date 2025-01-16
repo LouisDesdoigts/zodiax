@@ -1,6 +1,6 @@
 import zodiax
-import jax.numpy as np
-from jax import hessian, lax, Array
+import jax
+from jax import lax, Array, numpy as np
 from typing import Union, List, Any
 
 
@@ -44,63 +44,100 @@ def calc_entropy(cov_matrix: Array) -> Array:
     return 0.5 * (np.log(2 * np.pi * np.e) + (sign * logdet))
 
 
-def fisher_matrix(
+def hessian(
     pytree: Base(),
-    parameters: Params,
+    parameters: list | str,
     loglike_fn: callable,
-    *loglike_args: Any,
     shape_dict: dict = {},
-    **loglike_kwargs: Any,
+    save_memory: bool = False,
+    *loglike_args,
+    **loglike_kwargs,
 ) -> Array:
     """
-    Calculates the Fisher information matrix of the pytree parameters. The
-    `shaped_dict` parameter is used to specify the shape of the differentiated
-    vector for specific parameters. For example, if the parameter `param` is
-    a 1D array of shape (5,) and we wanted to calculate the Fisher information
-    of the mean, we can pass in `shape_dict={'param': (1,)}`. This will
-    differentiate the log likelihood with respect to the mean of the parameters.
+    Calculates the Hessian of the log likelihood function with respect to the
+    parameters of the pytree. It is evaluated at the current values of the
+    parameters as listed in the pytree.
 
     Parameters
     ----------
     pytree : Base
-        Pytree with a .model() function.
+        Pytree holding the parameters values.
     parameters : Union[str, list]
-        A path or list of paths or list of nested paths.
+        Names of parameters to be used in Hessian calculation.
     loglike_fn : callable
         The log likelihood function to differentiate.
-    *loglike_args : Any
-        The args to pass to the log likelihood function.
     shape_dict : dict = {}
         A dictionary specifying the shape of the differentiated vector for
         specific parameters.
+    save_memory : bool = False
+        If True, the Hessian is calculated column by column to save memory.
+    *loglike_args : Any
+        The args to pass to the log likelihood function.
     **loglike_kwargs : Any
         The kwargs to pass to the log likelihood function.
 
     Returns
     -------
-    fisher_matrix : Array
-        The Fisher information matrix of the pytree parameters.
+    hessian : Array
+        The Hessian of the log likelihood function with respect to the
+        parameters of the pytree.
     """
-    # Build X vec
+
+    # If only one parameter is passed, make it a list
+    if len(parameters) == 1:
+        parameters = [parameters]
+
+    # Build empty vector to perturb
     pytree = zodiax.tree.set_array(pytree, parameters)
     shapes, lengths = _shapes_and_lengths(pytree, parameters, shape_dict)
     X = np.zeros(_lengths_to_N(lengths))
 
-    # Build function to calculate FIM and calculate
-    @hessian
-    def calc_fim(X):
+    # Build perturbation function to differentiate
+    def loglike_fn_vec(X):
         parametric_pytree = _perturb(X, pytree, parameters, shapes, lengths)
         return loglike_fn(parametric_pytree, *loglike_args, **loglike_kwargs)
 
-    return calc_fim(X)
+    # optional column by column hessian calculation for RAM mercy
+    if save_memory:
+        return _hessian_col_by_col(loglike_fn_vec, X)
+
+    elif not save_memory:
+        return jax.hessian(loglike_fn_vec)(X)
+
+
+def fisher_matrix(
+    pytree: Base(),
+    parameters: list | str,
+    loglike_fn: callable,
+    shape_dict: dict = {},
+    save_memory: bool = False,
+    *loglike_args,
+    **loglike_kwargs,
+) -> Array:
+    """
+    Calculates the Fisher information matrix of the log likelihood function with
+    respect to the parameters of the pytree. It is evaluated at the current values
+    of the parameters as listed in the pytree. Simply returns the negative Hessian.
+    """
+
+    return -hessian(
+        pytree,
+        parameters,
+        loglike_fn,
+        shape_dict=shape_dict,
+        save_memory=save_memory,
+        *loglike_args,
+        **loglike_kwargs,
+    )
 
 
 def covariance_matrix(
     pytree: Base(),
     parameters: Params,
     loglike_fn: callable,
-    *loglike_args: Any,
     shape_dict: dict = {},
+    save_memory: bool = False,
+    *loglike_args: Any,
     **loglike_kwargs: Any,
 ) -> Array:
     """
@@ -119,11 +156,14 @@ def covariance_matrix(
         A path or list of paths or list of nested paths.
     loglike_fn : callable
         The log likelihood function to differentiate.
-    *loglike_args : Any
-        The args to pass to the log likelihood function.
     shape_dict : dict = {}
         A dictionary specifying the shape of the differentiated vector for
         specific parameters.
+    save_memory : bool = False
+        If True, the Hessian is calculated column by column to save memory.
+        This is slightly slower.
+    *loglike_args : Any
+        The args to pass to the log likelihood function.
     **loglike_kwargs : Any
         The kwargs to pass to the log likelihood function.
 
@@ -137,8 +177,9 @@ def covariance_matrix(
             pytree,
             parameters,
             loglike_fn,
-            *loglike_args,
             shape_dict=shape_dict,
+            save_memory=save_memory,
+            *loglike_args,
             **loglike_kwargs,
         )
     )
@@ -174,13 +215,41 @@ def _perturb(
     if isinstance(parameters, str):
         parameters = [parameters]
     indexes = range(len(parameters))
-    for i, param, shape, length in zip(indexes, parameters, shapes, lengths):
+    for i, shape, length in zip(indexes, shapes, lengths):
         if length == 1:
             xs.append(X[i + n])
         else:
             xs.append(lax.dynamic_slice(X, (i + n,), (length,)).reshape(shape))
             n += length
     return pytree.add(parameters, xs)
+
+
+def _hessian_col_by_col(f: callable, X: Array) -> Array:
+    """
+    Calculates the Hessian of a function f at x, column by column.
+    This may take longer than the full Hessian calculation, but is more
+    memory efficient.
+
+    Parameters
+    ----------
+    f : callable
+        The function to differentiate.
+    X : Array
+        The point to calculate the Hessian at.
+
+    Returns
+    -------
+    hessian : Array
+        The Hessian of the function at x.
+    """
+
+    # Jit the sub-function here since it is called many times
+    _, hvp = jax.linearize(jax.grad(f), X)
+    hvp = jax.jit(hvp)
+
+    # Build and stack
+    basis = np.eye(X.size).reshape(-1, *X.shape)
+    return np.stack([hvp(e) for e in basis]).reshape(X.shape + X.shape)
 
 
 # Functions for calculating lengths and shapes for 'dynamically' generated X
