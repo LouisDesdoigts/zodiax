@@ -66,7 +66,7 @@ def test_all_fisher_matrices(create_base):
 def test_calc_entropy(create_base):
     pytree = create_base()
     data = pytree.model()
-    loglike_fn = zodiax.bayes.poiss_loglike
+    loglike_fn = poiss_loglike
     shape_dict = {"param": (1,)}
     for param in paths:
         cov = zodiax.bayes.covariance_matrix(

@@ -6,6 +6,7 @@ from typing import Union, List, Any
 
 __all__ = [
     "calc_entropy",
+    "hessian",
     "fisher_matrix",
     "covariance_matrix",
 ]
@@ -48,8 +49,8 @@ def hessian(
     pytree: Base(),
     parameters: Params,
     loglike_fn: callable,
-    shape_dict: dict = {},
     *loglike_args,
+    shape_dict: dict = {},
     save_memory: bool = False,
     **loglike_kwargs,
 ) -> Array:
@@ -109,8 +110,8 @@ def fisher_matrix(
     pytree: Base(),
     parameters: Params,
     loglike_fn: callable,
-    shape_dict: dict = {},
     *loglike_args,
+    shape_dict: dict = {},
     save_memory: bool = False,
     **loglike_kwargs,
 ) -> Array:
@@ -135,8 +136,8 @@ def covariance_matrix(
     pytree: Base(),
     parameters: Params,
     loglike_fn: callable,
-    shape_dict: dict = {},
     *loglike_args: Any,
+    shape_dict: dict = {},
     save_memory: bool = False,
     **loglike_kwargs: Any,
 ) -> Array:
