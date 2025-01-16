@@ -1,5 +1,7 @@
 from __future__ import annotations
+import jax
 import jax.numpy as np
+import zodiax
 from equinox import tree_at, Module
 from typing import Union, Any, List
 
@@ -442,121 +444,186 @@ class Base(Module):
         return tree_at(leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None)
 
 
-"""
-Extra methods for possible future classes that recursively searches for 
-parameters.
-"""
-#     Method 1, get first
-#     def __getattr__(self, key):
-#         """
+class BaseModeller(zodiax.Base):
+    # TODO proper documentation
 
-#         """
-#         # Found it, nice work
-#         dict_like = self.__dict__
-#         if key in dict_like.keys():
-#             return dict_like[key]
+    """
+    A base class for modeling that extends `zodiax.Base`. This class allows for
+    dynamic attribute access and dictionary-like item retrieval from the `params`
+    dictionary.
+    Attributes:
+        params (dict): A dictionary of parameters.
+    Methods:
+        __getattr__(key):
+            Dynamically retrieves the value associated with `key` from the `params`
+            dictionary. If `key` is not found directly in `params`, it searches
+            through the values of `params` to find an attribute named `key`.
+            Raises an `AttributeError` if `key` is not found.
+        __getitem__(key):
+            Retrieves a dictionary of values from `params` where the `key` is present
+            in the nested dictionaries of `params`.
+    """
+    params: dict
 
-#         # Expand and iterate though items
-#         for value in dict_like.values():
+    def __init__(self, params):
+        self.params = params
 
-#             # Dictionary, call the recursive method
-#             if isinstance(value, dict):
-#                 try:
-#                     return _recurse_dict(value, key)
-#                 except ValueError as e:
-#                     pass
+    def __getattr__(self, key):
+        """
+        Dynamically retrieves the value associated with `key` from the `params`
+        dictionary. If `key` is not found directly in `params`, it searches
+        through the values of `params` to find an attribute named `key`.
+        Raises an `AttributeError` if `key` is not found.
+        """
+        if key in self.params:
+            return self.params[key]
+        for k, val in self.params.items():
+            if hasattr(val, key):
+                return getattr(val, key)
+        raise AttributeError(
+            f"Attribute {key} not found in params of {self.__class__.__name__} object"
+        )
 
-#             # dLux object, recurse
-#             if isinstance(value, Base):
-#                 try:
-#                     return getattr(value, key)
-#                 except ValueError as e:
-#                     pass
+    def __getitem__(self, key):
+        """
+        Retrieves a dictionary of values from `params` where the `key` is present
+        in the nested dictionaries of `params`.
+        """
+        values = {}
+        for param, item in self.params.items():
+            if isinstance(item, dict) and key in item.keys():
+                values[param] = item[key]
 
-#         # Not found, raise error
-#         raise ValueError("'{}' object has no attribute '{}'"\
-#                              .format(type(self), key))
-
-
-#     def _recurse_dict(self, dict_like, key):
-#         """
-
-#         """
-#         # Return item if it exists
-#         if key in dict_like:
-#             return dict_like[key]
-
-#         # Iterate through values
-#         for value in dict_like.values():
-
-#             # Value is a dict, Recurse
-#             if isinstance(value, dict):
-#                 try:
-#                     return self._recurse_dict(value, key)
-#                 except ValueError as e:
-#                     pass
-
-#             # Value is a dLux object, recall the getattr method
-#             if isinstance(value, Base):
-#                 try:
-#                     return getattr(value, key)
-#                 except ValueError as e:
-#                     pass
-
-#         # Nothing found, raise Error
-#         raise ValueError("'{}' not found.".format(key))
+        return values
 
 
-#     # Method 2, get all
-#     def __getattr__(self, key):
-#         """
+class ModelParams(BaseModeller):
+    # TODO proper documentation
+    """
+    A class to manage model parameters with various utility
+    methods for manipulation and access.
 
-#         """
-#         return self._get_all(key, [])
+    Methods
+    -------
+    keys:
+        Returns a list of parameter keys.
+    values:
+        Returns a list of parameter values.
+    __getattr__(key):
+        Retrieves the value of the specified parameter key.
+    replace(values):
+        Takes in a super-set class and updates this class with input values
+    from_model(values):
+        Sets the parameters from a given model's values.
+    __add__(values):
+        Adds the provided values to the current parameters.
+    __iadd__(values):
+        In-place addition of the provided values to the current parameters.
+    __mul__(values):
+        Multiplies the provided values with the current parameters.
+    __imul__(values):
+        In-place multiplication of the provided values with the current parameters.
+    inject(other):
+        Injects the values of this class into another class.
+    """
+
+    @property
+    def keys(self):
+        return list(self.params.keys())
+
+    @property
+    def values(self):
+        return list(self.params.values())
+
+    def __getattr__(self, key):
+        if key in self.keys:
+            return self.params[key]
+        for k, val in self.params.items():
+            if hasattr(val, key):
+                return getattr(val, key)
+        raise AttributeError(
+            f"Attribute {key} not found in params of {self.__class__.__name__} object"
+        )
+
+    def replace(self, values):
+        """
+        Takes in a super-set class and updates this class with input values
+        """
+        return self.set(
+            "params", dict([(param, getattr(values, param)) for param in self.keys])
+        )
+
+    def from_model(self, model: Base):
+        return self.set(
+            "params", dict([(param, model.get(param)) for param in self.keys])
+        )
+
+    def __add__(self, values):
+        matched = self.replace(values)
+        return jax.tree_map(lambda x, y: x + y, self, matched)
+
+    def __iadd__(self, values):
+        return self.__add__(values)
+
+    def __mul__(self, values):
+        matched = self.replace(values)
+        return jax.tree_map(lambda x, y: x * y, self, matched)
+
+    def __imul__(self, values):
+        return self.__mul__(values)
+
+    def inject(self, other: Base):
+        # Injects the values of this class into another class
+        return other.set(self.keys, self.values)
 
 
-#     def _get_all(self, key, values):
+class ModelHistory(ModelParams):
+    # TODO proper documentation
 
-#         # Found it, nice work
-#         dict_like = self.__dict__
-#         if key in dict_like.keys():
-#             values.append(dict_like[key])
+    """
+    Tracks the history of a set of parameters in a model via tuples.
+    Adds a series of convenience functions to interface with it.
 
-#         # Expand and iterate though items
-#         for value in dict_like.values():
+    NOTE This could have issues with leaves not being jax.Arrays,
+    so at some point it should be explicitly enforced that
+    only array_likes are tracked.
+    """
 
-#             # Dictionary, call the recursive method
-#             if isinstance(value, dict):
-#                 # values.append(self._recurse_dict(value, key, values))
-#                 values = self._recurse_dict(value, key, values)
+    def __init__(self, model, tracked):
 
-#             # dLux object, recurse
-#             if isinstance(value, Base):
-#                 # values.append(value._get_all(key, values))
-#                 values = value._get_all(key, values)
+        history = {}
+        for param in tracked:
+            leaf = model.get(param)
+            if not zodiax.is_array_like(leaf):
+                history[param] = jax.tree_map(lambda sub_leaf: [sub_leaf], leaf)
+            else:
+                history[param] = [leaf]
 
-#         return values
+        self.params = history
 
+    def append(self, model):
+        history = self.params
+        for param, leaf_history in history.items():
+            if hasattr(model, param):
+                new_leaf = getattr(model, param)
+            else:
+                new_leaf = model.get(param)
 
-#     def _recurse_dict(self, dict_like, key, values):
-#         """
+            # Tree-like case
+            if not zodiax.is_array_like(new_leaf):
 
-#         """
-#         # Return item if it exists
-#         if key in dict_like:
-#             values.append(dict_like[key])
+                def append_fn(history, value):
+                    return history + [value]
 
-#         # Iterate through values
-#         for value in dict_like.values():
+                def leaf_fn(leaf):
+                    return isinstance(leaf, list)
 
-#             # Value is a dict, Recurse
-#             if isinstance(value, dict):
-#                 # values.append(self._recurse_dict(value, key, values))
-#                 values = self._recurse_dict(value, key, values)
+                new_leaf_history = jax.tree_map(
+                    append_fn, leaf_history, new_leaf, is_leaf=leaf_fn
+                )
+                history[param] = new_leaf_history
 
-#             # Value is a dLux object, recall the getattr method
-#             if isinstance(value, Base):
-#                 # values.append(value._get_all(key, values))
-#                 values = value._get_all(key, values)
-
-#         return values
+            # Non-tree case
+            else:
+                history[param] = leaf_history + [new_leaf]
+        return self.set("params", history)

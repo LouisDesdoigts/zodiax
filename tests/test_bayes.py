@@ -35,6 +35,9 @@ def poiss_loglike(pytree, data: Array) -> float:
 
 
 def test_all_fisher_matrices(create_base):
+    """
+    tests the fisher_matrix, covariance_matrix and hessian functions
+    """
     pytree = create_base()
     data = pytree.model()
     loglike_fn = poiss_loglike
@@ -42,9 +45,15 @@ def test_all_fisher_matrices(create_base):
 
     for param in paths:
 
-        hess = zodiax.bayes.hessian(
-            pytree, param, loglike_fn, data, shape_dict=shape_dict
-        )
+        for save_memory in [True, False]:
+            hess = zodiax.bayes.hessian(
+                pytree,
+                param,
+                loglike_fn,
+                data,
+                shape_dict=shape_dict,
+                save_memory=save_memory,
+            )
 
         fisher = zodiax.bayes.fisher_matrix(
             pytree, param, loglike_fn, data, shape_dict=shape_dict
@@ -64,6 +73,9 @@ def test_all_fisher_matrices(create_base):
 
 
 def test_calc_entropy(create_base):
+    """
+    tests the calc_entropy function
+    """
     pytree = create_base()
     data = pytree.model()
     loglike_fn = poiss_loglike

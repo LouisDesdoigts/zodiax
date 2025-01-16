@@ -1,8 +1,8 @@
 import zodiax
 import jax.numpy as np
 import jax.tree_util as jtu
-from jax import Array
-from typing import Union, List, Any
+from jax import config
+from typing import Union, List
 
 
 __all__ = ["boolean_filter", "set_array"]
@@ -47,34 +47,29 @@ def boolean_filter(pytree: Base(), parameters: Params, inverse: bool = False) ->
         return true_pytree.set(parameters, len(parameters) * [False])
 
 
-# Array
-def _to_array(leaf: Any):
-    if not isinstance(leaf, Array):
-        return np.asarray(leaf, dtype=float)
-    else:
-        return leaf
-
-
-def set_array(pytree: Base(), parameters: Params) -> Base():
+def set_array(pytree: Base()) -> Base():
     """
-    Converts all leaves specified by parameters in the pytree to arrays to
-    ensure they have a .shape property for static dimensionality and size
-    checks. This allows for 'dynamicly generated' array shapes from the path
-    based `parameters` input. This is used for dynamically generating the
-    latent X parameter that we need to generate in order to calculate the
-    hessian.
+    Converts all leaves in the pytree to arrays to ensure they have a
+    .shape property for static dimensionality and size checks.
 
     Parameters
     ----------
     pytree : Base()
         The pytree to be converted.
-    parameters : Params
-        The leaves to be converted to arrays.
 
     Returns
     -------
     pytree : Base()
-        The pytree with the specified leaves converted to arrays.
+        The pytree with the leaves converted to arrays.
     """
-    new_leaves = jtu.tree_map(_to_array, pytree.get(parameters))
-    return pytree.set(parameters, new_leaves)
+    # grabbing float data type
+    dtype = np.float64 if config.x64_enabled else np.float32
+
+    # partitioning the pytree into arrays and other
+    floats, other = zodiax.partition(pytree, zodiax.is_inexact_array_like)
+
+    # converting the floats to arrays
+    floats = jtu.tree_map(lambda x: np.array(x, dtype=dtype), floats)
+
+    # recombining
+    return zodiax.combine(floats, other)
