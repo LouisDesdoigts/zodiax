@@ -1,8 +1,7 @@
 import zodiax
 import equinox as eqx
-import jax.numpy as np
-import jax.tree_util as jtu
-from jax import config
+import jax
+from jax import config, numpy as np
 from typing import Union, List
 
 
@@ -41,10 +40,10 @@ def boolean_filter(pytree: Base(), parameters: Params, inverse: bool = False) ->
     """
     parameters = parameters if isinstance(parameters, list) else [parameters]
     if not inverse:
-        false_pytree = jtu.tree_map(lambda _: False, pytree)
+        false_pytree = jax.tree.map(lambda _: False, pytree)
         return false_pytree.set(parameters, len(parameters) * [True])
     else:
-        true_pytree = jtu.tree_map(lambda _: True, pytree)
+        true_pytree = jax.tree.map(lambda _: True, pytree)
         return true_pytree.set(parameters, len(parameters) * [False])
 
 
@@ -70,7 +69,7 @@ def set_array(pytree: Base()) -> Base():
     floats, other = eqx.partition(pytree, zodiax.is_inexact_array_like)
 
     # converting the floats to arrays
-    floats = jtu.tree_map(lambda x: np.array(x, dtype=dtype), floats)
+    floats = jax.tree.map(lambda x: np.array(x, dtype=dtype), floats)
 
     # recombining
     return eqx.combine(floats, other)

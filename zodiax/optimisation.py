@@ -125,8 +125,8 @@ def debug_nan_check(grads: Base()) -> Base():
     grads : PyTree
         The gradients.
     """
-    bool_tree = jax.tree_map(lambda x: np.isnan(x).any(), grads)
-    vals = np.array(jax.tree_util.tree_flatten(bool_tree)[0])
+    bool_tree = jax.tree.map(lambda x: np.isnan(x).any(), grads)
+    vals = np.array(jax.tree.flatten(bool_tree)[0])
     eqx.debug.breakpoint_if(vals.sum() > 0)
     return grads
 
@@ -145,7 +145,7 @@ def zero_nan_check(grads: Base()) -> Base():
     grads : PyTree
         The gradients with NaN values replaced by zeros.
     """
-    return jax.tree_map(lambda x: np.where(np.isnan(x), 0.0, x), grads)
+    return jax.tree.map(lambda x: np.where(np.isnan(x), 0.0, x), grads)
 
 
 def get_optimiser(pytree: Base(), optimisers: dict, parameters: Params = None):
