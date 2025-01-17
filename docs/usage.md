@@ -16,34 +16,34 @@ _Zodiax_ is built from both _Jax_ and _Equinox_, so if you are unfamiliar with t
 
 ## Zodiax Basics
 
-`zodiax.Base` is the core class of Zodiax that registers instances of the class as a Pytree which is a native Jax object. Zodiax is also designed to ease working with complex nested class structures often nesseciateted by large physical models common to scientific programming. To do this `zodiax.Base` has a series of class methods that reflect the `jax` array update methods, along with introducing the concept of paths that can be used to access and update the leaves of a pytree.
+`zodiax.Base` is the core class of Zodiax that registers instances of the class as a Pytree which is a native Jax object. Zodiax is also designed to ease working with complex nested class structures often nessecitated by large physical models common to scientific programming. To do this, `zodiax.Base` has a series of class methods that reflect the `jax` array update methods, along with introducing the concept of paths that can be used to access and update the leaves of a pytree.
 
 ### Constructing a Zodiax class
 
-Lets examine how these methods work by looking at an example class structure. We will start with a simple class that models a normal distribution and then build a class that contains multiple instances of this class:
+Let's examine how these methods work by looking at an example class structure. We will start with a simple class that models a normal distribution and then build a class that contains multiple instances of this class:
 
 ```python
 import zodiax as zdx
-from jax import numpy as np, scipy as jsp
+from jax import numpy as np, scipy as scp
+
 
 class Normal(zdx.Base):
     """Basic class for modelling a normal distribution"""
-    mean : np.ndarray
-    scale : np.ndarray
-    amplitude : np.ndarray
 
+    mean: np.ndarray
+    scale: np.ndarray
+    amplitude: np.ndarray
 
     def __init__(self, mean, scale, amplitude):
         """Constructor for the Normal class"""
         self.mean = np.asarray(mean, dtype=float)
         self.scale = np.asarray(scale, dtype=float)
         self.amplitude = np.asarray(amplitude, dtype=float)
-    
 
     def model(self, width=10):
         """Evaluates the normal distribution"""
         xs = np.linspace(-width, width, 128)
-        return self.amplitude * jsp.stats.norm.pdf(xs, self.mean, self.scale)
+        return self.amplitude * scp.stats.norm.pdf(xs, self.mean, self.scale)
 ```
 
 This class simply models a normal distribution with a mean, scale and amplitude, and has a `.model()` method that is used to actually perform the calculation of the normal distribution.
@@ -70,9 +70,9 @@ Now we construct a class to store and model a set of multiple normals.
 ```python
 class NormalSet(zdx.Base):
     """Basic class for modelling a set of normal distributions"""
-    normals : dict
-    width : np.ndarray
 
+    normals: dict
+    width: np.ndarray
 
     def __init__(self, means, scales, amplitude, names, width=10):
         """Constructor for the NormalSet class"""
@@ -81,7 +81,6 @@ class NormalSet(zdx.Base):
             normals[names[i]] = Normal(means[i], scales[i], amplitude[i])
         self.normals = normals
         self.width = np.asarray(width, dtype=float)
-    
 
     def __getattr__(self, key):
         """Allows us to access the individual normals by their dictionary key"""
@@ -89,15 +88,15 @@ class NormalSet(zdx.Base):
             return self.normals[key]
         else:
             raise AttributeError(f"{key} not in {self.normals.keys()}")
-    
 
     def model(self):
         """Evaluates the set of normal distributions"""
-        return np.array([normal.model(self.width) 
-            for normal in self.normals.values()]).sum(0)
+        return np.array(
+            [normal.model(self.width) for normal in self.normals.values()]
+        ).sum(0)
 
 
-sources = NormalSet([-1., 2.], [1., 2.], [2., 4.], ['alpha', 'beta'])
+sources = NormalSet([-1.0, 2.0], [1.0, 2.0], [2.0, 4.0], ["alpha", "beta"])
 ```
 
 This `NormalSet` class now lets us store an arbitrary number of `Normal` objects in a dictionary, and allows us to access them by their dictionary key. We can also model the sum of all the normals using the `.model()` method.
@@ -116,7 +115,7 @@ This is all the class set-up we need, now we can look at how to perform differen
 
     It is strongly reccomended that your classes have a `__getattr__` method implemented as it makes working with nested structures *much* easier! When doing so it is important to ensure that the method raises the correct error when the attribute is not found. This is done by raising an `AttributeError` with a message that includes the name of the attribute that was not found. 
 
-Lets print this object to have a look at what it looks like:
+Let's print this object to have a look at what it looks like:
 
 ```python
 print(source)
@@ -163,9 +162,9 @@ Since we have constructed the `__getattr__` method, these paths can be simplifie
 
 ### **Class Methods**
 
-Zodiax adds a series of methods that can be used to manipulate the nodes or leaves of these pytrees that mirror and expand the functionality of the `jax.Array.at[]` [method](https://jax.readthedocs.io/en/latest/_autosummary/jax.numpy.ndarray.at.html?highlight=.at). The main methods are `get`, `set`, `add`, `multiply`, `divide`, `power`, `min`, `max`, `apply` and `apply_args`. The first argument to these methods is a path and methods that manipulate leaves also take in a values parameter. They all essentially follow the same syntax so lets look at some examples of how we would perform basic operations to Zodiax obejcts.
+Zodiax adds a series of methods that can be used to manipulate the nodes or leaves of these pytrees that mirror and expand the functionality of the `jax.Array.at[]` [method](https://jax.readthedocs.io/en/latest/_autosummary/jax.numpy.ndarray.at.html?highlight=.at). The main methods are `get`, `set`, `add`, `multiply`, `divide`, `power`, `min`, `max`, `apply` and `apply_args`. The first argument to these methods is a path and methods that manipulate leaves also take in a values parameter. They all essentially follow the same syntax so let's look at some examples of how we would perform basic operations to Zodiax obejcts.
 
-Lets change our 'alpha` source to a unit normal:
+Let's change our 'alpha` source to a unit normal:
 
 ```python
 sources = sources.set('alpha.mean', 0.)
@@ -191,7 +190,7 @@ print(sources.alpha)
     sources.alpha.mean += 2
     ```
 
-    However in Zodiax this will throw a `FrozenInstanceError`, what gives! Lets see how we can use Zodiax to achieve the same thing:
+    However in Zodiax this will throw a `FrozenInstanceError`, what gives! Let's see how we can use Zodiax to achieve the same thing:
 
     ```python
     sources = sources.set('alpha.mean', 4)
@@ -200,16 +199,16 @@ print(sources.alpha)
 
 ### **Multiple Paths and Nesting**
 
-Zodiax in very felixible in how you can use the paths to access and manipulate the leaves of the pytree. You can use a single path to access a single leaf, or you can use a list of paths to access multiple leaves. You can also use nested paths to access nested leaves. Lets see some examples:
+Zodiax is very flexible in how you can use the paths to access and manipulate the leaves of the pytree. You can use a single path to access a single leaf, or you can use a list of paths to access multiple leaves. You can also use nested paths to access nested leaves. Let's see some examples:
 
-Lets add all of the paths to the means together so we can have a simple variable that we can use to globally shift all of the `sources` at the same time.
+Let's add all of the paths to the means together so we can have a simple variable that we can use to globally shift all of the `sources` at the same time.
 
 ```python
 means = ['alpha.mean', 'beta.mean', 'gamma.mean']
 shifted_sources = sources.add(means, 2.5)
 ```
 
-It's that easy! We can also nest paths in order to perform complex operations simply. Lets say we want to change the scale of both the 'alpha' and 'beta' source together and the 'gamma' source independently.
+It's that easy! We can also nest paths in order to perform complex operations simply. Let's say we want to change the scale of both the 'alpha' and 'beta' source together and the 'gamma' source independently.
 
 ```python
 scales = [['alpha.scale', 'beta.scale'], 'gamma.scale']
@@ -217,17 +216,17 @@ values = [2., 4.]
 scaled_sources = sources.multiply(scales, values)
 ```
 
-This concept apllies to **all** of Zodiax and can be used with any of its methods. Similarly Zodiax is designed so that every update operations is performed **simultaneously**. This prevents the unessecary overhead of copy the entire contents of the pytree for every update which is especcially beneficial for large models!
+This concept apllies to **all** of Zodiax and can be used with any of its methods. Similarly, Zodiax is designed so that every update operations is performed **simultaneously**. This prevents the unnessecary overhead of copy the entire contents of the pytree for every update which is especially beneficial for large models!
 
 ---
 
 ## Optimisation & Inference
 
-Now that we have an understanding of how to construct and interact with Zodiax classes, lets see how we can use them to perform optimisation and inference on our model. We will start with a simple example of optimising a model using gradient descent, then show how to use the good deep mind gradient processing library [Optax](https://optax.readthedocs.io/en/latest/), then show how to use numpy to perform inference on the data, and finally show how to use derivates to calcaulte Fisher matrices. In these examples we will use the classes we created above.
+Now that we have an understanding of how to construct and interact with Zodiax classes, let's see how we can use them to perform optimisation and inference on our model. We will start with a simple example of optimising a model using gradient descent, then show how to use the good deep mind gradient processing library [Optax](https://optax.readthedocs.io/en/latest/), then show how to use numpy to perform inference on the data, and finally show how to use derivatives to calculate Fisher matrices. In these examples we will use the classes we created above.
 
 **Create some fake data**
 
-Now lets take a look at how we can recover the parameters of the model using gradient descent. To do this we need to create some fake data which we will do by modelling the normals and adding some noise.
+Now let's take a look at how we can recover the parameters of the model using gradient descent. To do this we need to create some fake data which we will do by modelling the normals and adding some noise.
 
 Then we create a new instance of the model that we will use to recover the parameters from the data!
 
@@ -238,10 +237,10 @@ import matplotlib.pyplot as plt
 # Make some data by adding some noise
 key = jr.PRNGKey(0)
 true_signal = sources.model()
-data = true_signal + jr.normal(key, sources.model().shape)/50
+data = true_signal + jr.normal(key, sources.model().shape) / 50
 
 # Create a model to initialise
-initial_model = NormalSet([-3., 3.], [1., 1.], [2.5, 2.5], ['alpha', 'beta'])
+initial_model = NormalSet([-3.0, 3.0], [1.0, 1.0], [2.5, 2.5], ["alpha", "beta"])
 ```
 
 ??? abstract "Plotting code"
@@ -264,18 +263,25 @@ initial_model = NormalSet([-3., 3.], [1., 1.], [2.5, 2.5], ['alpha', 'beta'])
 
 **Create a Loss Function**
 
-Now lets create a loss function and use the gradients to perform a simple gradient descent recovery of the parameters:
+Now let's create a loss function and use the gradients to perform a simple gradient descent recovery of the parameters:
 
 ```python
-# Now lets construct a loss function
+# Now let's construct a loss function
 opt_parameters = [
-    'alpha.mean', 'alpha.scale', 'alpha.amplitude',
-    'beta.mean', 'beta.scale', 'beta.amplitude'
-    ]
+    "alpha.mean",
+    "alpha.scale",
+    "alpha.amplitude",
+    "beta.mean",
+    "beta.scale",
+    "beta.amplitude",
+]
+
+
 @zdx.filter_jit
 @zdx.filter_value_and_grad(opt_parameters)
 def loss_fn(model, data):
     return np.square(model.model() - data).sum()
+
 
 # Evaluate loss function once Compile to XLA
 model = initial_model
@@ -286,13 +292,13 @@ loss, grads = loss_fn(model, data)
     The `@zdx.filter_jit` decorator is used to compile the function to XLA, which is done the first time it is called. This is not strictly necessary but it can speed up the function a huge amount and so it generally recommended. The reason we use this function and not the regular `@jax.jit` is that the Zodiax function will mark any non-optimisable parameters as _static_, such as strings. This allows us to create classes with extra meta-data that we don't have to manually declare as static!
 
 !!! info "`@zdx.filter_value_and_grad` & `opt_parameters`"
-    Why did we use the `@zdx.filter_value_and_grad` decorator and what is the `opt_pararmeters` variable? This filter function operates similarly to the `@zdx.filter_jit` decorator by preventaing gradients being taken with respect to strings and lets us specifiy _exactly_ what parameters we want to optimise. In this case we want to optimise the parameters of the individual normals, so we pass a list of of paths to those parameters!
+    Why did we use the `@zdx.filter_value_and_grad` decorator and what is the `opt_pararmeters` variable? This filter function operates similarly to the `@zdx.filter_jit` decorator by preventing gradients being taken with respect to strings and lets us specify _exactly_ what parameters we want to optimise. In this case we want to optimise the parameters of the individual normals, so we pass a list of of paths to those parameters!
 
 ---
 
-### Simple Gradeint Descent
+### Simple Gradient Descent
 
-In gradient descent we update our parameters towards the minimum of the loss function by taking a step in the opposite direction of the gradient (towards the minimum). The size of this step is controlled by the learning rate, which is a hyper-parameter that we have to tune. In this case we have set the learning rate to `1e-2` and applied this learning rate to all of the parameters in the model using the inbuilt Zodiax `.multiply` function.
+In gradient descent we update our parameters by taking a step in the opposite direction of the gradient (toward the minimum). The size of this step is controlled by the learning rate, which is a hyper-parameter that we have to tune. In this case we have set the learning rate to `1e-2` and applied this learning rate to all of the parameters in the model using the in-built Zodiax `.multiply` function.
 
 ```python
 losses = []
@@ -303,7 +309,7 @@ for i in range(200):
     losses.append(loss)
 ```
 
-How easy was that! Now lets examine the results:
+How easy was that! Now let's examine the results:
 
 ??? abstract "Plotting code"
     ```python
@@ -315,8 +321,8 @@ How easy was that! Now lets examine the results:
     plt.ylabel("Log10 Loss")
 
     plt.subplot(1, 2, 2)
-    plt.scatter(xs, data, s=10, label='Data')
-    plt.plot(xs, model.model(), alpha=0.75, label='Recovered Model',  c='tab:green')
+    plt.scatter(xs, data, s=10, label="Data")
+    plt.plot(xs, model.model(), alpha=0.75, label="Recovered Model", c="tab:green")
     plt.axhline(0, color="k", alpha=0.5)
     plt.title("Data and Recovered Signal")
     plt.xlabel("Position")
@@ -331,9 +337,9 @@ How easy was that! Now lets examine the results:
 
 ### Optax
 
-One of the other benfeits of using Zodiax is that our objects natively integrate in to the Jax optmisation ecosystem. For example we can use the Google DeepMind gradient processing libaray [Optax](https://optax.readthedocs.io/en/latest/) in order to gain access to a series of gradient optimisation algorithms.
+One of the other benfeits of using Zodiax is that our objects natively integrate in to the Jax optimisation ecosystem. For example we can use the Google DeepMind gradient processing libaray [Optax](https://optax.readthedocs.io/en/latest/) in order to gain access to a series of gradient optimisation algorithms.
 
-We can re-use the loss function from above, so lets have a look how we can use some Optax optimisers:
+We can re-use the loss function from above, so let's have a look how we can use some Optax optimisers:
 
 ```python
 import optax
@@ -341,6 +347,7 @@ import optax
 # Get optax objcets
 model = initial_model
 optimiser, state = zdx.get_optimiser(model, opt_parameters, optax.adam(1e-1))
+
 
 losses = []
 for i in range(200):
@@ -351,9 +358,9 @@ for i in range(200):
 ```
 
 !!! info "`zdx.get_optimiser(model, parameters, optimisers)`"
-    The `zdx.get_optimiser` function takes a model, a list of parameters to optimise and list of optimisers for each of the those parameters and returns an optax optimiser and an optax state object. This convenience function simply ensures that the we format our model correctly and map our optimisers correctly for Optax! These objects together are used to implement more complex gradient descent algorithms such as Adam, RMSProp, etc.
+    The `zdx.get_optimiser` function takes a model, a list of parameters to optimise and list of optimisers for each of the those parameters and returns an Optax optimiser and an optax state object. This convenience function simply ensures that the we format our model correctly and map our optimisers correctly for Optax! These objects together are used to implement more complex gradient descent algorithms such as Adam, RMSProp, etc.
 
-Easy! Lets examine the results
+Easy! Let's examine the results
 
 ??? abstract "Plotting code"
 
@@ -366,8 +373,8 @@ Easy! Lets examine the results
     plt.ylabel("Log10 Loss")
 
     plt.subplot(1, 2, 2)
-    plt.scatter(xs, data, s=10, label='Data')
-    plt.plot(xs, model.model(), alpha=0.75, label='Recovered Model',  c='tab:green')
+    plt.scatter(xs, data, s=10, label="Data")
+    plt.plot(xs, model.model(), alpha=0.75, label="Recovered Model", c="tab:green")
     plt.axhline(0, color="k", alpha=0.5)
     plt.title("Data and Recovered Signal")
     plt.xlabel("Position")
@@ -382,7 +389,7 @@ Easy! Lets examine the results
 
 ### Fisher Inference
 
-The differentiable nature of Zodiax objects also allows us to perform inference on the parameters of our model. The [Laplace approximation](https://en.wikipedia.org/wiki/Laplace%27s_approximation) assumes that the posterior distribution of our model parameters is a gaussian distribution centred on the maximum likelihood estimate of the parameters. Luckily we can use autodiff to calculate the hessian of the log likelihood function and invert it to get the covariance matrix of the posterior distribution! Zodiax has some inbuilt functions that can be used to calculate the covariance matrix of a model
+The differentiable nature of Zodiax objects also allows us to perform inference on the parameters of our model. The [Laplace approximation](https://en.wikipedia.org/wiki/Laplace%27s_approximation) assumes that the posterior distribution of our model parameters is a Gaussian distribution centred on the maximum likelihood estimate of the parameters. Luckily we can use autodiff to calculate the (negative) Hessian of the log likelihood function and invert it to get the covariance matrix of the posterior distribution! Zodiax has some inbuilt functions that can be used to calculate the covariance matrix of a model
 
 ??? info "Fisher and Covariance Matrices"
     The covariance matrix $\vec{\Sigma}$ describes the covariance between the parameters of a model. Under the Laplace approximation, we can calculate the covariance matrix using autodiff:
@@ -396,34 +403,60 @@ The differentiable nature of Zodiax objects also allows us to perform inference 
     where $\mathcal{L}$ is the likelihood function and $\rho$ is the prior function. In this example we will assume a flat prior, so $\rho(\vec{X}) = 1$.
 
 ```python
+# jax scipy for the chi2 log likelihood
+from jax import scipy as jsp
+
+
+def chi2_loglike(pytree, data, noise: float = 1) -> float:
+    return jsp.stats.chi2.logpdf(pytree.model(), data, scale=noise).sum()
+
+
 # Define the paramters we want to marginalise over
-parameters = ['alpha.mean',      'beta.mean', 
-              'alpha.scale',     'beta.scale', 
-              'alpha.amplitude', 'beta.amplitude']
+parameters = [
+    "alpha.mean",
+    "beta.mean",
+    "alpha.scale",
+    "beta.scale",
+    "alpha.amplitude",
+    "beta.amplitude",
+]
 
 # Get the covariance matrix
-covariance_matrix = zdx.covariance_matrix(model, parameters,
-    zdx.chi2_loglike, data, noise=1/50)
-deviations = np.abs(np.diag(covariance_matrix))**0.5
+covariance_matrix = zdx.covariance_matrix(
+    model, parameters, chi2_loglike, data, noise=1 / 50
+)
+deviations = np.abs(np.diag(covariance_matrix)) ** 0.5
 ```
 
-Lets examine the results:
+Let's examine the results:
 
 ??? abstract "Plotting code"
     ```python
     true_values = sources.get(parameters)
-    recoverd_parameters = model.get(parameters)
+    recovered_parameters = model.get(parameters)
 
-    formatted = [r"$\alpha_\mu$",    r"$\beta_\mu$",
-                 r"$\alpha_\sigma$", r"$\beta_\sigma$",
-                 r"$\alpha_A$",      r"$\beta_A$"]
+    formatted = [
+        r"$\alpha_\mu$",
+        r"$\beta_\mu$",
+        r"$\alpha_\sigma$",
+        r"$\beta_\sigma$",
+        r"$\alpha_A$",
+        r"$\beta_A$",
+    ]
 
     plt.figure(figsize=(8, 4))
     xs = np.arange(len(parameters))
-    plt.bar(xs, true_values, tick_label=formatted, width=0.3, label='True')
-    plt.bar(xs+0.33, recoverd_parameters, tick_label=formatted, yerr=deviations,
-        width=0.33, label='Recovered', capsize=3)
-    plt.plot([], c='k', label='1-sigma')
+    plt.bar(xs, true_values, tick_label=formatted, width=0.3, label="True")
+    plt.bar(
+        xs + 0.33,
+        recovered_parameters,
+        tick_label=formatted,
+        yerr=deviations,
+        width=0.33,
+        label="Recovered",
+        capsize=3,
+    )
+    plt.plot([], c="k", label="1-sigma")
     plt.axhline(0, color="k", alpha=0.5)
     plt.legend(loc=2)
     plt.xlabel("Parameter")
@@ -439,41 +472,47 @@ Fantastic, this method gives us a great way to estimate the uncertainty in our r
 
 ---
 
-### Numpyro
+### NumPyro
 
-[Numpyro](https://num.pyro.ai/en/latest/index.html) is a probabailistic programming library that allows us to perform efficient posterior sampling algorithms. Numpyro is also built in Jax and so is designed to that take advantage of differentiability in order to perform extremely high-dimensional inference!
+[NumPyro](https://num.pyro.ai/en/latest/index.html) is a probabilistic programming library that allows us to perform efficient posterior sampling algorithms. NumPyro is also built in Jax and so is designed to that take advantage of differentiability in order to perform extremely high-dimensional inference!
 
-Lets see how Zodiax can be integrated with Numpyro to perform posterior sampling on our model parameters.
+Let's see how Zodiax can be integrated with NumPyro to perform posterior sampling on our model parameters.
 
 ```python
 import numpyro as npy
 import numpyro.distributions as dist
 import chainconsumer as cc
 
+
 def sampling_fn(data, model):
-    paths = ["alpha.mean",      "beta.mean", 
-             "alpha.scale",     "beta.scale",
-             "alpha.amplitude", "beta.amplitude"]
+    paths = [
+        "alpha.mean",
+        "beta.mean",
+        "alpha.scale",
+        "beta.scale",
+        "alpha.amplitude",
+        "beta.amplitude",
+    ]
 
     # Define priors
-    values = [npy.sample(r"\alpha_\mu",    dist.Normal(0, 5)), 
-              npy.sample(r"\beta_\mu",     dist.Normal(0, 5)),
-              npy.sample(r"\alpha_\sigma", dist.HalfNormal(5)), 
-              npy.sample(r"\beta_\sigma",  dist.HalfNormal(5)),
-              npy.sample(r"\alpha_A",      dist.Normal(0, 5)), 
-              npy.sample(r"\beta_A",       dist.Normal(0, 5))]
-    
+    values = [
+        npy.sample(r"\alpha_\mu", dist.Normal(0, 5)),
+        npy.sample(r"\beta_\mu", dist.Normal(0, 5)),
+        npy.sample(r"\alpha_\sigma", dist.HalfNormal(5)),
+        npy.sample(r"\beta_\sigma", dist.HalfNormal(5)),
+        npy.sample(r"\alpha_A", dist.Normal(0, 5)),
+        npy.sample(r"\beta_A", dist.Normal(0, 5)),
+    ]
+
     # Sample from the posterior distribution
     with npy.plate("data", len(data)):
-        model_sampler = dist.Normal(
-            model.set(paths, values).model().flatten()
-            )
+        model_sampler = dist.Normal(model.set(paths, values).model().flatten())
         return npy.sample("Sampler", model_sampler, obs=data.flatten())
 ```
 
 Numpyo requires a 'sampling' function where you assign priors to your parameters and then sample from the posterior distribution. The syntax for this can be seen above. We then sample the data using a 'plate' and define a likelihood which in this case is a normal.
 
-We then need to define our sampler which in this case is the No U-Turn Sampler (NUTS). NUTS is a variant of Hamiltonian Monte Carlo (HMC) that is designed to be more efficient and robust, and takes advantage of gradients to allow high dimensional inference.
+We then need to define our sampler which in this case is the No U-Turn Sampler (NUTS). NUTS is a variant of Hamiltonian Monte Carlo (HMC) that is designed to be more efficient and robust, and takes advantage of gradients to allow high-dimensional inference.
 
 ```python
 # Using the model above, we can now sample from the posterior distribution
@@ -486,18 +525,28 @@ sampler = npy.infer.MCMC(
 %time sampler.run(jr.PRNGKey(0), data, model)
 ```
 
-Fantastic now lets have a look at our posterior distributions!
+Fantastic now let's have a look at our posterior distributions!
 
 ??? abstract "Plotting code"
     ```python
-    chain = cc.ChainConsumer()
-    chain.add_chain(sampler.get_samples())
-    chain.configure(
-        serif=True, shade=True, bar_shade=True, shade_alpha=0.2, spacing=1.0, max_ticks=3
+    import pandas as pd
+
+    samples = pd.DataFrame(sampler.get_samples())
+    chain = cc.Chain(
+        samples=samples,
+        name="NumPyro Run",
+        serif=True,
+        shade=True,
+        bar_shade=True,
+        shade_alpha=0.2,
+        spacing=1.0,
+        max_ticks=3,
     )
 
-    fig = chain.plotter.plot()
+    chainconsumer = cc.ChainConsumer()
+    chainconsumer.add_chain(chain)
+    fig = chainconsumer.plotter.plot()
     fig.set_size_inches((15, 15))
     ```
 
-![Numpyro](../assets/hmc_fit.png)
+![NumPyro](../assets/hmc_fit.png)
