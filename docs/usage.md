@@ -24,26 +24,26 @@ Lets examine how these methods work by looking at an example class structure. We
 
 ```python
 import zodiax as zdx
-from jax import numpy as np, scipy as scp
+from jax import numpy as np, scipy as jsp
 
 class Normal(zdx.Base):
     """Basic class for modelling a normal distribution"""
-    mean      : np.ndarray
-    scale     : np.ndarray
+    mean : np.ndarray
+    scale : np.ndarray
     amplitude : np.ndarray
 
 
     def __init__(self, mean, scale, amplitude):
         """Constructor for the Normal class"""
-        self.mean      = np.asarray(mean,      dtype=float)
-        self.scale     = np.asarray(scale,     dtype=float)
+        self.mean = np.asarray(mean, dtype=float)
+        self.scale = np.asarray(scale, dtype=float)
         self.amplitude = np.asarray(amplitude, dtype=float)
     
 
     def model(self, width=10):
         """Evaluates the normal distribution"""
         xs = np.linspace(-width, width, 128)
-        return self.amplitude * scp.stats.norm.pdf(xs, self.mean, self.scale)
+        return self.amplitude * jsp.stats.norm.pdf(xs, self.mean, self.scale)
 ```
 
 This class simply models a normal distribution with a mean, scale and amplitude, and has a `.model()` method that is used to actually perform the calculation of the normal distribution.
@@ -63,7 +63,7 @@ This class simply models a normal distribution with a mean, scale and amplitude,
     distribution = normal(10)
     ```
 
-    This is a matter of personal preference, *however* when using Optax if you try to optimise a class that has a `.__call__()` method, you can thrown unhelpful errors. Becuase of this I recommend avoiding `.__call__()` methods and instead using `.model()` method. Similarly, the `bayes` module of zodiax uses the `.model()` method to evaluate the likelihood of the model, so it is best to use this method to avoid confusion!
+    This is a matter of personal preference, *however* when using Optax if you try to optimise a class that has a `.__call__()` method, you can thrown unhelpful errors. Becuase of this I recommend avoiding `.__call__()` methods and instead using `.model()` method.
 
 Now we construct a class to store and model a set of multiple normals.
 
@@ -71,7 +71,7 @@ Now we construct a class to store and model a set of multiple normals.
 class NormalSet(zdx.Base):
     """Basic class for modelling a set of normal distributions"""
     normals : dict
-    width   : np.ndarray
+    width : np.ndarray
 
 
     def __init__(self, means, scales, amplitude, names, width=10):
