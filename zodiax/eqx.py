@@ -127,8 +127,10 @@ def partition(
     pytree2 : Base()
         A matching pytree with Nones at all leaves specified by the parameters.
     """
+
     if isinstance(parameters, str):
         parameters = [parameters]
+
     boolean_filter = zodiax.tree.boolean_filter(pytree, parameters)
     return equinox.partition(
         pytree, boolean_filter, *partition_args, **partition_kwargs

@@ -1,4 +1,5 @@
 import zodiax
+import equinox as eqx
 import jax.numpy as np
 import jax.tree_util as jtu
 from jax import config
@@ -66,10 +67,10 @@ def set_array(pytree: Base()) -> Base():
     dtype = np.float64 if config.x64_enabled else np.float32
 
     # partitioning the pytree into arrays and other
-    floats, other = zodiax.partition(pytree, zodiax.is_inexact_array_like)
+    floats, other = eqx.partition(pytree, zodiax.is_inexact_array_like)
 
     # converting the floats to arrays
     floats = jtu.tree_map(lambda x: np.array(x, dtype=dtype), floats)
 
     # recombining
-    return zodiax.combine(floats, other)
+    return eqx.combine(floats, other)

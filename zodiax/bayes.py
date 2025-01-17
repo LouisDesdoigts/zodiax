@@ -89,7 +89,7 @@ def hessian(
         parameters = [parameters]
 
     # Build empty vector to perturb
-    pytree = zodiax.tree.set_array(pytree, parameters)
+    pytree = zodiax.tree.set_array(pytree)
     shapes, lengths = _shapes_and_lengths(pytree, parameters, shape_dict)
     X = np.zeros(_lengths_to_N(lengths))
 

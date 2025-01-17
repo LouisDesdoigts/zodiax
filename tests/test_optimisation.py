@@ -57,8 +57,8 @@ def test_get_optimiser(create_base):
 
     # Optimisers
     optimisers = {
-        "param": zodiax.optimisation.sgd(1),
-        "b.param": zodiax.optimisation.adam(10),
+        "param": zodiax.optimisation.sgd(0, 1, (1, 0.5), (2, 0.25)),
+        "b.param": zodiax.optimisation.adam(0, 10, (1, 0.5), (2, 0.25)),
     }
 
     # Test paths
