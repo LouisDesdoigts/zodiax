@@ -18,7 +18,8 @@ value = pytree.get(paths)
 
 ```python
 pytree = pytree.set(paths, values)
-pytree = pytree.set_and_call(paths, values, call_fn)
+# pytree = pytree.set_and_call(paths, values, call_fn)
+pytree = pytree.update(dict)
 ```
 
 **Arithmetic Methods**
@@ -51,7 +52,7 @@ from equinox import filter_jit
 from zodiax import filter_jit
 ```
 
-Some Equinox functions are overwritten in order to give a path based interface. Currently there are two functions that are overwritten, `filter_grad` and `filter_value_and_grad`. This means that the following two lines will import *different* functions:
+Some Equinox functions are overwritten in order to give a path based interface. Currently there are three functions that are overwritten: `filter_grad`, `filter_value_and_grad`, and `partition`. This means that the following two lines will import *different* functions:
 
 ```python
 from equinox import filter_grad
@@ -65,7 +66,7 @@ from equinox import nn
 from zodiax.equinox import nn
 ```
 
----
+<!-- ---
 
 # Optimisation
 
@@ -84,4 +85,4 @@ The Tree module provides a module for helpful pytree manipulation functions. It 
 !!! warning "Serialisation is currently an experimental Module"
     This module is currently experimental and may change in future versions.
 
-The Serialisation methods are designed to make it easy to save and load Zodiax models! There are two main functions: `serialise()` and `deserialise()`.
+The Serialisation methods are designed to make it easy to save and load Zodiax models! There are two main functions: `serialise()` and `deserialise()`. -->
