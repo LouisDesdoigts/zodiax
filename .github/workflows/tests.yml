@@ -29,8 +29,8 @@ jobs:
         run: pytest --quiet tests/test_base.py
       - name: tree tests
         run: pytest --quiet tests/test_tree.py
-      - name: bayes tests
-        run: pytest --quiet tests/test_bayes.py
+      - name: fisher tests
+        run: pytest --quiet tests/test_fisher.py
       - name: equinox tests
         run: pytest --quiet tests/test_eqx.py
       - name: optimisation tests
