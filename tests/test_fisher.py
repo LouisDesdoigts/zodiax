@@ -46,7 +46,7 @@ def test_all_fisher_matrices(create_base):
     for param in paths:
 
         for save_memory in [True, False]:
-            hess = zodiax.bayes.hessian(
+            hess = zodiax.fisher.hessian(
                 pytree,
                 param,
                 loglike_fn,
@@ -55,11 +55,11 @@ def test_all_fisher_matrices(create_base):
                 save_memory=save_memory,
             )
 
-        fisher = zodiax.bayes.fisher_matrix(
+        fisher = zodiax.fisher.fisher_matrix(
             pytree, param, loglike_fn, data, shape_dict=shape_dict
         )
 
-        cov = zodiax.bayes.covariance_matrix(
+        cov = zodiax.fisher.covariance_matrix(
             pytree, param, loglike_fn, data, shape_dict=shape_dict
         )
 
@@ -81,7 +81,7 @@ def test_calc_entropy(create_base):
     loglike_fn = poiss_loglike
     shape_dict = {"param": (1,)}
     for param in paths:
-        cov = zodiax.bayes.covariance_matrix(
+        cov = zodiax.fisher.covariance_matrix(
             pytree, param, loglike_fn, data, shape_dict=shape_dict
         )
-        zodiax.bayes.calc_entropy(cov)
+        zodiax.fisher.calc_entropy(cov)
