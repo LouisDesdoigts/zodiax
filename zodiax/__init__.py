@@ -9,7 +9,7 @@ from . import (
 )
 
 name = "zodiax"
-__version__ = "0.4.2"
+__version__ = "0.5.0"
 
 # Dynamically import symbols into the top-level namespace
 for module in [base, fisher, eqx, optimisation, tree]:
