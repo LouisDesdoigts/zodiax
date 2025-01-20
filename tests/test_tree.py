@@ -28,5 +28,6 @@ def test_set_array(create_base):
     test the set_array function from zodiax/tree.py
     """
     pytree = create_base()
-    print(pytree)
-    zodiax.tree.set_array(pytree)
+
+    for params in [paths[0], None]:
+        zodiax.tree.set_array(pytree, params)

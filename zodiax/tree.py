@@ -1,8 +1,8 @@
 import zodiax
 import equinox as eqx
 import jax
-from jax import config, numpy as np
-from typing import Union, List
+from jax import config, Array, numpy as np
+from typing import Union, List, Any
 
 
 __all__ = ["boolean_filter", "set_array"]
@@ -47,7 +47,7 @@ def boolean_filter(pytree: Base(), parameters: Params, inverse: bool = False) ->
         return true_pytree.set(parameters, len(parameters) * [False])
 
 
-def set_array(pytree: Base()) -> Base():
+def set_array(pytree: Base(), parameters=None) -> Base():
     """
     Converts all leaves in the pytree to arrays to ensure they have a
     .shape property for static dimensionality and size checks.
@@ -62,6 +62,14 @@ def set_array(pytree: Base()) -> Base():
     pytree : Base()
         The pytree with the leaves converted to arrays.
     """
+
+    # Old routine for setting specificed parameters
+    if parameters is not None:
+        new_leaves = jax.tree.map(_to_array, pytree.get(parameters))
+        return pytree.set(parameters, new_leaves)
+
+    # else convert all leaves to arrays
+
     # grabbing float data type
     dtype = np.float64 if config.x64_enabled else np.float32
 
@@ -73,3 +81,10 @@ def set_array(pytree: Base()) -> Base():
 
     # recombining
     return eqx.combine(floats, other)
+
+
+def _to_array(leaf: Any):
+    if not isinstance(leaf, Array):
+        return np.asarray(leaf, dtype=float)
+    else:
+        return leaf
