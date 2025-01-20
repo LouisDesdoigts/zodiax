@@ -5,6 +5,9 @@ from jax import numpy as np
 from jax.lax import dynamic_slice as lax_slice
 
 
+__all__ = ["build_wrapper", "EquinoxWrapper", "WrapperHolder"]
+
+
 def build_wrapper(eqx_model, filter_fn=eqx.is_array):
     arr_mask = jax.tree.map(lambda leaf: filter_fn(leaf), eqx_model)
     dyn, static = eqx.partition(eqx_model, arr_mask)
