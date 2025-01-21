@@ -1,7 +1,7 @@
 import zodiax
-import jax.numpy as np
-import jax.tree_util as jtu
-from jax import Array
+import equinox as eqx
+import jax
+from jax import config, Array, numpy as np
 from typing import Union, List, Any
 
 
@@ -40,41 +40,51 @@ def boolean_filter(pytree: Base(), parameters: Params, inverse: bool = False) ->
     """
     parameters = parameters if isinstance(parameters, list) else [parameters]
     if not inverse:
-        false_pytree = jtu.tree_map(lambda _: False, pytree)
+        false_pytree = jax.tree.map(lambda _: False, pytree)
         return false_pytree.set(parameters, len(parameters) * [True])
     else:
-        true_pytree = jtu.tree_map(lambda _: True, pytree)
+        true_pytree = jax.tree.map(lambda _: True, pytree)
         return true_pytree.set(parameters, len(parameters) * [False])
 
 
-# Array
-def _to_array(leaf: Any):
-    if not isinstance(leaf, Array):
-        return np.asarray(leaf, dtype=float)
-    else:
-        return leaf
-
-
-def set_array(pytree: Base(), parameters: Params) -> Base():
+def set_array(pytree: Base(), parameters=None) -> Base():
     """
-    Converts all leaves specified by parameters in the pytree to arrays to
-    ensure they have a .shape property for static dimensionality and size
-    checks. This allows for 'dynamicly generated' array shapes from the path
-    based `parameters` input. This is used for dynamically generating the
-    latent X parameter that we need to generate in order to calculate the
-    hessian.
+    Converts all leaves in the pytree to arrays to ensure they have a
+    .shape property for static dimensionality and size checks.
 
     Parameters
     ----------
     pytree : Base()
         The pytree to be converted.
-    parameters : Params
-        The leaves to be converted to arrays.
 
     Returns
     -------
     pytree : Base()
-        The pytree with the specified leaves converted to arrays.
+        The pytree with the leaves converted to arrays.
     """
-    new_leaves = jtu.tree_map(_to_array, pytree.get(parameters))
-    return pytree.set(parameters, new_leaves)
+
+    # Old routine for setting specificed parameters
+    if parameters is not None:
+        new_leaves = jax.tree.map(_to_array, pytree.get(parameters))
+        return pytree.set(parameters, new_leaves)
+
+    # else convert all leaves to arrays
+
+    # grabbing float data type
+    dtype = np.float64 if config.x64_enabled else np.float32
+
+    # partitioning the pytree into arrays and other
+    floats, other = eqx.partition(pytree, zodiax.is_inexact_array_like)
+
+    # converting the floats to arrays
+    floats = jax.tree.map(lambda x: np.array(x, dtype=dtype), floats)
+
+    # recombining
+    return eqx.combine(floats, other)
+
+
+def _to_array(leaf: Any):
+    if not isinstance(leaf, Array):
+        return np.asarray(leaf, dtype=float)
+    else:
+        return leaf

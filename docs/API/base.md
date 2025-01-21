@@ -12,6 +12,7 @@ value = pytree.get(paths)
 
 ```python
 pytree = pytree.set(paths, values)
+pytree = pytree.update(dict)
 ```
 
 **Arithmetic Methods**

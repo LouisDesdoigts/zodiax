@@ -15,12 +15,19 @@ paths = [
 
 
 def test_boolean_filter(create_base):
+    """
+    test the boolean_filter function from zodiax/tree.py
+    """
     pytree = create_base()
     for path in paths:
         zodiax.tree.boolean_filter(pytree, path)
 
 
 def test_set_array(create_base):
+    """
+    test the set_array function from zodiax/tree.py
+    """
     pytree = create_base()
-    for path in paths:
-        zodiax.tree.set_array(pytree, path)
+
+    for params in [paths[0], None]:
+        zodiax.tree.set_array(pytree, params)

@@ -1,5 +1,5 @@
 import zodiax
-import jax.tree_util as jtu
+import jax
 from jax import Array
 from typing import Union, List, Any
 
@@ -57,5 +57,5 @@ def improve_jit_hash(pytree: Base(), parameters: Params):
         The pytree with scalar arrays leaves replaced with python floats.
     """
     dynamic, static = zodiax.eqx.partition(pytree, parameters)
-    static = jtu.tree_map(_float_from_0d, static)
+    static = jax.tree.map(_float_from_0d, static)
     return zodiax.combine(dynamic, static)

@@ -1,6 +1,6 @@
 # Core
 equinox
-jax
+jax>=0.4.25
 jaxlib
 jaxtyping
 numpy # Needed for serialisation

@@ -32,7 +32,7 @@ Documentation: [louisdesdoigts.github.io/zodiax/](https://louisdesdoigts.github.
 
 Contributors: [Louis Desdoigts](https://github.com/LouisDesdoigts)
 
-Requires: Python 3.8+, Jax 0.4.3+
+Requires: Python 3.9+, Jax 0.4.25+
 
 Installation: ```pip install zodiax```
 
