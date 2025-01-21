@@ -41,6 +41,7 @@ def filter_grad(parameters: Params, *filter_args, **filter_kwargs) -> Callable:
         @wraps(func)
         def inner_wrapper(pytree: PyTree, *args, **kwargs):
             # Convert parameters
+            pytree = zodiax.set_array(pytree)
             boolean_filter = zodiax.tree.boolean_filter(pytree, parameters)
 
             # Wrap original function
@@ -84,6 +85,7 @@ def filter_value_and_grad(
         @wraps(func)
         def inner_wrapper(pytree: PyTree, *args, **kwargs):
             # Convert parameters
+            pytree = zodiax.set_array(pytree)
             boolean_filter = zodiax.tree.boolean_filter(pytree, parameters)
 
             # Wrap original function
@@ -131,6 +133,7 @@ def partition(
     if isinstance(parameters, str):
         parameters = [parameters]
 
+    pytree = zodiax.set_array(pytree)
     boolean_filter = zodiax.tree.boolean_filter(pytree, parameters)
     return equinox.partition(
         pytree, boolean_filter, *partition_args, **partition_kwargs
