@@ -12,14 +12,6 @@ __all__ = [
 ]
 
 
-"""
-Assumes all pytrees have a .model() function
-TODO: Allow *args and **kwargs to be passed to pytree.model()
-    -> Actually kind of hard, since we already have * args and ** kwargs for
-    the loglike function
-"""
-
-
 def Base():
     return zodiax.base.Base
 
@@ -48,16 +40,15 @@ def calc_entropy(cov_matrix: Array) -> Array:
 def hessian(
     pytree: Base(),
     parameters: Params,
-    loglike_fn: callable,
-    *loglike_args,
+    fn: callable,
+    *fn_args,
     shape_dict: dict = {},
     save_memory: bool = False,
-    **loglike_kwargs,
+    **fn_kwargs,
 ) -> Array:
     """
-    Calculates the Hessian of the log likelihood function with respect to the
-    parameters of the pytree. It is evaluated at the current values of the
-    parameters as listed in the pytree.
+    Calculates the Hessian of the function with respect to the parameters of the pytree.
+    It is evaluated at the current values of the parameters as listed in the pytree.
 
     Parameters
     ----------
@@ -65,16 +56,16 @@ def hessian(
         Pytree holding the parameters values.
     parameters : Union[str, list]
         Names of parameters to be used in Hessian calculation.
-    loglike_fn : callable
-        The log likelihood function to differentiate.
+    fn : callable
+        The function to differentiate.
+    *fn_args : Any
+        The args to pass to the log likelihood function.
     shape_dict : dict = {}
         A dictionary specifying the shape of the differentiated vector for
         specific parameters.
     save_memory : bool = False
         If True, the Hessian is calculated column by column to save memory.
-    *loglike_args : Any
-        The args to pass to the log likelihood function.
-    **loglike_kwargs : Any
+    **fn__kwargs : Any
         The kwargs to pass to the log likelihood function.
 
     Returns
@@ -96,7 +87,7 @@ def hessian(
     # Build perturbation function to differentiate
     def loglike_fn_vec(X):
         parametric_pytree = _perturb(X, pytree, parameters, shapes, lengths)
-        return loglike_fn(parametric_pytree, *loglike_args, **loglike_kwargs)
+        return fn(parametric_pytree, *fn_args, **fn_kwargs)
 
     # optional column by column hessian calculation for RAM mercy
     if save_memory:

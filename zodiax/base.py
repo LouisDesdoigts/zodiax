@@ -14,7 +14,7 @@ Params = Union[str, List[str]]
 
 def _get_leaf(pytree: Base, param: Params) -> Any:
     """
-    A hidden class desinged to recurse down a pytree following the param,
+    A hidden class designed to recurse down a pytree following the param,
     returning the leaf at the end of the param.
 
     Base case: len(param) == 1
@@ -29,7 +29,7 @@ def _get_leaf(pytree: Base, param: Params) -> Any:
     Parameters
     ----------
     pytree : Base
-        The pytee object to recurse though.
+        The pytree object to recurse though.
     param : Params
         The param to recurse down.
 
@@ -59,7 +59,7 @@ def _get_leaves(pytree: Base, parameters: list) -> list:
     Parameters
     ----------
     pytree : Base
-        The pytee object to recurse though.
+        The pytree object to recurse though.
     parameters : list
         A list/tuple of nested parameters. Note param objects can only be
         nested a single time.
@@ -90,7 +90,7 @@ def _unwrap(parameters: Params, values_in: list = None) -> list:
     parameters, values : list, list
         The list of unwrapped parameters or parameters and values.
     """
-    # Inititalise empty lists
+    # Initialise empty lists
     parameters_out, values_out = [], []
 
     # If values are provided, apply transformation to both
@@ -174,14 +174,14 @@ def _format(parameters: Params, values: list = None) -> list:
         else:
             flat_parameters = _unwrap(parameters)
 
-        # Turn into seperate strings
+        # Turn into separate strings
         new_parameters = [
             param.split(".") if "." in param else [param] for param in flat_parameters
         ]
 
     # Un-nested/singular input
     else:
-        # Turn into seperate strings
+        # Turn into separate strings
         new_parameters = [parameters.split(".") if "." in parameters else [parameters]]
         new_values = [values]
 
@@ -194,7 +194,7 @@ def _format(parameters: Params, values: list = None) -> list:
 ###############
 class Base(Module):
     """
-    Extend the Equninox.Module class to give a user-friendly 'param based' API
+    Extend the Equinox.Module class to give a user-friendly 'param based' API
     for working with pytrees by adding a series of methods used to interface
     with the leaves of the pytree using parameters.
     """
@@ -259,7 +259,7 @@ class Base(Module):
         Returns
         -------
         pytree : Base
-            The pytree with updated paramaters.
+            The pytree with updated parameters.
         """
 
         # Grabbing the parameters and values from the dictionary
@@ -448,7 +448,7 @@ class BaseModeller(Base):
     # TODO proper documentation
 
     """
-    A base class for modeling that extends `zodiax.Base`. This class allows for
+    A base class for modelling that extends `zodiax.Base`. This class allows for
     dynamic attribute access and dictionary-like item retrieval from the `params`
     dictionary.
     Attributes:
