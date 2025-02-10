@@ -212,7 +212,7 @@ def _perturb(
             xs.append(X[i + n])
         else:
             xs.append(lax.dynamic_slice(X, (i + n,), (length,)).reshape(shape))
-            n += length
+            n += length - 1
     return pytree.add(parameters, xs)
 
 
