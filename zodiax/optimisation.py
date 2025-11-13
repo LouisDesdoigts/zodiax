@@ -25,6 +25,11 @@ def Base():
 Params = Union[str, List[str]]
 Optimisers = Union[GradientTransformation, list]
 
+if jax.config.read("jax_enable_x64"):
+    BIG = np.finfo(np.float64).max / 1e1
+else:
+    BIG = np.finfo(np.float32).max / 1e1
+
 
 def scheduler(lr: float, start: int, *args):
     """
@@ -50,13 +55,13 @@ def scheduler(lr: float, start: int, *args):
     """
 
     # Create a dictionary to store the schedule
-    sched_dict = {start: 1e100}
+    sched_dict = {start: BIG}
 
     # looping over learning rate updates
     for start, mul in args:
         sched_dict[start] = mul
 
-    return optax.piecewise_constant_schedule(lr / 1e100, sched_dict)
+    return optax.piecewise_constant_schedule(lr / BIG, sched_dict)
 
 
 def _base_sgd(vals):
