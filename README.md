@@ -52,8 +52,8 @@ import zodiax as zdx
 import jax.numpy as np
 
 class Linear(zdx.Base):
-    m : Jax.Array
-    b : Jax.Array
+    m : jax.Array
+    b : jax.Array
 
     def __init__(self, m, b):
         self.m = m
