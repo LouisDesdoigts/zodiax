@@ -75,8 +75,8 @@ def hessian(
         parameters of the pytree.
     """
 
-    # If only one parameter is passed, make it a list
-    if len(parameters) == 1:
+    # If a single parameter is passed as a string, make it a list
+    if isinstance(parameters, str):
         parameters = [parameters]
 
     # Build empty vector to perturb
