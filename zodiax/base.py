@@ -261,9 +261,17 @@ class Base(Module):
         pytree : Base
             The pytree with updated parameters.
         """
+        # Unpack the dictionary in to keys and values
+        keys, values = list(dict.keys()), list(dict.values())
 
-        # Grabbing the parameters and values from the dictionary
-        parameters, values = list(dict.keys()), list(dict.values())
+        # Check for any tuples in the parameters and cast to lists.
+        parameters = []
+        for key in keys:
+            if isinstance(key, tuple):
+                param = [str(p) for p in key]
+            else:
+                param = key
+            parameters.append(param)
 
         # Calling the set method
         return self.set(parameters, values)
