@@ -198,7 +198,7 @@ def get_optimiser(
 
     # Generate optimiser dictionary and Assign the null group
     opt_dict = dict([(groups[i], optimisers[i]) for i in range(len(groups))])
-    opt_dict["null"] = optax.adam(0.0)
+    opt_dict["null"] = optax.sgd(0.0)
 
     # Get optimiser object and filtered optimiser
     optim = optax.multi_transform(opt_dict, param_spec)
