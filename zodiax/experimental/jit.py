@@ -3,7 +3,6 @@ import jax
 from jax import Array
 from typing import Union, List, Any
 
-
 __all__ = ["improve_jit_hash"]
 
 

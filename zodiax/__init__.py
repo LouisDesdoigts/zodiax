@@ -7,13 +7,16 @@ from . import (
     tree,
     wrappers,
     experimental,
+    batching,
+    stats,
 )
 
 name = "zodiax"
 __version__ = "0.5.0"
 
 # Dynamically import symbols into the top-level namespace
-for module in [base, fisher, eqx, optimisation, tree, wrappers]:
+# for module in [base, fisher, eqx, optimisation, tree, wrappers]:
+for module in [base, fisher, eqx, optimisation, tree, wrappers, batching, stats]:
     globals().update({name: getattr(module, name) for name in module.__all__})
 
 # Add to __all__
@@ -25,4 +28,6 @@ __all__ = (
     + tree.__all__
     + wrappers.__all__
     + experimental.__all__
+    + batching.__all__
+    + stats.__all__
 )

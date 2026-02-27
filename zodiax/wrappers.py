@@ -4,7 +4,6 @@ import jax
 from jax import numpy as np
 from jax.lax import dynamic_slice as lax_slice
 
-
 __all__ = ["build_wrapper", "EquinoxWrapper", "WrapperHolder"]
 
 

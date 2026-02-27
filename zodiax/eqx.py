@@ -7,7 +7,6 @@ from typing import Union, Callable, List
 import equinox as eqx
 from types import ModuleType
 
-
 Params = Union[str, List[str]]
 
 

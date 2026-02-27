@@ -4,7 +4,6 @@ import jax
 from jax import config, Array, numpy as np
 from typing import Union, List, Any
 
-
 __all__ = ["boolean_filter", "set_array"]
 
 
