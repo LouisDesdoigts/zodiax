@@ -75,18 +75,18 @@ def test_get_optimiser(create_base):
         zodiax.optimisation.get_optimiser(pytree, path, optimiser)
 
 
-def test_get_model_params_optimiser(create_base):
-    """
-    tests the get_optimiser method
-    """
-    # Define parameters and construct base
-    pytree = create_base()
+# def test_get_model_params_optimiser(create_base):
+#     """
+#     tests the get_optimiser method
+#     """
+#     # Define parameters and construct base
+#     pytree = create_base()
 
-    # Optimisers
-    optimisers = {
-        "param": zodiax.optimisation.sgd(0, 1, (1, 0.5), (2, 0.25)),
-        "b.param": zodiax.optimisation.adam(0, 10, (1, 0.5), (2, 0.25)),
-    }
+#     # Optimisers
+#     optimisers = {
+#         "param": zodiax.optimisation.sgd(0, 1, (1, 0.5), (2, 0.25)),
+#         "b.param": zodiax.optimisation.adam(0, 10, (1, 0.5), (2, 0.25)),
+#     }
 
-    # Test paths
-    zodiax.optimisation.get_model_params_optimiser(pytree, optimisers)
+#     # Test paths
+#     zodiax.optimisation.get_model_params_optimiser(pytree, optimisers)

@@ -1,4 +1,3 @@
-import pytest
 import equinox as eqx
 import zodiax as zdx
 import jax.numpy as np
