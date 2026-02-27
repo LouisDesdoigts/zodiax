@@ -2,7 +2,7 @@ import zodiax
 import jax
 from jax import lax, Array, numpy as np
 from typing import Union, List, Any
-
+import warnings
 
 __all__ = [
     "calc_entropy",
@@ -33,6 +33,10 @@ def calc_entropy(cov_matrix: Array) -> Array:
     entropy : Array
         The entropy of the covariance matrix.
     """
+    warnings.warn(
+        "calc_entropy is deprecated as of v1.4 and will be removed in v5.1",
+        DeprecationWarning,
+    )
     sign, logdet = np.linalg.slogdet(cov_matrix)
     return 0.5 * (np.log(2 * np.pi * np.e) + (sign * logdet))
 
@@ -74,6 +78,10 @@ def hessian(
         The Hessian of the log likelihood function with respect to the
         parameters of the pytree.
     """
+    warnings.warn(
+        "hessian is deprecated as of v1.4 and will be removed in v5.1",
+        DeprecationWarning,
+    )
 
     # If only one parameter is passed, make it a list
     if len(parameters) == 1:
@@ -111,6 +119,10 @@ def fisher_matrix(
     respect to the parameters of the pytree. It is evaluated at the current values
     of the parameters as listed in the pytree. Simply returns the negative Hessian.
     """
+    warnings.warn(
+        "fisher_matrix is deprecated as of v1.4 and will be removed in v5.1",
+        DeprecationWarning,
+    )
 
     return -hessian(
         pytree,
@@ -164,6 +176,11 @@ def covariance_matrix(
     covariance_matrix : Array
         The covariance matrix of the pytree parameters.
     """
+    warnings.warn(
+        "covariance_matrix is deprecated as of v1.4 and will be removed in v5.1",
+        DeprecationWarning,
+    )
+
     return np.linalg.inv(
         fisher_matrix(
             pytree,

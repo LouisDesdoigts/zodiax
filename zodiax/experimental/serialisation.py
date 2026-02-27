@@ -11,7 +11,6 @@ import jax.numpy as jnp
 from equinox import tree_serialise_leaves, tree_deserialise_leaves
 from pathlib import Path
 
-
 __all__ = ["serialise", "deserialise", "load_structure", "build_structure"]
 
 

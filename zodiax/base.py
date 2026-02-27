@@ -5,11 +5,26 @@ import equinox as eqx
 from equinox import tree_at, Module
 from typing import Union, Any, List
 
-
 __all__ = ["Base"]
 
 
 Params = Union[str, List[str]]
+
+
+def _unpack(dict):
+    """
+    Unpacks a dictionary with potnetially nested keys into a dictionary with a
+    one to one mapping of keys to values.
+    """
+    # Check for any tuples in the parameters and cast to lists.
+    unpacked = {}
+    for key, value in dict.items():
+        if isinstance(key, tuple):
+            for param in key:
+                unpacked[param] = value
+        else:
+            unpacked[key] = value
+    return unpacked
 
 
 def _get_leaf(pytree: Base, param: Params) -> Any:
@@ -261,17 +276,9 @@ class Base(Module):
         pytree : Base
             The pytree with updated parameters.
         """
-        # Unpack the dictionary in to keys and values
-        keys, values = list(dict.keys()), list(dict.values())
 
-        # Check for any tuples in the parameters and cast to lists.
-        parameters = []
-        for key in keys:
-            if isinstance(key, tuple):
-                param = [str(p) for p in key]
-            else:
-                param = key
-            parameters.append(param)
+        dict = _unpack(dict)
+        parameters, values = list(dict.keys()), list(dict.values())
 
         # Calling the set method
         return self.set(parameters, values)
