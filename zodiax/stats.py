@@ -72,6 +72,9 @@ def check_positive_semi_definite(mat):
 
 def gauss_hessian(J, cov=None):
     # Gauss-Newton hessian approximation under the assumption of a multivariate normal
+    # if cov is None:
+    #     return J @ J.T
+    # return J @ (np.linalg.inv(cov) @ J.T)
     if cov is None:
-        return J @ J.T
-    return J @ (np.linalg.inv(cov) @ J.T)
+        return J.T @ J
+    return J.T @ (np.linalg.inv(cov) @ J)
