@@ -13,7 +13,7 @@ Params = Union[str, List[str]]
 
 def _unpack(dict):
     """
-    Unpacks a dictionary with potnetially nested keys into a dictionary with a
+    Unpacks a dictionary with potentially nested keys into a dictionary with a
     one to one mapping of keys to values.
     """
     # Check for any tuples in the parameters and cast to lists.
