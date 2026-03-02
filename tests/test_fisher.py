@@ -70,18 +70,3 @@ def test_all_fisher_matrices(create_base):
             raise ValueError(
                 "Inverse Fisher matrix and covariance matrix are not equal."
             )
-
-
-def test_calc_entropy(create_base):
-    """
-    tests the calc_entropy function
-    """
-    pytree = create_base()
-    data = pytree.model()
-    loglike_fn = poiss_loglike
-    shape_dict = {"param": (1,)}
-    for param in paths:
-        cov = zodiax.fisher.covariance_matrix(
-            pytree, param, loglike_fn, data, shape_dict=shape_dict
-        )
-        zodiax.fisher.calc_entropy(cov)

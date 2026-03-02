@@ -1,6 +1,5 @@
-import zodiax
 import equinox as eqx
-import jax
+import jax.tree as jtu
 from jax import config, Array, numpy as np
 from typing import Union, Any
 import warnings
@@ -42,10 +41,10 @@ def boolean_filter(pytree: PyTree, parameters: Params, inverse: bool = False) ->
     )
     parameters = parameters if isinstance(parameters, list) else [parameters]
     if not inverse:
-        false_pytree = jax.tree.map(lambda _: False, pytree)
+        false_pytree = jtu.map(lambda _: False, pytree)
         return false_pytree.set(parameters, len(parameters) * [True])
     else:
-        true_pytree = jax.tree.map(lambda _: True, pytree)
+        true_pytree = jtu.map(lambda _: True, pytree)
         return true_pytree.set(parameters, len(parameters) * [False])
 
 
@@ -70,7 +69,7 @@ def set_array(pytree: PyTree, parameters=None) -> PyTree:
     )
     # Old routine for setting specified parameters
     if parameters is not None:
-        new_leaves = jax.tree.map(_to_array, pytree.get(parameters))
+        new_leaves = jtu.map(_to_array, pytree.get(parameters))
         return pytree.set(parameters, new_leaves)
 
     # else convert all leaves to arrays
@@ -79,10 +78,10 @@ def set_array(pytree: PyTree, parameters=None) -> PyTree:
     dtype = np.float64 if config.x64_enabled else np.float32
 
     # partitioning the pytree into arrays and other
-    floats, other = eqx.partition(pytree, zodiax.is_inexact_array_like)
+    floats, other = eqx.partition(pytree, eqx.is_inexact_array_like)
 
     # converting the floats to arrays
-    floats = jax.tree.map(lambda x: np.array(x, dtype=dtype), floats)
+    floats = jtu.map(lambda x: np.array(x, dtype=dtype), floats)
 
     # recombining
     return eqx.combine(floats, other)

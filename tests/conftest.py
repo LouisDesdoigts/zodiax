@@ -41,8 +41,6 @@ class B(zodiax.base.Base):
         self.param = param
 
 
-# @pytest.fixture(scope='class')
-# def create_Base(a=1., b=2.):
 @pytest.fixture
 def create_base():
     """
