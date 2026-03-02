@@ -2,7 +2,7 @@
 # https://squidfunk.github.io/mkdocs-material/reference/buttons/
 
 site_name: Zodiax
-docs_dir: .
+docs_dir: /docs
 site_description: Documentation for Zodiax.
 site_author: Louis Desdoigts
 site_url: https://louisdesdoigts.github.io/zodiax/
@@ -10,17 +10,11 @@ repo_url: https://github.com/LouisDesdoigts/zodiax
 repo_name: louisdesdoigts/zodiax
 edit_uri: "" 
 
-strict: false  # Allow warnings during the build process (change later)
-
 plugins:
-  # - mkdocs-jupyter
   - search
   - same-dir
   - autorefs
   - simple:
-      ignore_folders:
-        - tests
-        - zodiax
   - mkdocstrings:
       default_handler: python
       handlers:
@@ -64,11 +58,7 @@ theme:
     - navigation.indexes 
     - navigation.top
     - content.code.copy
-    # - navigation.tabs # Adds tabs for High Level settings
-    # - navigation.tabs.sticky
     - toc.integrate  # Table of contents is integrated on the left; does not appear separately on the right.
-    # - toc.integrate
-    # - content.action.view
   palette:
     # Light mode / dark mode
     # We deliberately don't automatically use `media` to check a user's preferences. We default to light mode as
@@ -96,11 +86,15 @@ nav:
 - API: 
   - Overview:      docs/API/api.md
   - Base:          docs/API/base.md
-  - Tree:          docs/API/tree.md
-  - Bayes:         docs/API/bayes.md
-  - Equinox (eqx): docs/API/eqx.md
   - Optimisation:  docs/API/optimisation.md
-  - Serialisation: docs/API/serialisation.md
+  - Stats:         docs/API/stats.md
+  - Batching:      docs/API/batching.md
+  - Tree:          docs/API/tree.md
+  - Fisher:        docs/API/fisher.md
+  - Equinox (eqx): docs/API/eqx.md
+
+- Previous Versions:
+  - v0.1.0: https://louisdesdoigts.github.io/zodiax/v0.1.0/
 
 - FAQ & Troubleshooting: docs/faq.md
 - Change Log: CHANGELOG.md

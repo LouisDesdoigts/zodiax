@@ -21,7 +21,7 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
-dev = ["pytest", "black", "ruff", "pre-commit", "mkdocs", "mkdocs-jupyter", "mkdocs-same-dir", "mkdocs-autorefs", "mkdocs-simple-plugin", "mkdocstrings-python", "jupyter_contrib_nbextensions", "notebook==6.4.12"]
+dev = ["pytest", "black", "ruff", "pre-commit", "mkdocs", "mkdocs-same-dir", "mkdocs-autorefs", "mkdocstrings-python"]
 
 [tool.black]
 line-length = 88
@@ -29,7 +29,7 @@ line-length = 88
 [tool.ruff]
 line-length = 88
 select = ["E", "F"]
-ignore = ["E402", "E721", "E731", "E741", "F722"]
+ignore = ["E731", "E741", "F722"]
 ignore-init-module-imports = true
 
 [tool.ruff.isort]
