@@ -1,0 +1,118 @@
+Metadata-Version: 2.4
+Name: zodiax
+Version: 0.5.0
+Summary: Equinox extension for scientific programming.
+Author-email: Louis Desdoigts <louis.desdoigts@sydney.edu.au>
+Project-URL: repository, https://github.com/LouisDesdoigts/zodiax
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: jax
+Requires-Dist: jaxlib
+Requires-Dist: equinox
+Requires-Dist: optax
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
+Requires-Dist: pre-commit; extra == "dev"
+Requires-Dist: mkdocs; extra == "dev"
+Requires-Dist: mkdocs-jupyter; extra == "dev"
+Requires-Dist: mkdocs-same-dir; extra == "dev"
+Requires-Dist: mkdocs-autorefs; extra == "dev"
+Requires-Dist: mkdocs-simple-plugin; extra == "dev"
+Requires-Dist: mkdocstrings-python; extra == "dev"
+Requires-Dist: jupyter_contrib_nbextensions; extra == "dev"
+Requires-Dist: notebook==6.4.12; extra == "dev"
+Dynamic: license-file
+
+<!-- <h1 align='center'>Zodiax</h1> -->
+# Zodiax
+
+[![PyPI version](https://badge.fury.io/py/zodiax.svg)](https://badge.fury.io/py/zodiax)
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+[![integration](https://github.com/LouisDesdoigts/zodiax/actions/workflows/tests.yml/badge.svg)](https://github.com/LouisDesdoigts/zodiax/actions/workflows/tests.yml)
+[![Documentation](https://github.com/LouisDesdoigts/zodiax/actions/workflows/documentation.yml/badge.svg)](https://louisdesdoigts.github.io/zodiax/)
+
+---
+
+[_Zodiax_](https://github.com/LouisDesdoigts/zodiax) is a lightweight extension to the object-oriented [_Jax_](https://github.com/google/jax) framework [_Equinox_](https://github.com/patrick-kidger/equinox). _Equinox_ allows for **differentiable classes** that are recognised as a valid _Jax_ type and _Zodiax_ adds lightweight methods to simplify interfacing with these classes! _Zodiax_ was originially built in the development of [dLux](https://github.com/LouisDesdoigts/dLux) and was designed to make working with large nested classes structures simple and flexible.
+
+Zodiax is directly integrated with both Jax and Equinox, gaining all of their core features:
+
+> - [Accelerated Numpy](https://jax.readthedocs.io/en/latest/jax-101/01-jax-basics.html): a Numpy like API that can run on GPU and TPU
+>
+> - [Automatic Differentiation](https://jax.readthedocs.io/en/latest/jax-101/04-advanced-autodiff.html): Allows for optimisation and inference in extremely high dimensional spaces
+>
+> - [Just-In-Time Compilation](https://jax.readthedocs.io/en/latest/jax-101/02-jitting.html): Compliles code into XLA at runtime and optimising execution across hardware
+>
+> - [Automatic Vectorisation](https://jax.readthedocs.io/en/latest/jax-101/03-vectorization.html): Allows for simple parallelism across hardware and asynchronys execution
+>
+> - [Object Oriented Jax](https://docs.kidger.site/equinox/all-of-equinox/): Allows for differentiable classes that are recognised as a valid _Jax_ type
+>
+> - [Inbuilt Neural Networks](https://docs.kidger.site/equinox/api/nn/linear/): Has pre-built neural network layers classes
+>
+> - [Path-Based Pytree Interface](docs/usage.md): Path based indexing allows for easy interfacing with large and highly nested physical models
+>
+> - [Leaf Manipulation Methods](docs/usage.md): Inbuilt methods allow for easy manipulation of Pytrees mirroring the _Jax_ Array API
+
+Documentation: [louisdesdoigts.github.io/zodiax/](https://louisdesdoigts.github.io/zodiax/)
+
+Contributors: [Louis Desdoigts](https://github.com/LouisDesdoigts)
+
+Requires: Python 3.9+, Jax 0.4.25+
+
+Installation: ```pip install zodiax```
+
+Docs installation: ```pip install "zodiax[docs]"```
+
+Test installation: ```pip install "zodiax[tests]"```
+
+---
+
+### Quickstart
+
+Create a regular class that inherits from `zodiax.Base`
+
+```python
+import jax
+import zodiax as zdx
+import jax.numpy as np
+
+class Linear(zdx.Base):
+    m : jax.Array
+    b : jax.Array
+
+    def __init__(self, m, b):
+        self.m = m
+        self.b = b
+
+    def model(self, x):
+        return self.m * x + self.b
+
+linear = Linear(1., 1.)
+```
+
+Its that simple! The `linear` class is now a fully differentiable object that gives us **all** the benefits of jax with an object-oriented interface! Lets see how we can jit-compile and take gradients of this class.
+
+```python
+@jax.jit
+@jax.grad
+def loss_fn(model, xs, ys):
+    return np.square(model.model(xs) - ys).sum()
+
+xs = np.arange(5)
+ys = 2*np.arange(5)
+grads = loss_fn(linear, xs, ys)
+print(grads)
+print(grads.m, grads.b)
+```
+
+```python
+> Linear(m=f32[], b=f32[])
+> -40.0 -10.0
+```
+
+The `grads` object is an instance of the `Linear` class with the gradients of the parameters with respect to the loss function!
