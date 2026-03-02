@@ -11,8 +11,9 @@ theme:
   icon:
     repo: fontawesome/brands/github  # Sets the logo to the GitHub 'cat'
   features:
-    - navigation.expand   # Keep sub-menus open
+    # - navigation.sections  # Groups top-level items into sections
     - navigation.top      # "Back to top" button
+    - navigation.indexes   # Allows a section title to be its own page
     - content.code.copy   # Copy button on code blocks
     - toc.integrate       # Put Table of Contents on the left sidebar
     - content.action.edit   # Adds an "Edit this page" button
@@ -42,7 +43,7 @@ plugins:
         python:
           options:
             docstring_style: "numpy"
-
+            show_root_heading: true      # Highly recommended for module-level docs
 extra:
   version:
     provider: mike  # Tells the UI: "Look for mike's version list"
@@ -68,16 +69,18 @@ extra_javascript:
 
 # Navigation map
 nav:
-  - Overview: index.md
-  - Using Zodiax: usage.md
+  - Overview: 
+      - index.md
+  - Using Zodiax: 
+      - Building Classes: usage.md
+      - Optimisation: optimisation_tools.md
   - API:
-      - Overview: API/api.md
       - Base: API/base.md
       - Optimisation: API/optimisation.md
       - Stats: API/stats.md
       - Batching: API/batching.md
       - Tree: API/tree.md
-      - Bayes: API/bayes.md
+      - Fisher: API/fisher.md
       - Equinox (eqx): API/eqx.md
   - Previous Versions:
       - v0.4.1: https://louisdesdoigts.github.io/zodiax/v0.4.1/

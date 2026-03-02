@@ -18,7 +18,6 @@ value = pytree.get(paths)
 
 ```python
 pytree = pytree.set(paths, values)
-# pytree = pytree.set_and_call(paths, values, call_fn)
 pytree = pytree.update(dict)
 ```
 
@@ -40,49 +39,3 @@ pytree = pytree.apply(paths, fns)
 pytree = pytree.apply_args(paths, fns, args)
 pytree = pytree.apply_and_call(paths, fns, call_fn)
 ```
-
----
-
-# Equinox
-
-Zodiax designed to be a 'drop in' replacement for Equinox, this means that all Equinox functions are available through Zodiax! Functions in the main Equinox namespace are raised into the Zodiax namespace, meaning these two line will import the *same* function:
-
-```python
-from equinox import filter_jit
-from zodiax import filter_jit
-```
-
-Some Equinox functions are overwritten in order to give a path based interface. Currently there are three functions that are overwritten: `filter_grad`, `filter_value_and_grad`, and `partition`. This means that the following two lines will import *different* functions:
-
-```python
-from equinox import filter_grad
-from zodiax import filter_grad
-```
-
-Submodules in Equinox are also raised into the Zodiax namespace through the `zodiax.equinox` submodule. This is how you would import the `nn` submodule from either Equinox or Zodiax:
-
-```python
-from equinox import nn
-from zodiax.equinox import nn
-```
-
-<!-- ---
-
-# Optimisation
-
-The `zodiax.optimisation` module contains only a single function, `get_optmiser`. It is a simple interface designed to apply Optax optimisers to individual leaves!
-
----
-
-# Tree
-
-The Tree module provides a module for helpful pytree manipulation functions. It only implements a single function, `get_args(paths)`. It returns a matching pytree with boolean leaves, where the leaves specified by `paths` are `True` and the rest are `False`.
-
----
-
-# Serialisation
-
-!!! warning "Serialisation is currently an experimental Module"
-    This module is currently experimental and may change in future versions.
-
-The Serialisation methods are designed to make it easy to save and load Zodiax models! There are two main functions: `serialise()` and `deserialise()`. -->
