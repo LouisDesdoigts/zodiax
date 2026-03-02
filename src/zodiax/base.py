@@ -1,6 +1,5 @@
-from __future__ import annotations
-import jax
 import jax.numpy as np
+import jax.tree as jtu
 import equinox as eqx
 from jax import lax, Array
 from typing import Union, Any
@@ -471,7 +470,7 @@ class Base(eqx.Module):
         )
 
 
-def build_wrapper(eqx_model, filter_fn=eqx.is_array):
+def build_wrapper(pytree: PyTree, filter_fn: callable = eqx.is_array):
     """
     Deconstructs an equinox model into its values and structure, and returns a
     `WrapperHolder` object that can be used to interact with the model in a way
@@ -479,10 +478,10 @@ def build_wrapper(eqx_model, filter_fn=eqx.is_array):
 
     Parameters
     ----------
-    eqx_model : equinox.Module
-        The Equinox model to deconstruct.
+    pytree : PyTree
+        The pytree to deconstruct.
     filter_fn : callable, optional
-        A function that takes a leaf of the model and returns a boolean value
+        A function that takes a leaf of the pytree and returns a boolean value
 
     Returns
     -------
@@ -491,9 +490,9 @@ def build_wrapper(eqx_model, filter_fn=eqx.is_array):
     structure : EquinoxWrapper
         The structure of the model, stored in a `EquinoxWrapper` object.
     """
-    arr_mask = jax.tree.map(lambda leaf: filter_fn(leaf), eqx_model)
-    dyn, static = eqx.partition(eqx_model, arr_mask)
-    leaves, tree_def = jax.tree.flatten(dyn)
+    arr_mask = jtu.map(lambda leaf: filter_fn(leaf), pytree)
+    dyn, static = eqx.partition(pytree, arr_mask)
+    leaves, tree_def = jtu.flatten(dyn)
     values = np.concatenate([val.flatten() for val in leaves])
     return values, EquinoxWrapper(static, leaves, tree_def)
 
@@ -527,7 +526,7 @@ class EquinoxWrapper(Base):
             lax.dynamic_slice(values, (start,), (size,)).reshape(shape)
             for start, size, shape in zip(self.starts, self.sizes, self.shapes)
         ]
-        return eqx.combine(jax.tree.unflatten(self.tree_def, leaves), self.static)
+        return eqx.combine(jtu.unflatten(self.tree_def, leaves), self.static)
 
 
 class WrapperHolder(Base):

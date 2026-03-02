@@ -1,6 +1,11 @@
 import jax
+import equinox as eqx
 import jax.numpy as np
+from jax import Array
 from jax.flatten_util import ravel_pytree
+from typing import Union
+
+PyTree = Union[dict, list, tuple, eqx.Module]
 
 __all__ = [
     "get_batch_sizes",
@@ -10,7 +15,7 @@ __all__ = [
 ]
 
 
-def get_batch_sizes(n, nbatches):
+def get_batch_sizes(n: int, nbatches: int) -> tuple[Array, int]:
     # Convert "nbatches" into a fixed block size
     batch_size = (n + nbatches - 1) // nbatches
     total = nbatches * batch_size
@@ -32,7 +37,13 @@ def get_batch_sizes(n, nbatches):
     return (idx, total)  # batch_size
 
 
-def jacobian(f, x, nbatches=1, jit=True, checkpoint=False):
+def jacobian(
+    f: callable,
+    x: PyTree,
+    nbatches: int = 1,
+    jit: bool = True,
+    checkpoint: bool = False,
+) -> tuple[Array, callable]:
     """
     A batched version of jax.jacobian designed to save memory by computing the Jacobian
     in column blocks. To lower memory usage, increase the number of batches (nbatches),
@@ -79,7 +90,13 @@ def jacobian(f, x, nbatches=1, jit=True, checkpoint=False):
     return J, unflatten
 
 
-def hessian(f, x, nbatches=1, jit=True, checkpoint=False):
+def hessian(
+    f: callable,
+    x: PyTree,
+    nbatches: int = 1,
+    jit: bool = True,
+    checkpoint: bool = False,
+) -> tuple[Array, callable]:
     """
     A batched version of jax.hessian designed to save memory by computing the Hessian
     in column blocks. Increase nbatches to reduce block size. If memory is still an
@@ -127,7 +144,7 @@ def hessian(f, x, nbatches=1, jit=True, checkpoint=False):
     return H, unflatten
 
 
-def hessian_to_pytree(H, x):
+def hessian_to_pytree(H: Array, x: PyTree) -> PyTree:
     """
     Convert a flat (n, n) Hessian (w.r.t. ravel_pytree(x)) into a pytree-of-pytrees.
 
