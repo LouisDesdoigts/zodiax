@@ -4,6 +4,8 @@ from typing import Union, Callable, Any
 import warnings
 from .tree import set_array, boolean_filter
 
+__all__ = ["filter_grad", "filter_value_and_grad", "partition"]
+
 PyTree = Union[dict, list, tuple, eqx.Module]
 Params = Union[str, list[str], tuple[str]]
 Values = Union[Any, list[Any], tuple[Any]]
@@ -138,53 +140,3 @@ def partition(
     pytree = set_array(pytree)
     bool_filter = boolean_filter(pytree, parameters)
     return eqx.partition(pytree, bool_filter, *partition_args, **partition_kwargs)
-
-
-# # Dictionary of replaced functions
-# replaced_dict = {
-#     "filter_grad": filter_grad,
-#     "filter_value_and_grad": filter_value_and_grad,
-#     "partition": partition,
-# }
-
-
-# # Use the __all__ attribute of the external package to get a list of all
-# # public functions
-# external_api = [func_name for func_name in dir(eqx) if not func_name.startswith("_")]
-
-
-# # Create a dictionary of API wrappers that simply point to the
-# # corresponding function/class/module from the equinox
-# wrappers = {}
-
-# for api_element in external_api:
-
-#     # Get the object corresponding to the api_element name
-#     api_obj = getattr(eqx, api_element)
-
-#     # Functions and classes
-#     if callable(api_obj):
-
-#         # if it is rewritten in zodiax, use the rewritten version
-#         if api_element in replaced_dict.keys():
-#             wrappers[api_element] = replaced_dict[api_element]
-
-#         # otherwise, just use the original equinox function
-#         else:
-#             wrappers[api_element] = getattr(eqx, api_element)
-
-#     # Modules
-#     elif isinstance(api_obj, ModuleType):
-#         wrappers[api_element] = getattr(eqx, api_element)
-
-#     # The rest of these should just be custom types that we dont need
-#     else:
-#         pass
-
-
-# # Push the wrappers to the global namespace
-# globals().update(wrappers)
-
-# # Adding the equinox public API to the __all__ attribute
-# # with zodiax rewrites
-# __all__ = list(wrappers.keys())
