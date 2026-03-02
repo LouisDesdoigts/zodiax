@@ -2,7 +2,8 @@ import zodiax
 import equinox as eqx
 import jax
 from jax import config, Array, numpy as np
-from typing import Union, List, Any
+from typing import Union, Any
+import warnings
 
 __all__ = ["boolean_filter", "set_array"]
 
@@ -10,9 +11,6 @@ __all__ = ["boolean_filter", "set_array"]
 PyTree = Union[dict, list, tuple, eqx.Module]
 Params = Union[str, list[str], tuple[str]]
 Values = Union[Any, list[Any], tuple[Any]]
-
-
-Params = Union[str, List[str]]
 
 
 # Boolean
@@ -38,6 +36,10 @@ def boolean_filter(pytree: PyTree, parameters: Params, inverse: bool = False) ->
     args : PyTree
         An pytree of matching structre with boolean values at the leaves.
     """
+    warnings.warn(
+        "boolean_filter is deprecated as of v4.1 and will be removed in v5.1",
+        DeprecationWarning,
+    )
     parameters = parameters if isinstance(parameters, list) else [parameters]
     if not inverse:
         false_pytree = jax.tree.map(lambda _: False, pytree)
@@ -62,7 +64,10 @@ def set_array(pytree: PyTree, parameters=None) -> PyTree:
     pytree : PyTree
         The pytree with the leaves converted to arrays.
     """
-
+    warnings.warn(
+        "set_array is deprecated as of v4.1 and will be removed in v5.1",
+        DeprecationWarning,
+    )
     # Old routine for setting specified parameters
     if parameters is not None:
         new_leaves = jax.tree.map(_to_array, pytree.get(parameters))

@@ -61,7 +61,7 @@ def scheduler(lr: float, start: int, *args):
         The piecewise constant learning rate schedule.
     """
     warnings.warn(
-        "scheduler is deprecated as of v1.4 and will be removed in v5.1",
+        "scheduler is deprecated as of v4.1 and will be removed in v5.1",
         DeprecationWarning,
     )
 
@@ -103,7 +103,7 @@ def sgd(lr: float, start: int, *schedule):
         The optimiser with the piecewise constant learning rate schedule.
     """
     warnings.warn(
-        "sgd is deprecated as of v1.4 and will be removed in v5.1",
+        "sgd is deprecated as of v4.1 and will be removed in v5.1",
         DeprecationWarning,
     )
     return _base_sgd(scheduler(lr, start, *schedule))
@@ -129,7 +129,7 @@ def adam(lr: float, start: int, *schedule):
         The optimiser with the piecewise constant learning rate schedule.
     """
     warnings.warn(
-        "adam is deprecated as of v1.4 and will be removed in v5.1",
+        "adam is deprecated as of v4.1 and will be removed in v5.1",
         DeprecationWarning,
     )
     return _base_adam(scheduler(lr, start, *schedule))
@@ -203,7 +203,7 @@ def get_optimiser(
     state : optax.MultiTransformState
     """
     warnings.warn(
-        "get_optimiser is deprecated as of v1.4 and will be removed in v5.1",
+        "get_optimiser is deprecated as of v4.1 and will be removed in v5.1",
         DeprecationWarning,
     )
 
