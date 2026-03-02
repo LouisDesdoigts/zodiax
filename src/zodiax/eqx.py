@@ -1,9 +1,8 @@
-import zodiax
 import equinox as eqx
 from functools import wraps
 from typing import Union, Callable, Any
-from types import ModuleType
 import warnings
+from .tree import set_array, boolean_filter
 
 PyTree = Union[dict, list, tuple, eqx.Module]
 Params = Union[str, list[str], tuple[str]]
@@ -40,8 +39,8 @@ def filter_grad(parameters: Params, *filter_args, **filter_kwargs) -> Callable:
         @wraps(func)
         def inner_wrapper(pytree, *args, **kwargs):
             # Convert parameters
-            pytree = zodiax.set_array(pytree)
-            boolean_filter = zodiax.tree.boolean_filter(pytree, parameters)
+            pytree = set_array(pytree)
+            bool_filter = boolean_filter(pytree, parameters)
 
             # Wrap original function
             @eqx.filter_grad(*filter_args, **filter_kwargs)
@@ -49,7 +48,7 @@ def filter_grad(parameters: Params, *filter_args, **filter_kwargs) -> Callable:
                 return func(eqx.combine(traced, static), *args, **kwargs)
 
             # Return wrapped function
-            return recombine(*eqx.partition(pytree, boolean_filter))
+            return recombine(*eqx.partition(pytree, bool_filter))
 
         return inner_wrapper
 
@@ -88,8 +87,8 @@ def filter_value_and_grad(
         @wraps(func)
         def inner_wrapper(pytree, *args, **kwargs):
             # Convert parameters
-            pytree = zodiax.set_array(pytree)
-            boolean_filter = zodiax.tree.boolean_filter(pytree, parameters)
+            pytree = set_array(pytree)
+            bool_filter = boolean_filter(pytree, parameters)
 
             # Wrap original function
             @eqx.filter_value_and_grad(*filter_args, **filter_kwargs)
@@ -97,7 +96,7 @@ def filter_value_and_grad(
                 return func(eqx.combine(traced, static), *args, **kwargs)
 
             # Return wrapped function
-            return recombine(*eqx.partition(pytree, boolean_filter))
+            return recombine(*eqx.partition(pytree, bool_filter))
 
         return inner_wrapper
 
@@ -136,56 +135,56 @@ def partition(
     if isinstance(parameters, str):
         parameters = [parameters]
 
-    pytree = zodiax.set_array(pytree)
-    boolean_filter = zodiax.tree.boolean_filter(pytree, parameters)
-    return eqx.partition(pytree, boolean_filter, *partition_args, **partition_kwargs)
+    pytree = set_array(pytree)
+    bool_filter = boolean_filter(pytree, parameters)
+    return eqx.partition(pytree, bool_filter, *partition_args, **partition_kwargs)
 
 
-# Dictionary of replaced functions
-replaced_dict = {
-    "filter_grad": filter_grad,
-    "filter_value_and_grad": filter_value_and_grad,
-    "partition": partition,
-}
+# # Dictionary of replaced functions
+# replaced_dict = {
+#     "filter_grad": filter_grad,
+#     "filter_value_and_grad": filter_value_and_grad,
+#     "partition": partition,
+# }
 
 
-# Use the __all__ attribute of the external package to get a list of all
-# public functions
-external_api = [func_name for func_name in dir(eqx) if not func_name.startswith("_")]
+# # Use the __all__ attribute of the external package to get a list of all
+# # public functions
+# external_api = [func_name for func_name in dir(eqx) if not func_name.startswith("_")]
 
 
-# Create a dictionary of API wrappers that simply point to the
-# corresponding function/class/module from the equinox
-wrappers = {}
+# # Create a dictionary of API wrappers that simply point to the
+# # corresponding function/class/module from the equinox
+# wrappers = {}
 
-for api_element in external_api:
+# for api_element in external_api:
 
-    # Get the object corresponding to the api_element name
-    api_obj = getattr(eqx, api_element)
+#     # Get the object corresponding to the api_element name
+#     api_obj = getattr(eqx, api_element)
 
-    # Functions and classes
-    if callable(api_obj):
+#     # Functions and classes
+#     if callable(api_obj):
 
-        # if it is rewritten in zodiax, use the rewritten version
-        if api_element in replaced_dict.keys():
-            wrappers[api_element] = replaced_dict[api_element]
+#         # if it is rewritten in zodiax, use the rewritten version
+#         if api_element in replaced_dict.keys():
+#             wrappers[api_element] = replaced_dict[api_element]
 
-        # otherwise, just use the original equinox function
-        else:
-            wrappers[api_element] = getattr(eqx, api_element)
+#         # otherwise, just use the original equinox function
+#         else:
+#             wrappers[api_element] = getattr(eqx, api_element)
 
-    # Modules
-    elif isinstance(api_obj, ModuleType):
-        wrappers[api_element] = getattr(eqx, api_element)
+#     # Modules
+#     elif isinstance(api_obj, ModuleType):
+#         wrappers[api_element] = getattr(eqx, api_element)
 
-    # The rest of these should just be custom types that we dont need
-    else:
-        pass
+#     # The rest of these should just be custom types that we dont need
+#     else:
+#         pass
 
 
-# Push the wrappers to the global namespace
-globals().update(wrappers)
+# # Push the wrappers to the global namespace
+# globals().update(wrappers)
 
-# Adding the equinox public API to the __all__ attribute
-# with zodiax rewrites
-__all__ = list(wrappers.keys())
+# # Adding the equinox public API to the __all__ attribute
+# # with zodiax rewrites
+# __all__ = list(wrappers.keys())
