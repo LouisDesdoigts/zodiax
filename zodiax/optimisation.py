@@ -232,52 +232,6 @@ def get_optimiser(
     return (optim, opt_state)
 
 
-# def get_model_params_optimiser(
-#     pytree: PyTree, optimisers: dict, parameters: Params = None
-# ):
-#     """
-#     Returns an Optax.GradientTransformion object, with the optimisers
-#     specified by optimisers applied to the leaves specified by parameters.
-
-#     Parameters
-#     ----------
-#     pytree : PyTree
-#         A zodiax.base.PyTree object containing the model parameters.
-#     optimisers : dict
-#         A dictionary of optax.GradientTransformation objects to be applied
-#         to the leaves specified by parameters.
-#     parameters : Union[str, List[str]] = None
-#         A path or list of parameters or list of nested parameters. If None,
-#         all parameters in optimisers will be optimised.
-
-#     Returns
-#     -------
-#     model_params : ModelParams
-#         A ModelParams object containing the model parameters.
-#     optim : optax.GradientTransformion
-#         An optax.GradientTransformion object with the optimisers applied to the
-#         leaves specified by parameters.
-#     state : optax.MultiTransformState
-#         The initialised optimisation state.
-#     """
-
-
-#     # Get the parameters and opt_dict
-#     if parameters is not None:
-#         optimisers = dict([(p, optimisers[p]) for p in parameters])
-#     else:
-#         parameters = list(optimisers.keys())
-
-#     # Get the model parameters and optimiser
-#     model_params = ModelParams(dict([(p, pytree.get(p)) for p in parameters]))
-#     param_spec = ModelParams(dict([(param, param) for param in parameters]))
-#     optim = optax.multi_transform(optimisers, param_spec)
-
-#     # Build the optimised object - the 'model_params' object
-#     state = optim.init(model_params)
-#     return model_params, optim, state
-
-
 def map_optimisers(params, optimisers, strict=False):
 
     # unpack the dicts to ensure matching structures
