@@ -86,18 +86,3 @@ print(grads.m, grads.b)
 ```
 
 The `grads` object is an instance of the `Linear` class with the gradients of the parameters with respect to the loss function!
-
-<!-- !!! tip "zodiax.filter_grad"
-    If we replace the `jax.grad` decorator with `zdz.filter_grad` then we can choose speicifc parameters to take gradients with respect to! This is detailed in the [Using Zodiax section]((<https://louisdesdoigts.github.io/zodiax/docs/usage.md>)) of the docs.
-
-!!! tip "Pretty-printing"
-    All `zodiax` classes gain a pretty-printing method that will display the class instance in a nice readable format! Lets use it here to see what the gradients look like:
-
-    ```python
-
-    ```
-    
-    ```python
-    > Linear(m=f32[], b=f32[])
-    > -40.0 -10.0
-    ``` -->
