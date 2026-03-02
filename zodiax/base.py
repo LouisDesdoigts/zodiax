@@ -2,9 +2,11 @@ from __future__ import annotations
 import jax
 import jax.numpy as np
 import equinox as eqx
+from jax.lax import dynamic_slice as lax_slice
+from jax import Array
 from typing import Union, Any
 
-__all__ = ["Base"]
+__all__ = ["Base", "build_wrapper", "EquinoxWrapper", "WrapperHolder"]
 
 PyTree = Union[dict, list, tuple, eqx.Module]
 Params = Union[str, list[str], tuple[str]]
@@ -473,186 +475,311 @@ class Base(eqx.Module):
         )
 
 
-class BaseModeller(Base):
-    # TODO proper documentation
-
+def build_wrapper(eqx_model, filter_fn=eqx.is_array):
     """
-    A base class for modelling that extends `zodiax.Base`. This class allows for
-    dynamic attribute access and dictionary-like item retrieval from the `params`
-    dictionary.
-    Attributes:
-        params (dict): A dictionary of parameters.
-    Methods:
-        __getattr__(key):
-            Dynamically retrieves the value associated with `key` from the `params`
-            dictionary. If `key` is not found directly in `params`, it searches
-            through the values of `params` to find an attribute named `key`.
-            Raises an `AttributeError` if `key` is not found.
-        __getitem__(key):
-            Retrieves a dictionary of values from `params` where the `key` is present
-            in the nested dictionaries of `params`.
-    """
-    params: dict
+    Deconstructs an equinox model into its values and structure, and returns a
+    `WrapperHolder` object that can be used to interact with the model in a way
+    that is compatible with the Zodiax framework.
 
-    def __init__(self, params):
-        self.params = params
+    Parameters
+    ----------
+    eqx_model : equinox.Module
+        The Equinox model to deconstruct.
+    filter_fn : callable, optional
+        A function that takes a leaf of the model and returns a boolean value
 
-    def __getattr__(self, key):
-        """
-        Dynamically retrieves the value associated with `key` from the `params`
-        dictionary. If `key` is not found directly in `params`, it searches
-        through the values of `params` to find an attribute named `key`.
-        Raises an `AttributeError` if `key` is not found.
-        """
-        if key in self.params:
-            return self.params[key]
-        for k, val in self.params.items():
-            if hasattr(val, key):
-                return getattr(val, key)
-        raise AttributeError(
-            f"Attribute {key} not found in params of {self.__class__.__name__} object"
-        )
-
-    def __getitem__(self, key):
-        """
-        Retrieves a dictionary of values from `params` where the `key` is present
-        in the nested dictionaries of `params`.
-        """
-        values = {}
-        for param, item in self.params.items():
-            if isinstance(item, dict) and key in item.keys():
-                values[param] = item[key]
-
-        return values
-
-
-class ModelParams(BaseModeller):
-    # TODO proper documentation
-    """
-    A class to manage model parameters with various utility
-    methods for manipulation and access.
-
-    Methods
+    Returns
     -------
-    keys:
-        Returns a list of parameter keys.
-    values:
-        Returns a list of parameter values.
-    __getattr__(key):
-        Retrieves the value of the specified parameter key.
-    replace(values):
-        Takes in a super-set class and updates this class with input values
-    from_model(values):
-        Sets the parameters from a given model's values.
-    __add__(values):
-        Adds the provided values to the current parameters.
-    __iadd__(values):
-        In-place addition of the provided values to the current parameters.
-    __mul__(values):
-        Multiplies the provided values with the current parameters.
-    __imul__(values):
-        In-place multiplication of the provided values with the current parameters.
-    inject(other):
-        Injects the values of this class into another class.
+    values : Array
+        The values of the model, flattened and concatenated.
+    structure : EquinoxWrapper
+        The structure of the model, stored in a `EquinoxWrapper` object.
     """
+    arr_mask = jax.tree.map(lambda leaf: filter_fn(leaf), eqx_model)
+    dyn, static = eqx.partition(eqx_model, arr_mask)
+    leaves, tree_def = jax.tree.flatten(dyn)
+    values = np.concatenate([val.flatten() for val in leaves])
+    return values, EquinoxWrapper(static, leaves, tree_def)
+
+
+class EquinoxWrapper(Base):
+    """
+    A wrapper class designed to store an Equinox model (typically a neural network)
+    in a way that makes it easily compatible within the Zodiax framework. This is
+    necessary as Equinox operates on _whole_ models, where as Zodiax operates on
+    model _leaves_. This class is designed to bridge that gap.
+
+    This class should not need to be interacted with directly, and is designed to be
+    held within the `WrapperHolder` class.
+    """
+
+    static: eqx.Module
+    shapes: list
+    sizes: list
+    starts: list
+    tree_def: None
+
+    def __init__(self, static, leaves, tree_def):
+        self.static = static
+        self.tree_def = tree_def
+        self.shapes = [v.shape for v in leaves]
+        self.sizes = [int(v.size) for v in leaves]
+        self.starts = [int(i) for i in np.cumsum(np.array([0] + self.sizes))]
+
+    def inject(self, values):
+        leaves = [
+            lax_slice(values, (start,), (size,)).reshape(shape)
+            for start, size, shape in zip(self.starts, self.sizes, self.shapes)
+        ]
+        return eqx.combine(jax.tree.unflatten(self.tree_def, leaves), self.static)
+
+
+class WrapperHolder(Base):
+    """
+    A class designed to hold an Equinox model, its structure and values. This helps it
+    operate smoothly within the Zodiax framework.
+
+    To apply transformations to the Equinox model values, operate on the `values` leaf
+    of this class. To build the model, call the `build` property, and the Equinox model
+    will be constructed with the stored values and be able to operated with as if it
+    were a regular Equinox model.
+
+    This class is designed to be instantiated by the `build_wrapper` function.
+
+    Example
+    -------
+
+    ```python
+    import equinox as eqx
+    import zodiax as zdx
+    import jax.numpy as np
+    import jax.random as jr
+
+    eqx_model = eqx.nn.MLP(
+        in_size=16, out_size=16, width_size=32, depth=1, key=jr.PRNGKey(0)
+    )
+
+    class Foo(zdx.WrapperHolder):
+
+        def __init__(self, nn):
+            values, structure = zdx.build_wrapper(nn)
+            self.values = values
+            self.structure = structure
+
+        def __call__(self, x):
+            return self.build(x)
+
+    x = np.ones(16)
+    foo = Foo(eqx_model)
+
+    # Now we can use the model as if it were a regular Equinox model
+    print(foo(x))
+
+    >>> [ 0.1767296   0.15628047 -0.63250038 -0.01583058  0.39692974  0.4556041
+    >>>   0.33121592 -0.3183221  -0.75008567 -0.32724514  0.28351735 -0.03595607
+    >>>  -0.53921278 -0.20966474 -0.33641739 -0.28726151]
+
+    # We can also apply Zodiax transformations to the model!
+    print(foo.multiply("values", 0.)(x))
+    >>> [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+    """
+
+    values: Array
+    structure: EquinoxWrapper
 
     @property
-    def keys(self):
-        return list(self.params.keys())
-
-    @property
-    def values(self):
-        return list(self.params.values())
-
-    def __getattr__(self, key):
-        if key in self.keys:
-            return self.params[key]
-        for k, val in self.params.items():
-            if hasattr(val, key):
-                return getattr(val, key)
-        raise AttributeError(
-            f"Attribute {key} not found in params of {self.__class__.__name__} object"
-        )
-
-    def replace(self, values):
+    def build(self):
         """
-        Takes in a super-set class and updates this class with input values
+        Builds the Equinox model with the stored values and structure.
         """
-        return self.set(
-            "params", dict([(param, getattr(values, param)) for param in self.keys])
-        )
+        return self.structure.inject(self.values)
 
-    def from_model(self, model: Base):
-        return self.set(
-            "params", dict([(param, model.get(param)) for param in self.keys])
-        )
-
-    def __add__(self, values):
-        matched = self.replace(values)
-        return jax.tree_map(lambda x, y: x + y, self, matched)
-
-    def __iadd__(self, values):
-        return self.__add__(values)
-
-    def __mul__(self, values):
-        matched = self.replace(values)
-        return jax.tree_map(lambda x, y: x * y, self, matched)
-
-    def __imul__(self, values):
-        return self.__mul__(values)
-
-    def inject(self, other: Base):
-        # Injects the values of this class into another class
-        return other.set(self.keys, self.values)
+    def __getattr__(self, name):
+        if hasattr(self.structure, name):
+            return getattr(self.structure, name)
+        raise AttributeError(f"Attribute {name} not found in {self.__class__.__name__}")
 
 
-class ModelHistory(ModelParams):
-    # TODO proper documentation
+# class BaseModeller(Base):
+#     # TODO proper documentation
 
-    """
-    Tracks the history of a set of parameters in a model via tuples.
-    Adds a series of convenience functions to interface with it.
+#     """
+#     A base class for modelling that extends `zodiax.Base`. This class allows for
+#     dynamic attribute access and dictionary-like item retrieval from the `params`
+#     dictionary.
+#     Attributes:
+#         params (dict): A dictionary of parameters.
+#     Methods:
+#         __getattr__(key):
+#             Dynamically retrieves the value associated with `key` from the `params`
+#             dictionary. If `key` is not found directly in `params`, it searches
+#             through the values of `params` to find an attribute named `key`.
+#             Raises an `AttributeError` if `key` is not found.
+#         __getitem__(key):
+#             Retrieves a dictionary of values from `params` where the `key` is present
+#             in the nested dictionaries of `params`.
+#     """
+#     params: dict
 
-    NOTE This could have issues with leaves not being jax.Arrays,
-    so at some point it should be explicitly enforced that
-    only array_likes are tracked.
-    """
+#     def __init__(self, params):
+#         self.params = params
 
-    def __init__(self, model, tracked):
+#     def __getattr__(self, key):
+#         """
+#         Dynamically retrieves the value associated with `key` from the `params`
+#         dictionary. If `key` is not found directly in `params`, it searches
+#         through the values of `params` to find an attribute named `key`.
+#         Raises an `AttributeError` if `key` is not found.
+#         """
+#         if key in self.params:
+#             return self.params[key]
+#         for k, val in self.params.items():
+#             if hasattr(val, key):
+#                 return getattr(val, key)
+#         raise AttributeError(
+#             f"Attribute {key} not found in params of {self.__class__.__name__} object"
+#         )
 
-        history = {}
-        for param in tracked:
-            leaf = model.get(param)
-            if not eqx.is_array_like(leaf):
-                history[param] = jax.tree_map(lambda sub_leaf: [sub_leaf], leaf)
-            else:
-                history[param] = [leaf]
+#     def __getitem__(self, key):
+#         """
+#         Retrieves a dictionary of values from `params` where the `key` is present
+#         in the nested dictionaries of `params`.
+#         """
+#         values = {}
+#         for param, item in self.params.items():
+#             if isinstance(item, dict) and key in item.keys():
+#                 values[param] = item[key]
 
-        self.params = history
+#         return values
 
-    def append(self, model):
-        history = self.params
-        for param, leaf_history in history.items():
-            if hasattr(model, param):
-                new_leaf = getattr(model, param)
-            else:
-                new_leaf = model.get(param)
 
-            # Tree-like case
-            if not eqx.is_array_like(new_leaf):
+# class ModelParams(BaseModeller):
+#     # TODO proper documentation
+#     """
+#     A class to manage model parameters with various utility
+#     methods for manipulation and access.
 
-                def append_fn(history, value):
-                    return history + [value]
+#     Methods
+#     -------
+#     keys:
+#         Returns a list of parameter keys.
+#     values:
+#         Returns a list of parameter values.
+#     __getattr__(key):
+#         Retrieves the value of the specified parameter key.
+#     replace(values):
+#         Takes in a super-set class and updates this class with input values
+#     from_model(values):
+#         Sets the parameters from a given model's values.
+#     __add__(values):
+#         Adds the provided values to the current parameters.
+#     __iadd__(values):
+#         In-place addition of the provided values to the current parameters.
+#     __mul__(values):
+#         Multiplies the provided values with the current parameters.
+#     __imul__(values):
+#         In-place multiplication of the provided values with the current parameters.
+#     inject(other):
+#         Injects the values of this class into another class.
+#     """
 
-                def leaf_fn(leaf):
-                    return isinstance(leaf, list)
+#     @property
+#     def keys(self):
+#         return list(self.params.keys())
 
-                new_leaf_history = jax.tree_map(
-                    append_fn, leaf_history, new_leaf, is_leaf=leaf_fn
-                )
-                history[param] = new_leaf_history
+#     @property
+#     def values(self):
+#         return list(self.params.values())
 
-            # Non-tree case
-            else:
-                history[param] = leaf_history + [new_leaf]
-        return self.set("params", history)
+#     def __getattr__(self, key):
+#         if key in self.keys:
+#             return self.params[key]
+#         for k, val in self.params.items():
+#             if hasattr(val, key):
+#                 return getattr(val, key)
+#         raise AttributeError(
+#             f"Attribute {key} not found in params of {self.__class__.__name__} object"
+#         )
+
+#     def replace(self, values):
+#         """
+#         Takes in a super-set class and updates this class with input values
+#         """
+#         return self.set(
+#             "params", dict([(param, getattr(values, param)) for param in self.keys])
+#         )
+
+#     def from_model(self, model: Base):
+#         return self.set(
+#             "params", dict([(param, model.get(param)) for param in self.keys])
+#         )
+
+#     def __add__(self, values):
+#         matched = self.replace(values)
+#         return jax.tree_map(lambda x, y: x + y, self, matched)
+
+#     def __iadd__(self, values):
+#         return self.__add__(values)
+
+#     def __mul__(self, values):
+#         matched = self.replace(values)
+#         return jax.tree_map(lambda x, y: x * y, self, matched)
+
+#     def __imul__(self, values):
+#         return self.__mul__(values)
+
+#     def inject(self, other: Base):
+#         # Injects the values of this class into another class
+#         return other.set(self.keys, self.values)
+
+
+# class ModelHistory(ModelParams):
+#     # TODO proper documentation
+
+#     """
+#     Tracks the history of a set of parameters in a model via tuples.
+#     Adds a series of convenience functions to interface with it.
+
+#     NOTE This could have issues with leaves not being jax.Arrays,
+#     so at some point it should be explicitly enforced that
+#     only array_likes are tracked.
+#     """
+
+#     def __init__(self, model, tracked):
+
+#         history = {}
+#         for param in tracked:
+#             leaf = model.get(param)
+#             if not eqx.is_array_like(leaf):
+#                 history[param] = jax.tree_map(lambda sub_leaf: [sub_leaf], leaf)
+#             else:
+#                 history[param] = [leaf]
+
+#         self.params = history
+
+#     def append(self, model):
+#         history = self.params
+#         for param, leaf_history in history.items():
+#             if hasattr(model, param):
+#                 new_leaf = getattr(model, param)
+#             else:
+#                 new_leaf = model.get(param)
+
+#             # Tree-like case
+#             if not eqx.is_array_like(new_leaf):
+
+#                 def append_fn(history, value):
+#                     return history + [value]
+
+#                 def leaf_fn(leaf):
+#                     return isinstance(leaf, list)
+
+#                 new_leaf_history = jax.tree_map(
+#                     append_fn, leaf_history, new_leaf, is_leaf=leaf_fn
+#                 )
+#                 history[param] = new_leaf_history
+
+#             # Non-tree case
+#             else:
+#                 history[param] = leaf_history + [new_leaf]
+#         return self.set("params", history)
