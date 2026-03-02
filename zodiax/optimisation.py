@@ -232,6 +232,7 @@ def get_optimiser(
     return (optim, opt_state)
 
 
+### New Functions ###
 def map_optimisers(params, optimisers, strict=False):
 
     # unpack the dicts to ensure matching structures
@@ -247,7 +248,7 @@ def map_optimisers(params, optimisers, strict=False):
     # Check for keys in params that aren't in optimisers, and paste an empty optimiser
     for key in params.keys():
         if key not in optimisers.keys():
-            optimisers[key] = optax.sgd(0.0)
+            optimisers[key] = optax.identity()
 
     # Check for keys in optimisers that aren't in params, and set to zero
     for key in optimisers.keys():
@@ -260,8 +261,8 @@ def map_optimisers(params, optimisers, strict=False):
     return optim, state
 
 
-def delay(lr: float, start: int):
-    return optax.linear_schedule(0.0, lr, 1, start)
+def delay(lr: float, start: int, length: int = 1):
+    return optax.linear_schedule(0.0, lr, length, start)
 
 
 def decompose(matrix, hermitian=True, normalise=False):
