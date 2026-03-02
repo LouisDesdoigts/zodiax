@@ -544,7 +544,6 @@ class WrapperHolder(Base):
     Example
     -------
 
-    ```python
     import equinox as eqx
     import zodiax as zdx
     import jax.numpy as np
@@ -561,22 +560,23 @@ class WrapperHolder(Base):
             self.values = values
             self.structure = structure
 
-        def __call__(self, x):
+        def __call__(self, x)ß:
             return self.build(x)
 
     x = np.ones(16)
     foo = Foo(eqx_model)
 
-    # Now we can use the model as if it were a regular Equinox model
+    Now we can use the model as if it were a regular Equinox model
     print(foo(x))
 
-    >>> [ 0.1767296   0.15628047 -0.63250038 -0.01583058  0.39692974  0.4556041
-    >>>   0.33121592 -0.3183221  -0.75008567 -0.32724514  0.28351735 -0.03595607
-    >>>  -0.53921278 -0.20966474 -0.33641739 -0.28726151]
+    `[ 0.1767296   0.15628047 -0.63250038 -0.01583058  0.39692974  0.4556041
+    0.33121592 -0.3183221  -0.75008567 -0.32724514  0.28351735 -0.03595607
+    -0.53921278 -0.20966474 -0.33641739 -0.28726151]`
 
-    # We can also apply Zodiax transformations to the model!
+    We can also apply Zodiax transformations to the model!
     print(foo.multiply("values", 0.)(x))
-    >>> [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
+
+    `[0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]`
     """
 
     values: Array

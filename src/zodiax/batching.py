@@ -8,14 +8,13 @@ from typing import Union
 PyTree = Union[dict, list, tuple, eqx.Module]
 
 __all__ = [
-    "get_batch_sizes",
     "jacobian",
     "hessian",
     "hessian_to_pytree",
 ]
 
 
-def get_batch_sizes(n: int, nbatches: int) -> tuple[Array, int]:
+def _get_batch_sizes(n: int, nbatches: int) -> tuple[Array, int]:
     # Convert "nbatches" into a fixed block size
     batch_size = (n + nbatches - 1) // nbatches
     total = nbatches * batch_size
@@ -70,7 +69,7 @@ def jacobian(
         return J, unflatten
 
     # Get the batch indices and total size after padding
-    idx, total = get_batch_sizes(n, nbatches)
+    idx, total = _get_batch_sizes(n, nbatches)
 
     # Use linearise to get the jvp without re-evaluating f for each column
     y0, jvp = jax.linearize(f_flat, x_flat)
@@ -124,7 +123,7 @@ def hessian(
         return H, unflatten
 
     # Get the batch indices and total size after padding
-    idx, total = get_batch_sizes(n, nbatches)
+    idx, total = _get_batch_sizes(n, nbatches)
 
     # Linearise the gradient once to get a fast Hessian-vector product:
     # hvp(v) = H @ v  (forward-over-reverse)

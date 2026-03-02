@@ -55,7 +55,7 @@ def hessian(
         parameters of the pytree.
     """
     warnings.warn(
-        "hessian is deprecated as of v4.1 and will be removed in v5.1",
+        "fisher.hessian is deprecated as of v0.5.0 and will be removed in v0.6.0",
         DeprecationWarning,
     )
 
@@ -96,7 +96,7 @@ def fisher_matrix(
     of the parameters as listed in the pytree. Simply returns the negative Hessian.
     """
     warnings.warn(
-        "fisher_matrix is deprecated as of v4.1 and will be removed in v5.1",
+        "fisher_matrix is deprecated as of v0.5.0 and will be removed in v0.6.0",
         DeprecationWarning,
     )
 
@@ -153,7 +153,7 @@ def covariance_matrix(
         The covariance matrix of the pytree parameters.
     """
     warnings.warn(
-        "covariance_matrix is deprecated as of v4.1 and will be removed in v5.1",
+        "covariance_matrix is deprecated as of v0.5.0 and will be removed in v0.6.0",
         DeprecationWarning,
     )
 

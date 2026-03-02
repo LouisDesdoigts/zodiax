@@ -33,7 +33,7 @@ def filter_grad(parameters: Params, *filter_args, **filter_kwargs) -> Callable:
         The wrapped function.
     """
     warnings.warn(
-        "filter_grad is deprecated as of v4.1 and will be removed in v5.1",
+        "filter_grad is deprecated as of v0.5.0 and will be removed in v0.6.0",
         DeprecationWarning,
     )
 
@@ -81,7 +81,8 @@ def filter_value_and_grad(
         The wrapped function.
     """
     warnings.warn(
-        "filter_value_and_grad is deprecated as of v4.1 and will be removed in v5.1",
+        "filter_value_and_grad is deprecated as of v0.5.0 and will be removed in "
+        "v0.6.0",
         DeprecationWarning,
     )
 

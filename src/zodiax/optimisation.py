@@ -66,6 +66,11 @@ def zero_nan_check(grads: PyTree) -> PyTree:
 
 
 def map_optimisers(params: dict, optimisers: dict, strict: bool = False) -> tuple:
+    """
+    Maps optimiser from a dictionary of optax optimisers to a dictionary of parameters.
+
+    TODO: Develop docs more
+    """
 
     # unpack the dicts to ensure matching structures
     params = _unpack(params)
@@ -94,6 +99,10 @@ def map_optimisers(params: dict, optimisers: dict, strict: bool = False) -> tupl
 
 
 def delay(lr: float, start: int, length: int = 1) -> optax.Schedule:
+    """
+    Delays the learning rate by starting at 0 and linearly increasing to the specified
+    learning rate over a specified number of steps.
+    """
     return optax.linear_schedule(0.0, lr, length, start)
 
 
@@ -122,6 +131,11 @@ def decompose(
 
 
 def eigen_projection(fmat: Array = None, cov: Array = None) -> Array:
+    """
+    Projects the parameter space into the an orthonormal basis
+
+    TODO: develop docs more
+    """
     # Make sure we have one input
     if fmat is None and cov is None:
         raise ValueError("Must provide either fmat or cov")
@@ -206,7 +220,7 @@ def scheduler(lr: float, start: int, *args):
         The piecewise constant learning rate schedule.
     """
     warnings.warn(
-        "scheduler is deprecated as of v4.1 and will be removed in v5.1",
+        "scheduler is deprecated as of v0.5.0 and will be removed in v0.6.0",
         DeprecationWarning,
     )
 
@@ -248,7 +262,7 @@ def sgd(lr: float, start: int, *schedule):
         The optimiser with the piecewise constant learning rate schedule.
     """
     warnings.warn(
-        "sgd is deprecated as of v4.1 and will be removed in v5.1",
+        "sgd is deprecated as of v0.5.0 and will be removed in v0.6.0",
         DeprecationWarning,
     )
     return _base_sgd(scheduler(lr, start, *schedule))
@@ -274,7 +288,7 @@ def adam(lr: float, start: int, *schedule):
         The optimiser with the piecewise constant learning rate schedule.
     """
     warnings.warn(
-        "adam is deprecated as of v4.1 and will be removed in v5.1",
+        "adam is deprecated as of v0.5.0 and will be removed in v0.6.0",
         DeprecationWarning,
     )
     return _base_adam(scheduler(lr, start, *schedule))
@@ -311,7 +325,7 @@ def get_optimiser(
     state : optax.MultiTransformState
     """
     warnings.warn(
-        "get_optimiser is deprecated as of v4.1 and will be removed in v5.1",
+        "get_optimiser is deprecated as of v0.5.0 and will be removed in v0.6.0",
         DeprecationWarning,
     )
 

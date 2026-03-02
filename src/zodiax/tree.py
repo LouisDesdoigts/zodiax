@@ -36,7 +36,7 @@ def boolean_filter(pytree: PyTree, parameters: Params, inverse: bool = False) ->
         An pytree of matching structre with boolean values at the leaves.
     """
     warnings.warn(
-        "boolean_filter is deprecated as of v4.1 and will be removed in v5.1",
+        "boolean_filter is deprecated as of v0.5.0 and will be removed in v0.6.0",
         DeprecationWarning,
     )
     parameters = parameters if isinstance(parameters, list) else [parameters]
@@ -64,7 +64,7 @@ def set_array(pytree: PyTree, parameters=None) -> PyTree:
         The pytree with the leaves converted to arrays.
     """
     warnings.warn(
-        "set_array is deprecated as of v4.1 and will be removed in v5.1",
+        "set_array is deprecated as of v0.5.0 and will be removed in v0.6.0",
         DeprecationWarning,
     )
     # Old routine for setting specified parameters
