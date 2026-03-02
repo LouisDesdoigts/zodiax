@@ -2,11 +2,10 @@ import jax
 import jax.numpy as np
 import jax.tree as jtu
 import equinox as eqx
-import zodiax
 
 # from .base import ModelParams
 import optax
-from typing import Union, List
+from typing import Union, Any
 from .base import _unpack
 import warnings
 
@@ -26,11 +25,11 @@ __all__ = [
 ]
 
 
-def Base():
-    return zodiax.base.Base
+PyTree = Union[dict, list, tuple, eqx.Module]
+Params = Union[str, list[str], tuple[str]]
+Values = Union[Any, list[Any], tuple[Any]]
 
-
-Params = Union[str, List[str]]
+# To be deprecated
 Optimisers = Union[optax.GradientTransformation, list]
 
 if jax.config.read("jax_enable_x64"):
@@ -136,7 +135,7 @@ def adam(lr: float, start: int, *schedule):
     return _base_adam(scheduler(lr, start, *schedule))
 
 
-def debug_nan_check(grads: Base()) -> Base():
+def debug_nan_check(grads: PyTree) -> PyTree:
     """
     Checks for NaN values in the gradients and triggers a breakpoint if any are found.
 
@@ -156,7 +155,7 @@ def debug_nan_check(grads: Base()) -> Base():
     return grads
 
 
-def zero_nan_check(grads: Base()) -> Base():
+def zero_nan_check(grads: PyTree) -> PyTree:
     """
     Replaces any NaN values in the gradients and with zeros.
 
@@ -175,7 +174,7 @@ def zero_nan_check(grads: Base()) -> Base():
 
 # NOTE old version, consider if its worth keeping
 def get_optimiser(
-    pytree: Base(),
+    pytree: PyTree,
     parameters: Params,
     optimisers: Optimisers,
 ) -> tuple:
@@ -185,11 +184,11 @@ def get_optimiser(
 
     Parameters
     ----------
-    pytree : Base
-        A zodiax.base.Base object.
-    parameters :  Union[str, List[str]]
+    pytree : PyTree
+        A zodiax.base.PyTree object.
+    parameters : Params
         A path or list of parameters or list of nested parameters.
-    optimisers : Union[optax.GradientTransformation, list]
+    optimisers : Optimisers
         A optax.GradientTransformation or list of
         optax.GradientTransformation objects to be applied to the leaves
         specified by parameters.
@@ -234,7 +233,7 @@ def get_optimiser(
 
 
 # def get_model_params_optimiser(
-#     pytree: Base(), optimisers: dict, parameters: Params = None
+#     pytree: PyTree, optimisers: dict, parameters: Params = None
 # ):
 #     """
 #     Returns an Optax.GradientTransformion object, with the optimisers
@@ -242,8 +241,8 @@ def get_optimiser(
 
 #     Parameters
 #     ----------
-#     pytree : Base
-#         A zodiax.base.Base object containing the model parameters.
+#     pytree : PyTree
+#         A zodiax.base.PyTree object containing the model parameters.
 #     optimisers : dict
 #         A dictionary of optax.GradientTransformation objects to be applied
 #         to the leaves specified by parameters.

@@ -2,16 +2,16 @@ from __future__ import annotations
 import jax
 import jax.numpy as np
 import equinox as eqx
-from equinox import tree_at, Module
-from typing import Union, Any, List
+from typing import Union, Any
 
 __all__ = ["Base"]
 
+PyTree = Union[dict, list, tuple, eqx.Module]
+Params = Union[str, list[str], tuple[str]]
+Values = Union[Any, list[Any], tuple[Any]]
 
-Params = Union[str, List[str]]
 
-
-def _unpack(dict):
+def _unpack(dict: dict) -> dict:
     """
     Unpacks a dictionary with potentially nested keys into a dictionary with a
     one to one mapping of keys to values.
@@ -27,7 +27,7 @@ def _unpack(dict):
     return unpacked
 
 
-def _get_leaf(pytree: Base, param: Params) -> Any:
+def _get_leaf(pytree: PyTree, param: Params) -> Any:
     """
     A hidden class designed to recurse down a pytree following the param,
     returning the leaf at the end of the param.
@@ -43,7 +43,7 @@ def _get_leaf(pytree: Base, param: Params) -> Any:
 
     Parameters
     ----------
-    pytree : Base
+    pytree : PyTree
         The pytree object to recurse though.
     param : Params
         The param to recurse down.
@@ -67,13 +67,13 @@ def _get_leaf(pytree: Base, param: Params) -> Any:
     return pytree if len(param) == 1 else _get_leaf(pytree, param[1:])
 
 
-def _get_leaves(pytree: Base, parameters: list) -> list:
+def _get_leaves(pytree: PyTree, parameters: list) -> list:
     """
     Returns a list of leaves specified by the parameters.
 
     Parameters
     ----------
-    pytree : Base
+    pytree : PyTree
         The pytree object to recurse though.
     parameters : list
         A list/tuple of nested parameters. Note param objects can only be
@@ -207,14 +207,14 @@ def _format(parameters: Params, values: list = None) -> list:
 ###############
 ### Classes ###
 ###############
-class Base(Module):
+class Base(eqx.Module):
     """
     Extend the Equinox.Module class to give a user-friendly 'param based' API
     for working with pytrees by adding a series of methods used to interface
     with the leaves of the pytree using parameters.
     """
 
-    def get(self: Base, parameters: Params) -> Any:
+    def get(self: PyTree, parameters: Params) -> Any:
         """
         Get the leaf specified by param.
 
@@ -232,7 +232,7 @@ class Base(Module):
         values = _get_leaves(self, new_parameters)
         return values[0] if len(new_parameters) == 1 else values
 
-    def set(self: Base, parameters: Params, values: Union[List[Any], Any]) -> Base:
+    def set(self: PyTree, parameters: Params, values: Values) -> PyTree:
         """
         Set the leaves specified by parameters with values.
 
@@ -240,12 +240,12 @@ class Base(Module):
         ----------
         parameters : Params
             A param or list of parameters or list of nested parameters.
-        values : Union[List[Any], Any]
+        values : Values
             The list of values to set at the leaves specified by parameters.
 
         Returns
         -------
-        pytree : Base
+        pytree : PyTree
             The pytree with leaves specified by parameters updated with values.
         """
         # Allow None inputs
@@ -259,9 +259,11 @@ class Base(Module):
         def leaves_fn(pytree):
             return _get_leaves(pytree, new_parameters)
 
-        return tree_at(leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None)
+        return eqx.tree_at(
+            leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None
+        )
 
-    def update(self: Base, dict: dict) -> Base:
+    def update(self: PyTree, dict: dict) -> PyTree:
         """
         Calls the set method to update the leaves specified by the keys
         of the dictionary with the values of the dictionary.
@@ -273,7 +275,7 @@ class Base(Module):
 
         Returns
         -------
-        pytree : Base
+        pytree : PyTree
             The pytree with updated parameters.
         """
 
@@ -283,7 +285,7 @@ class Base(Module):
         # Calling the set method
         return self.set(parameters, values)
 
-    def add(self: Base, parameters: Params, values: Union[List[Any], Any]) -> Base:
+    def add(self: PyTree, parameters: Params, values: Values) -> PyTree:
         """
         Add to the the leaves specified by parameters with values.
 
@@ -291,12 +293,12 @@ class Base(Module):
         ----------
         parameters : Params
             A param or list of parameters or list of nested parameters.
-        values : Union[List[Any], Any]
+        values : Values
             The list of values to add to the leaves specified by parameters.
 
         Returns
         -------
-        pytree : Base
+        pytree : PyTree
             The pytree with values added to leaves specified by parameters.
         """
         new_parameters, new_values = _format(parameters, values)
@@ -309,9 +311,11 @@ class Base(Module):
         def leaves_fn(pytree):
             return _get_leaves(pytree, new_parameters)
 
-        return tree_at(leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None)
+        return eqx.tree_at(
+            leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None
+        )
 
-    def multiply(self: Base, parameters: Params, values: Union[List[Any], Any]) -> Base:
+    def multiply(self: PyTree, parameters: Params, values: Values) -> PyTree:
         """
         Multiplies the the leaves specified by parameters with values.
 
@@ -319,12 +323,12 @@ class Base(Module):
         ----------
         parameters : Params
             A param or list of parameters or list of nested parameters.
-        values : Union[List[Any], Any]
+        values : Values
             The list of values to multiply the leaves specified by parameters.
 
         Returns
         -------
-        pytree : Base
+        pytree : PyTree
             The pytree with values multiplied by leaves specified by parameters.
         """
         new_parameters, new_values = _format(parameters, values)
@@ -337,9 +341,11 @@ class Base(Module):
         def leaves_fn(pytree):
             return _get_leaves(pytree, new_parameters)
 
-        return tree_at(leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None)
+        return eqx.tree_at(
+            leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None
+        )
 
-    def divide(self: Base, parameters: Params, values: Union[List[Any], Any]) -> Base:
+    def divide(self: PyTree, parameters: Params, values: Values) -> PyTree:
         """
         Divides the the leaves specified by parameters with values.
 
@@ -347,12 +353,12 @@ class Base(Module):
         ----------
         parameters : Params
             A param or list of parameters or list of nested parameters.
-        values : Union[List[Any], Any]
+        values : Values
             The list of values to divide the leaves specified by parameters.
 
         Returns
         -------
-        pytree : Base
+        pytree : PyTree
             The pytree with values divided by leaves specified by parameters.
         """
         new_parameters, new_values = _format(parameters, values)
@@ -365,9 +371,11 @@ class Base(Module):
         def leaves_fn(pytree):
             return _get_leaves(pytree, new_parameters)
 
-        return tree_at(leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None)
+        return eqx.tree_at(
+            leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None
+        )
 
-    def power(self: Base, parameters: Params, values: Union[List[Any], Any]) -> Base:
+    def power(self: PyTree, parameters: Params, values: Values) -> PyTree:
         """
         Raises th leaves specified by parameters to the power of values.
 
@@ -375,13 +383,13 @@ class Base(Module):
         ----------
         parameters : Params
             A param or list of parameters or list of nested parameters.
-        values : Union[List[Any], Any]
+        values : Values
             The list of values to take the leaves specified by parameters to the
             power of.
 
         Returns
         -------
-        pytree : Base
+        pytree : PyTree
             The pytree with the leaves specified by parameters raised to the power
             of values.
         """
@@ -395,9 +403,11 @@ class Base(Module):
         def leaves_fn(pytree):
             return _get_leaves(pytree, new_parameters)
 
-        return tree_at(leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None)
+        return eqx.tree_at(
+            leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None
+        )
 
-    def min(self: Base, parameters: Params, values: Union[List[Any], Any]) -> Base:
+    def min(self: PyTree, parameters: Params, values: Values) -> PyTree:
         """
         Updates the leaves specified by parameters with the minimum value of the
         leaves and values.
@@ -406,12 +416,12 @@ class Base(Module):
         ----------
         parameters : Params
             A param or list of parameters or list of nested parameters.
-        values : Union[List[Any], Any]
+        values : Values
             The list of values to take the minimum of and the leaf.
 
         Returns
         -------
-        pytree : Base
+        pytree : PyTree
             The pytree with the leaves specified by parameters updated with the
             minimum value of the leaf and values.
         """
@@ -425,9 +435,11 @@ class Base(Module):
         def leaves_fn(pytree):
             return _get_leaves(pytree, new_parameters)
 
-        return tree_at(leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None)
+        return eqx.tree_at(
+            leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None
+        )
 
-    def max(self: Base, parameters: Params, values: Union[List[Any], Any]) -> Base:
+    def max(self: PyTree, parameters: Params, values: Values) -> PyTree:
         """
         Updates the leaves specified by parameters with the maximum value of the
         leaves and values.
@@ -437,12 +449,12 @@ class Base(Module):
         ----------
         parameters : Params
             A param or list of parameters or list of nested parameters.
-        values : Union[List[Any], Any]
+        values : Values
             The list of values to take the maximum of and the leaf.
 
         Returns
         -------
-        pytree : Base
+        pytree : PyTree
             The pytree with the leaves specified by parameters updated with the
             maximum value of the leaf and values.
         """
@@ -456,7 +468,9 @@ class Base(Module):
         def leaves_fn(pytree):
             return _get_leaves(pytree, new_parameters)
 
-        return tree_at(leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None)
+        return eqx.tree_at(
+            leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None
+        )
 
 
 class BaseModeller(Base):

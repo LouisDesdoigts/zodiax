@@ -1,7 +1,8 @@
 import zodiax
 import jax
+import equinox as eqx
 from jax import lax, Array, numpy as np
-from typing import Union, List, Any
+from typing import Union, Any
 import warnings
 
 __all__ = [
@@ -12,11 +13,9 @@ __all__ = [
 ]
 
 
-def Base():
-    return zodiax.base.Base
-
-
-Params = Union[str, List[str]]
+PyTree = Union[dict, list, tuple, eqx.Module]
+Params = Union[str, list[str], tuple[str]]
+Values = Union[Any, list[Any], tuple[Any]]
 
 
 def calc_entropy(cov_matrix: Array) -> Array:
@@ -34,7 +33,7 @@ def calc_entropy(cov_matrix: Array) -> Array:
         The entropy of the covariance matrix.
     """
     warnings.warn(
-        "calc_entropy is deprecated as of v1.4 and will be removed in v5.1",
+        "calc_entropy is deprecated as of v4.1 and will be removed in v5.1",
         DeprecationWarning,
     )
     sign, logdet = np.linalg.slogdet(cov_matrix)
@@ -42,7 +41,7 @@ def calc_entropy(cov_matrix: Array) -> Array:
 
 
 def hessian(
-    pytree: Base(),
+    pytree: PyTree,
     parameters: Params,
     fn: callable,
     *fn_args,
@@ -56,9 +55,9 @@ def hessian(
 
     Parameters
     ----------
-    pytree : Base
+    pytree : PyTree
         Pytree holding the parameters values.
-    parameters : Union[str, list]
+    parameters : Params
         Names of parameters to be used in Hessian calculation.
     fn : callable
         The function to differentiate.
@@ -79,7 +78,7 @@ def hessian(
         parameters of the pytree.
     """
     warnings.warn(
-        "hessian is deprecated as of v1.4 and will be removed in v5.1",
+        "hessian is deprecated as of v4.1 and will be removed in v5.1",
         DeprecationWarning,
     )
 
@@ -106,7 +105,7 @@ def hessian(
 
 
 def fisher_matrix(
-    pytree: Base(),
+    pytree: PyTree,
     parameters: Params,
     loglike_fn: callable,
     *loglike_args,
@@ -120,7 +119,7 @@ def fisher_matrix(
     of the parameters as listed in the pytree. Simply returns the negative Hessian.
     """
     warnings.warn(
-        "fisher_matrix is deprecated as of v1.4 and will be removed in v5.1",
+        "fisher_matrix is deprecated as of v4.1 and will be removed in v5.1",
         DeprecationWarning,
     )
 
@@ -136,7 +135,7 @@ def fisher_matrix(
 
 
 def covariance_matrix(
-    pytree: Base(),
+    pytree: PyTree,
     parameters: Params,
     loglike_fn: callable,
     *loglike_args: Any,
@@ -154,9 +153,9 @@ def covariance_matrix(
 
     Parameters
     ----------
-    pytree : Base
+    pytree : PyTree
         Pytree with a .model() function.
-    parameters : Union[str, list]
+    parameters : Params
         A path or list of paths or list of nested paths.
     loglike_fn : callable
         The log likelihood function to differentiate.
@@ -177,7 +176,7 @@ def covariance_matrix(
         The covariance matrix of the pytree parameters.
     """
     warnings.warn(
-        "covariance_matrix is deprecated as of v1.4 and will be removed in v5.1",
+        "covariance_matrix is deprecated as of v4.1 and will be removed in v5.1",
         DeprecationWarning,
     )
 
@@ -195,8 +194,8 @@ def covariance_matrix(
 
 
 def _perturb(
-    X: Array, pytree: Base(), parameters: Params, shapes: list, lengths: list
-) -> Base():
+    X: Array, pytree: PyTree, parameters: Params, shapes: list, lengths: list
+) -> PyTree:
     """
     Perturbs the pytree parameters by the values in X, automatically setting
     up the correct sizes based on each parameter.
@@ -205,9 +204,9 @@ def _perturb(
     ----------
     X : Array
         The vector to perturb the parameters by.
-    pytree : Base
+    pytree : PyTree
         Pytree with a .model() function.
-    parameters : Union[str, list]
+    parameters : Params
         A path or list of paths or list of nested paths.
     shapes : list
         A list of the shapes of the parameters.
@@ -216,7 +215,7 @@ def _perturb(
 
     Returns
     -------
-    pytree : Base
+    pytree : PyTree
         The perturbed pytree.
     """
     # Improve with lax.scan or lax.carry?
@@ -303,7 +302,7 @@ def _shape_to_length(shape: Union[tuple, int], length: int = 0) -> int:
 
 
 def _get_shape(
-    pytree: Base(), parameter: str, shape_dict: dict = {}
+    pytree: PyTree, parameter: str, shape_dict: dict = {}
 ) -> Union[tuple, int]:
     """
     Gets the shape of a parameter in the pytree. If the parameter is in the
@@ -312,7 +311,7 @@ def _get_shape(
 
     Parameters
     ----------
-    pytree : Base
+    pytree : PyTree
         Pytree with a .model() function.
     parameter : str
         The path to the parameter.
@@ -332,7 +331,7 @@ def _get_shape(
 
 
 def _shapes_and_lengths(
-    pytree: Base(), parameters: Params, shape_dict: dict = {}
+    pytree: PyTree, parameters: Params, shape_dict: dict = {}
 ) -> tuple:
     """
     Calculates the shapes and lenths of the parameters in the pytree. If the
@@ -341,9 +340,9 @@ def _shapes_and_lengths(
 
     Parameters
     ----------
-    pytree : Base
+    pytree : PyTree
         Pytree with a .model() function.
-    parameters : Union[str, list]
+    parameters : Params
         A path or list of paths or list of nested paths.
     shape_dict : dict = {}
         A dictionary specifying the shape of the differentiated vector for

@@ -1,17 +1,14 @@
 import zodiax
 import equinox
 from functools import wraps
-from jaxtyping import PyTree
-from typing import Union, Callable, List
+from typing import Union, Callable, Any
 
 import equinox as eqx
 from types import ModuleType
 
-Params = Union[str, List[str]]
-
-
-def Base():
-    return zodiax.base.Base
+PyTree = Union[dict, list, tuple, eqx.Module]
+Params = Union[str, list[str], tuple[str]]
+Values = Union[Any, list[Any], tuple[Any]]
 
 
 def filter_grad(parameters: Params, *filter_args, **filter_kwargs) -> Callable:
@@ -38,14 +35,14 @@ def filter_grad(parameters: Params, *filter_args, **filter_kwargs) -> Callable:
 
     def wrapper(func: Callable):
         @wraps(func)
-        def inner_wrapper(pytree: PyTree, *args, **kwargs):
+        def inner_wrapper(pytree, *args, **kwargs):
             # Convert parameters
             pytree = zodiax.set_array(pytree)
             boolean_filter = zodiax.tree.boolean_filter(pytree, parameters)
 
             # Wrap original function
             @equinox.filter_grad(*filter_args, **filter_kwargs)
-            def recombine(traced: PyTree, static: PyTree):
+            def recombine(traced, static):
                 return func(eqx.combine(traced, static), *args, **kwargs)
 
             # Return wrapped function
@@ -82,14 +79,14 @@ def filter_value_and_grad(
 
     def wrapper(func: Callable):
         @wraps(func)
-        def inner_wrapper(pytree: PyTree, *args, **kwargs):
+        def inner_wrapper(pytree, *args, **kwargs):
             # Convert parameters
             pytree = zodiax.set_array(pytree)
             boolean_filter = zodiax.tree.boolean_filter(pytree, parameters)
 
             # Wrap original function
             @equinox.filter_value_and_grad(*filter_args, **filter_kwargs)
-            def recombine(traced: PyTree, static: PyTree):
+            def recombine(traced, static):
                 return func(eqx.combine(traced, static), *args, **kwargs)
 
             # Return wrapped function
@@ -101,7 +98,7 @@ def filter_value_and_grad(
 
 
 def partition(
-    pytree: Base(), parameters: Params, *partition_args, **partition_kwargs
+    pytree: PyTree, parameters: Params, *partition_args, **partition_kwargs
 ) -> tuple:
     """
     Wraps the equinox partition function to take in a list of parameters to
@@ -110,7 +107,7 @@ def partition(
 
     Parameters
     ----------
-    pytree : Base()
+    pytree : PyTree
         The pytree to partition.
     parameters : Union[str, List[str]]
         The parameters to partition. Can either be a single string path or a
@@ -122,10 +119,10 @@ def partition(
 
     Returns
     -------
-    pytree1 : Base()
+    pytree1 : PyTree
         A matching pytree with Nones at all leaves not specified by the
         parameters.
-    pytree2 : Base()
+    pytree2 : PyTree
         A matching pytree with Nones at all leaves specified by the parameters.
     """
 

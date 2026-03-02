@@ -7,15 +7,16 @@ from typing import Union, List, Any
 __all__ = ["boolean_filter", "set_array"]
 
 
-def Base():
-    return zodiax.base.Base
+PyTree = Union[dict, list, tuple, eqx.Module]
+Params = Union[str, list[str], tuple[str]]
+Values = Union[Any, list[Any], tuple[Any]]
 
 
 Params = Union[str, List[str]]
 
 
 # Boolean
-def boolean_filter(pytree: Base(), parameters: Params, inverse: bool = False) -> Base():
+def boolean_filter(pytree: PyTree, parameters: Params, inverse: bool = False) -> PyTree:
     """
     Returns a pytree of matching structure with boolean values at the leaves.
     Leaves specified by paths will be True, all others will be False.
@@ -27,7 +28,7 @@ def boolean_filter(pytree: Base(), parameters: Params, inverse: bool = False) ->
     ----------
     pytree : PyTree
         The pytree to be filtered.
-    parameters : Union[str, list]
+    parameters : Params
         A path or list of paths or list of nested paths.
     inverse : bool = False
         If True, the boolean values will be inverted, by default False
@@ -46,23 +47,23 @@ def boolean_filter(pytree: Base(), parameters: Params, inverse: bool = False) ->
         return true_pytree.set(parameters, len(parameters) * [False])
 
 
-def set_array(pytree: Base(), parameters=None) -> Base():
+def set_array(pytree: PyTree, parameters=None) -> PyTree:
     """
     Converts all leaves in the pytree to arrays to ensure they have a
     .shape property for static dimensionality and size checks.
 
     Parameters
     ----------
-    pytree : Base()
+    pytree : PyTree
         The pytree to be converted.
 
     Returns
     -------
-    pytree : Base()
+    pytree : PyTree
         The pytree with the leaves converted to arrays.
     """
 
-    # Old routine for setting specificed parameters
+    # Old routine for setting specified parameters
     if parameters is not None:
         new_leaves = jax.tree.map(_to_array, pytree.get(parameters))
         return pytree.set(parameters, new_leaves)
