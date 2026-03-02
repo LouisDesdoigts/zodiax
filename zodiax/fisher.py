@@ -1,8 +1,8 @@
-import zodiax
 import jax
 import equinox as eqx
 from jax import lax, Array, numpy as np
 from typing import Union, Any
+from .tree import set_array
 import warnings
 
 __all__ = [
@@ -64,7 +64,7 @@ def hessian(
         parameters = [parameters]
 
     # Build empty vector to perturb
-    pytree = zodiax.tree.set_array(pytree)
+    pytree = set_array(pytree)
     shapes, lengths = _shapes_and_lengths(pytree, parameters, shape_dict)
     X = np.zeros(_lengths_to_N(lengths))
 

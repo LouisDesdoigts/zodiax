@@ -2,8 +2,7 @@ from __future__ import annotations
 import jax
 import jax.numpy as np
 import equinox as eqx
-from jax.lax import dynamic_slice as lax_slice
-from jax import Array
+from jax import lax, Array
 from typing import Union, Any
 
 __all__ = ["Base", "build_wrapper", "EquinoxWrapper", "WrapperHolder"]
@@ -206,9 +205,6 @@ def _format(parameters: Params, values: list = None) -> list:
     return new_parameters if values is None else (new_parameters, new_values)
 
 
-###############
-### Classes ###
-###############
 class Base(eqx.Module):
     """
     Extend the Equinox.Module class to give a user-friendly 'param based' API
@@ -528,7 +524,7 @@ class EquinoxWrapper(Base):
 
     def inject(self, values):
         leaves = [
-            lax_slice(values, (start,), (size,)).reshape(shape)
+            lax.dynamic_slice(values, (start,), (size,)).reshape(shape)
             for start, size, shape in zip(self.starts, self.sizes, self.shapes)
         ]
         return eqx.combine(jax.tree.unflatten(self.tree_def, leaves), self.static)

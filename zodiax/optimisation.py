@@ -12,7 +12,6 @@ import warnings
 __all__ = [
     "debug_nan_check",
     "zero_nan_check",
-    # New
     "delay",
     "map_optimisers",
     "decompose",
