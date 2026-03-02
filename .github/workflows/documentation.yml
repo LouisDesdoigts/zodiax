@@ -3,35 +3,42 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*' # Triggers a new versioned archive when you push a git tag
 
 jobs:
   documentation:
     runs-on: ubuntu-latest
     steps: 
-      - name: checkout all
-        uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v4 # Updated to v4 for 2026 compatibility
         with:
-          fetch-depth: 0
+          fetch-depth: 0      # Essential: mike needs full history to push to gh-pages
 
-
-      - name: python install
-        uses: actions/setup-python@v1
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.x
-          architecture: x64
+          python-version: '3.11' # Zensical requires 3.10+
 
-      - name: install environment
+      - name: Install environment
         run: |
-          pip install mkdocs
-          pip install mkdocs-same-dir
-          pip install pymdown-extensions
-          pip install mkdocs-pymdownx-material-extras
-          pip install mkdocs-autorefs  
-          pip install mkdocs-simple-plugin
-          pip install mkdocstrings
-          pip install mkdocstrings[python]
-          pip install mkdocs-material
+          pip install .[dev]   # Cleaner: installs Zensical and plugins from your pyproject.toml
+          pip install mike     # Ensure mike is available for versioning
 
-      - name: generate and deploy documentation
-        run: mkdocs gh-deploy -d https://louisdesdoigts.github.io/zodiax
+      - name: Configure Git
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
 
+      - name: Deploy Documentation
+        run: |
+          # If this is a normal push to main, update the 'dev' and 'latest' aliases
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            mike deploy --push --update-aliases dev latest
+          fi
+          
+          # If this is a tag (e.g. v0.5.0), create a permanent versioned folder
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            mike deploy --push --update-aliases $VERSION latest
+          fi

@@ -3,35 +3,34 @@ name = "zodiax"
 version = "0.5.0"
 description = "Equinox extension for scientific programming."
 readme = "README.md"
-requires-python =">=3.8"
+requires-python = ">=3.10" # Zensical requires 3.10+
 license = {file = "LICENSE.md"}
-authors = [
-  {name = "Louis Desdoigts", email = "louis.desdoigts@sydney.edu.au"},
-]
-keywords = []
-urls = {repository = "https://github.com/LouisDesdoigts/zodiax"}
+authors = [{name = "Louis Desdoigts", email = "louis.desdoigts@sydney.edu.au"}]
 dependencies = ["jax", "jaxlib", "equinox", "optax"]
-classifiers=[
-    "Programming Language :: Python :: 3",
-    "Operating System :: OS Independent",
-]
-
-[build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
-dev = ["pytest", "black", "ruff", "pre-commit", "mkdocs", "mkdocs-same-dir", "mkdocs-autorefs", "mkdocstrings-python"]
-
-[tool.black]
-line-length = 88
+dev = [
+    "pytest",
+    "black",
+    "ruff",
+    "pre-commit",
+    "zensical",           # The new documentation engine
+    "mkdocstrings-python" # Required for API generation
+]
 
 [tool.ruff]
 line-length = 88
-select = ["E", "F"]
-ignore = ["E731", "E741", "F722"]
-ignore-init-module-imports = true
+# E = pycodestyle, F = Pyflakes, I = Isort (replaces your separate isort config)
+lint.select = ["E", "F", "I"]
+lint.ignore = [
+    "E731", # Allow lambda assignments
+    "E741", # Allow ambiguous variable names (l, O, I)
+    "F722"  # Allow syntax errors in forward type annotations
+]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 combine-as-imports = true
 lines-after-imports = 2
+
+[tool.black]
+line-length = 88
