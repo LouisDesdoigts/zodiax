@@ -6,7 +6,6 @@ from typing import Union, Any
 import warnings
 
 __all__ = [
-    "calc_entropy",
     "hessian",
     "fisher_matrix",
     "covariance_matrix",
@@ -16,28 +15,6 @@ __all__ = [
 PyTree = Union[dict, list, tuple, eqx.Module]
 Params = Union[str, list[str], tuple[str]]
 Values = Union[Any, list[Any], tuple[Any]]
-
-
-def calc_entropy(cov_matrix: Array) -> Array:
-    """
-    Calculates the entropy of a covariance matrix.
-
-    Parameters
-    ----------
-    cov_matrix : Array
-        The covariance matrix to calculate the entropy of.
-
-    Returns
-    -------
-    entropy : Array
-        The entropy of the covariance matrix.
-    """
-    warnings.warn(
-        "calc_entropy is deprecated as of v4.1 and will be removed in v5.1",
-        DeprecationWarning,
-    )
-    sign, logdet = np.linalg.slogdet(cov_matrix)
-    return 0.5 * (np.log(2 * np.pi * np.e) + (sign * logdet))
 
 
 def hessian(

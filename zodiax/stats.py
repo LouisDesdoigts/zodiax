@@ -1,7 +1,7 @@
 import jax.numpy as np
 from jax.scipy import stats
 from jax.flatten_util import ravel_pytree
-from jax import lax
+from jax import lax, Array
 
 __all__ = [
     "z_score",
@@ -11,6 +11,7 @@ __all__ = [
     "chi2",
     "chi2r",
     "chi2r_from_z",
+    "calc_entropy",
     "ddof",
     "check_symmetric",
     "check_positive_semi_definite",
@@ -75,3 +76,21 @@ def gauss_hessian(J, cov=None):
     if cov is None:
         return J.T @ J
     return J.T @ (np.linalg.inv(cov) @ J)
+
+
+def calc_entropy(cov_matrix: Array) -> Array:
+    """
+    Calculates the entropy of a covariance matrix.
+
+    Parameters
+    ----------
+    cov_matrix : Array
+        The covariance matrix to calculate the entropy of.
+
+    Returns
+    -------
+    entropy : Array
+        The entropy of the covariance matrix.
+    """
+    sign, logdet = np.linalg.slogdet(cov_matrix)
+    return 0.5 * (np.log(2 * np.pi * np.e) + (sign * logdet))
