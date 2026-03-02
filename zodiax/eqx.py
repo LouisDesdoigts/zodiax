@@ -1,10 +1,9 @@
 import zodiax
-import equinox
+import equinox as eqx
 from functools import wraps
 from typing import Union, Callable, Any
-
-import equinox as eqx
 from types import ModuleType
+import warnings
 
 PyTree = Union[dict, list, tuple, eqx.Module]
 Params = Union[str, list[str], tuple[str]]
@@ -32,6 +31,10 @@ def filter_grad(parameters: Params, *filter_args, **filter_kwargs) -> Callable:
     Callable
         The wrapped function.
     """
+    warnings.warn(
+        "filter_grad is deprecated as of v4.1 and will be removed in v5.1",
+        DeprecationWarning,
+    )
 
     def wrapper(func: Callable):
         @wraps(func)
@@ -41,7 +44,7 @@ def filter_grad(parameters: Params, *filter_args, **filter_kwargs) -> Callable:
             boolean_filter = zodiax.tree.boolean_filter(pytree, parameters)
 
             # Wrap original function
-            @equinox.filter_grad(*filter_args, **filter_kwargs)
+            @eqx.filter_grad(*filter_args, **filter_kwargs)
             def recombine(traced, static):
                 return func(eqx.combine(traced, static), *args, **kwargs)
 
@@ -76,6 +79,10 @@ def filter_value_and_grad(
     Callable
         The wrapped function.
     """
+    warnings.warn(
+        "filter_value_and_grad is deprecated as of v4.1 and will be removed in v5.1",
+        DeprecationWarning,
+    )
 
     def wrapper(func: Callable):
         @wraps(func)
@@ -85,7 +92,7 @@ def filter_value_and_grad(
             boolean_filter = zodiax.tree.boolean_filter(pytree, parameters)
 
             # Wrap original function
-            @equinox.filter_value_and_grad(*filter_args, **filter_kwargs)
+            @eqx.filter_value_and_grad(*filter_args, **filter_kwargs)
             def recombine(traced, static):
                 return func(eqx.combine(traced, static), *args, **kwargs)
 
@@ -131,9 +138,7 @@ def partition(
 
     pytree = zodiax.set_array(pytree)
     boolean_filter = zodiax.tree.boolean_filter(pytree, parameters)
-    return equinox.partition(
-        pytree, boolean_filter, *partition_args, **partition_kwargs
-    )
+    return eqx.partition(pytree, boolean_filter, *partition_args, **partition_kwargs)
 
 
 # Dictionary of replaced functions
@@ -146,9 +151,7 @@ replaced_dict = {
 
 # Use the __all__ attribute of the external package to get a list of all
 # public functions
-external_api = [
-    func_name for func_name in dir(equinox) if not func_name.startswith("_")
-]
+external_api = [func_name for func_name in dir(eqx) if not func_name.startswith("_")]
 
 
 # Create a dictionary of API wrappers that simply point to the
@@ -158,7 +161,7 @@ wrappers = {}
 for api_element in external_api:
 
     # Get the object corresponding to the api_element name
-    api_obj = getattr(equinox, api_element)
+    api_obj = getattr(eqx, api_element)
 
     # Functions and classes
     if callable(api_obj):
@@ -169,11 +172,11 @@ for api_element in external_api:
 
         # otherwise, just use the original equinox function
         else:
-            wrappers[api_element] = getattr(equinox, api_element)
+            wrappers[api_element] = getattr(eqx, api_element)
 
     # Modules
     elif isinstance(api_obj, ModuleType):
-        wrappers[api_element] = getattr(equinox, api_element)
+        wrappers[api_element] = getattr(eqx, api_element)
 
     # The rest of these should just be custom types that we dont need
     else:
