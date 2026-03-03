@@ -1000,19 +1000,21 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">equinox</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">eqx</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">jax.random</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jr</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.tree</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jtu</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">dLux</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dl</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">dLux.utils</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dlu</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">optax</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm.auto</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">jax.tree</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jtu</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">optax</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">optimistix</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">optx</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm.auto</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 
 <span class="c1"># Note we enable 64-bit precision for numerical stability when computing the Hessians</span>
 <span class="c1"># later in the tutorial!</span>
 <span class="n">jax</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s2">&quot;jax_enable_x64&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
 </code></pre></div>
+<pre><code>/Users/louis/mambaforge/envs/zdx-tuts/lib/python3.14/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+  from .autonotebook import tqdm as notebook_tqdm
+</code></pre>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mpl</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib.colors</span><span class="w"> </span><span class="kn">import</span> <span class="n">CenteredNorm</span>
@@ -1097,7 +1099,7 @@ dLux version: 0.14.0
     <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 
         <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+            <span class="bp">self</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
 
         <span class="n">mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">)</span>
         <span class="n">std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">std</span><span class="p">)</span>
@@ -1187,7 +1189,7 @@ dLux version: 0.14.0
     <span class="n">losses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span>
 <span class="n">losses</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">losses</span><span class="p">)</span>
 </code></pre></div>
-<pre><code>100%|██████████| 500/500 [00:00&lt;00:00, 669.56it/s]
+<pre><code>100%|██████████| 500/500 [00:00&lt;00:00, 671.04it/s]
 </code></pre>
 <p>Now we can take a look at our loss curve and check the final value of our reduced chi-squared statistic to see how well we did. We can also look at the final parameters to see how close we got to the true values.</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># Check the final reduced chi-squared statistic</span>
@@ -1557,7 +1559,7 @@ Steps: 27
 <pre><code>initial reduced chi-squared: 1553037.1824619938
 
 
-100%|██████████| 200/200 [00:03&lt;00:00, 54.62it/s, log_loss=3.6472]
+100%|██████████| 200/200 [00:04&lt;00:00, 48.82it/s, log_loss=3.6472]
 
 
 Final reduced chi-squared: 1478.1168068610625
@@ -1719,7 +1721,9 @@ Final reduced chi-squared: 1478.1168068610625
 <pre><code>initial reduced chi-squared: 1553037.1824619938
 
 
-100%|██████████| 100/100 [00:01&lt;00:00, 63.26it/s, log_loss=0.4635]
+  0%|          | 0/100 [00:00&lt;?, ?it/s]
+
+100%|██████████| 100/100 [00:01&lt;00:00, 60.69it/s, log_loss=0.4635]
 
 
 Final reduced chi-squared: 0.9742225768208455
@@ -1960,7 +1964,28 @@ Steps: 29
 <span class="n">sampler</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">jr</span><span class="o">.</span><span class="n">key</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">args</span><span class="p">)</span>
 <span class="n">sampler</span><span class="o">.</span><span class="n">print_summary</span><span class="p">()</span>
 </code></pre></div>
-<pre><code>warmup:   7%|▋         | 255/3500 [00:27&lt;06:31,  8.28it/s, 15 steps of size 3.17e-01. acc. prob=0.78]
+<pre><code>sample: 100%|██████████| 3500/3500 [05:49&lt;00:00, 10.02it/s, 7 steps of size 5.42e-01. acc. prob=0.90]
+
+
+                mean       std    median      5.0%     95.0%     n_eff     r_hat
+ Latent[0]     -0.02      1.03     -0.03     -1.74      1.59   4193.92      1.00
+ Latent[1]     -0.01      1.06     -0.01     -1.78      1.68   4498.04      1.00
+ Latent[2]     -0.00      0.98     -0.01     -1.63      1.55   4704.01      1.00
+ Latent[3]     -0.00      0.95      0.01     -1.56      1.49   3757.81      1.00
+ Latent[4]      0.02      0.99      0.02     -1.56      1.68   6129.37      1.00
+ Latent[5]      0.02      1.01      0.01     -1.74      1.56   4113.58      1.00
+ Latent[6]     -0.01      0.99      0.00     -1.75      1.50   4940.96      1.00
+ Latent[7]      0.02      1.04      0.01     -1.72      1.66   5110.49      1.00
+ Latent[8]      0.02      1.03      0.02     -1.47      1.89   4052.82      1.00
+ Latent[9]      0.01      1.03     -0.01     -1.53      1.76   4775.03      1.00
+Latent[10]     -0.01      0.98      0.00     -1.53      1.65   5026.96      1.00
+Latent[11]     -0.02      1.01     -0.01     -1.70      1.58   4673.57      1.00
+Latent[12]      0.00      1.02      0.01     -1.75      1.58   4140.21      1.00
+Latent[13]     -0.00      0.97      0.01     -1.62      1.56   4972.45      1.00
+Latent[14]      0.02      1.01      0.03     -1.79      1.57   4560.83      1.00
+Latent[15]      0.01      0.98      0.01     -1.67      1.55   4722.11      1.00
+
+Number of divergences: 0
 </code></pre>
 <p>Great, we can see that our r_hat parameters are all close to unity, indicating good convergence. Lets have a look at the posterior samples, our estimate from the hessian we used to calculate the projection matrix, and what our true values are to see how well we did! Don't worry too much about the code below, its mostly just unpacking things to be plotted which can be quite tedious.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
