@@ -23,8 +23,13 @@ jobs:
       - name: Install environment
         run: |
           python -m pip install --upgrade pip
-          pip install ".[dev]"
-          pip install zensical mkdocstrings-python mike
+          python -m pip install ".[dev]"
+          python -m pip install zensical mkdocstrings-python mike
+
+      - name: Verify docs environment
+        run: |
+          python -m pip show zensical mkdocs mike
+          python -c "import zensical, mkdocs, mike; print('Docs deps OK')"
 
       - name: Configure Git
         run: |
@@ -35,11 +40,11 @@ jobs:
         run: |
           # If this is a normal push to main, update the 'dev' and 'latest' aliases
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            mike deploy --push --update-aliases dev latest
+            python -m mike deploy --push --update-aliases dev latest
           fi
           
           # If this is a tag (e.g. v0.5.0), create a permanent versioned folder
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             VERSION=${GITHUB_REF#refs/tags/v}
-            mike deploy --push --update-aliases $VERSION latest
+            python -m mike deploy --push --update-aliases $VERSION latest
           fi
