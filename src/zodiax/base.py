@@ -29,7 +29,7 @@ def _unpack(dict: dict) -> dict:
 
 def _get_leaf(pytree: PyTree, param: Params) -> Any:
     """
-    A hidden class designed to recurse down a pytree following the param,
+    A helper function designed to recurse down a pytree following the param,
     returning the leaf at the end of the param.
 
     Base case: len(param) == 1
@@ -44,7 +44,7 @@ def _get_leaf(pytree: PyTree, param: Params) -> Any:
     Parameters
     ----------
     pytree : PyTree
-        The pytree object to recurse though.
+        The pytree object to recurse through.
     param : Params
         The param to recurse down.
 
@@ -74,7 +74,7 @@ def _get_leaves(pytree: PyTree, parameters: list) -> list:
     Parameters
     ----------
     pytree : PyTree
-        The pytree object to recurse though.
+        The pytree object to recurse through.
     parameters : list
         A list/tuple of nested parameters. Note param objects can only be
         nested a single time.
@@ -89,7 +89,7 @@ def _get_leaves(pytree: PyTree, parameters: list) -> list:
 
 def _unwrap(parameters: Params, values_in: list = None) -> list:
     """
-    Unwraps the provided parameters in to the correct list-based format for the
+    Unwraps the provided parameters into the correct list-based format for the
     _get_leaves and _get_leaf methods, returning a single dimensional list
     of input parameters.
 
@@ -156,7 +156,7 @@ def _unwrap(parameters: Params, values_in: list = None) -> list:
 
 def _format(parameters: Params, values: list = None) -> list:
     """
-    Formats the provided parameters in to the correct list-based format for the
+    Formats the provided parameters into the correct list-based format for the
     _get_leaves and _get_leaf methods, returning a single dimensional list
     of input parameters.
 
@@ -176,7 +176,7 @@ def _format(parameters: Params, values: list = None) -> list:
     if isinstance(parameters, (list, tuple)):
         parameters = list(parameters)
 
-        # If there is nesting, ensure correct dis
+        # If there is nesting, ensure correct dimensions
         if (
             len(parameters) > 1
             and values is not None
@@ -189,7 +189,7 @@ def _format(parameters: Params, values: list = None) -> list:
                 "of equal length."
             )
 
-        # Its a list - iterate and unbind all the keys
+        # It's a list - iterate and unbind all the keys
         if values is not None:
             flat_parameters, new_values = _unwrap(parameters, values)
         else:
@@ -215,12 +215,18 @@ def _normalise_mutation_inputs(
     values: Values = None,
     updates: dict = None,
     method_name: str = "method",
+    require_values: bool = False,
 ) -> tuple:
     """
     Normalises mutation inputs for methods that can accept either:
     - (parameters, values)
     - a mapping of parameter->value
     - keyword arguments of parameter=value
+
+    Parameters
+    ----------
+    require_values : bool, optional
+        If True, raises a TypeError when the resolved values are None.
     """
     updates = {} if updates is None else updates
 
@@ -231,21 +237,26 @@ def _normalise_mutation_inputs(
                 "(parameters, values), a mapping, or keyword arguments."
             )
         mapping = _unpack(updates)
-        return list(mapping.keys()), list(mapping.values())
-
-    if isinstance(parameters, dict):
+        parameters, values = list(mapping.keys()), list(mapping.values())
+    elif isinstance(parameters, dict):
         if values is not None:
             raise TypeError(
                 f"{method_name}() received both a mapping and values. "
                 "Provide only one input style."
             )
         mapping = _unpack(parameters)
-        return list(mapping.keys()), list(mapping.values())
+        parameters, values = list(mapping.keys()), list(mapping.values())
+    else:
+        if parameters is None:
+            raise TypeError(
+                f"{method_name}() requires input via (parameters, values), "
+                "a mapping, or keyword arguments."
+            )
 
-    if parameters is None:
+    if require_values and values is None:
         raise TypeError(
-            f"{method_name}() requires input via (parameters, values), "
-            "a mapping, or keyword arguments."
+            f"{method_name}() missing values. Use (parameters, values), a mapping, "
+            "or keyword arguments."
         )
 
     return parameters, values
@@ -340,7 +351,7 @@ class Base(eqx.Module):
         **updates,
     ) -> PyTree:
         """
-        Add to the the leaves specified by parameters with values.
+        Add to the leaves specified by parameters with values.
 
         Parameters
         ----------
@@ -365,12 +376,8 @@ class Base(eqx.Module):
             values,
             updates=updates,
             method_name="add",
+            require_values=True,
         )
-        if values is None:
-            raise TypeError(
-                "add() missing values. Use (parameters, values), a mapping, "
-                "or keyword arguments."
-            )
         new_parameters, new_values = _format(parameters, values)
         new_values = [
             leaf + value
@@ -393,7 +400,7 @@ class Base(eqx.Module):
         **updates,
     ) -> PyTree:
         """
-        Multiplies the the leaves specified by parameters with values.
+        Multiplies the leaves specified by parameters with values.
 
         Parameters
         ----------
@@ -416,12 +423,8 @@ class Base(eqx.Module):
             values,
             updates=updates,
             method_name="multiply",
+            require_values=True,
         )
-        if values is None:
-            raise TypeError(
-                "multiply() missing values. Use (parameters, values), a mapping, "
-                "or keyword arguments."
-            )
         new_parameters, new_values = _format(parameters, values)
         new_values = [
             leaf * value
@@ -444,7 +447,7 @@ class Base(eqx.Module):
         **updates,
     ) -> PyTree:
         """
-        Divides the the leaves specified by parameters with values.
+        Divides the leaves specified by parameters with values.
 
         Parameters
         ----------
@@ -467,12 +470,8 @@ class Base(eqx.Module):
             values,
             updates=updates,
             method_name="divide",
+            require_values=True,
         )
-        if values is None:
-            raise TypeError(
-                "divide() missing values. Use (parameters, values), a mapping, "
-                "or keyword arguments."
-            )
         new_parameters, new_values = _format(parameters, values)
         new_values = [
             leaf / value
@@ -495,7 +494,7 @@ class Base(eqx.Module):
         **updates,
     ) -> PyTree:
         """
-        Raises th leaves specified by parameters to the power of values.
+        Raises the leaves specified by parameters to the power of values.
 
         Parameters
         ----------
@@ -519,12 +518,8 @@ class Base(eqx.Module):
             values,
             updates=updates,
             method_name="power",
+            require_values=True,
         )
-        if values is None:
-            raise TypeError(
-                "power() missing values. Use (parameters, values), a mapping, "
-                "or keyword arguments."
-            )
         new_parameters, new_values = _format(parameters, values)
         new_values = [
             leaf**value
@@ -572,12 +567,8 @@ class Base(eqx.Module):
             values,
             updates=updates,
             method_name="min",
+            require_values=True,
         )
-        if values is None:
-            raise TypeError(
-                "min() missing values. Use (parameters, values), a mapping, "
-                "or keyword arguments."
-            )
         new_parameters, new_values = _format(parameters, values)
         new_values = [
             np.minimum(leaf, value)
@@ -626,12 +617,8 @@ class Base(eqx.Module):
             values,
             updates=updates,
             method_name="max",
+            require_values=True,
         )
-        if values is None:
-            raise TypeError(
-                "max() missing values. Use (parameters, values), a mapping, "
-                "or keyword arguments."
-            )
         new_parameters, new_values = _format(parameters, values)
         new_values = [
             np.maximum(leaf, value)
@@ -713,7 +700,7 @@ class WrapperHolder(Base):
 
     To apply transformations to the Equinox model values, operate on the `values` leaf
     of this class. To build the model, call the `build` property, and the Equinox model
-    will be constructed with the stored values and be able to operated with as if it
+    will be constructed with the stored values and be able to be used as if it
     were a regular Equinox model.
 
     This class is designed to be instantiated by the `build_wrapper` function.
@@ -737,7 +724,7 @@ class WrapperHolder(Base):
             self.values = values
             self.structure = structure
 
-        def __call__(self, x)ß:
+        def __call__(self, x):
             return self.build(x)
 
     x = np.ones(16)
