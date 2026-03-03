@@ -4,6 +4,7 @@
 [![PyPI version](https://badge.fury.io/py/zodiax.svg)](https://badge.fury.io/py/zodiax)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![integration](https://github.com/LouisDesdoigts/zodiax/actions/workflows/tests.yml/badge.svg)](https://github.com/LouisDesdoigts/zodiax/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/LouisDesdoigts/zodiax/graph/badge.svg)](https://codecov.io/gh/LouisDesdoigts/zodiax)
 [![Documentation](https://github.com/LouisDesdoigts/zodiax/actions/workflows/documentation.yml/badge.svg)](https://louisdesdoigts.github.io/zodiax/)
 
 ---
@@ -40,6 +41,14 @@ Docs installation: ```pip install "zodiax[docs]"```
 
 Test installation: ```pip install "zodiax[tests]"```
 
+Coverage:
+
+```bash
+pytest --cov=zodiax --cov-report=term-missing --cov-report=xml --cov-report=html tests
+```
+
+This writes `coverage.xml` and an `htmlcov/` report for local inspection.
+
 ---
 
 ### Quickstart
@@ -59,7 +68,7 @@ class Linear(zdx.Base):
         self.m = m
         self.b = b
 
-    def model(self, x):
+    def __call__(self, x):
         return self.m * x + self.b
 
 linear = Linear(1., 1.)
@@ -71,7 +80,7 @@ Its that simple! The `linear` class is now a fully differentiable object that gi
 @jax.jit
 @jax.grad
 def loss_fn(model, xs, ys):
-    return np.square(model.model(xs) - ys).sum()
+    return np.square(model(xs) - ys).sum()
 
 xs = np.arange(5)
 ys = 2*np.arange(5)
@@ -87,17 +96,23 @@ print(grads.m, grads.b)
 
 The `grads` object is an instance of the `Linear` class with the gradients of the parameters with respect to the loss function!
 
-<!-- !!! tip "zodiax.filter_grad"
-    If we replace the `jax.grad` decorator with `zdz.filter_grad` then we can choose speicifc parameters to take gradients with respect to! This is detailed in the [Using Zodiax section]((<https://louisdesdoigts.github.io/zodiax/docs/usage.md>)) of the docs.
+### Update Signatures (Minimal Overview)
 
-!!! tip "Pretty-printing"
-    All `zodiax` classes gain a pretty-printing method that will display the class instance in a nice readable format! Lets use it here to see what the gradients look like:
+Most Zodiax update methods (`set`, `add`, `multiply`, `divide`, `power`, `min`, `max`) support three equivalent input styles:
 
-    ```python
+1. **`(parameters, values)` positional style**
+2. **`{parameter: value}` dictionary style**
+3. **`param=value` keyword style** (and `**{"nested.path": value}` for nested paths)
 
-    ```
-    
-    ```python
-    > Linear(m=f32[], b=f32[])
-    > -40.0 -10.0
-    ``` -->
+```python
+# 1) Positional: (parameters, values)
+linear = linear.set(["m", "b"], [2.0, 0.5])
+
+# 2) Dictionary: {parameter: value}
+linear = linear.add({"m": 0.1, "b": -0.2})
+
+# 3) Keyword: param=value
+linear = linear.multiply(m=2.0, b=0.5)
+```
+
+Use whichever style is clearest for your workflow. The operations remain immutable and return new objects.

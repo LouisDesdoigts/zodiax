@@ -1,7 +1,0 @@
-# Core
-equinox
-jax>=0.4.25
-jaxlib
-jaxtyping
-numpy # Needed for serialisation
-optax # Needed for optimisation

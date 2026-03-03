@@ -1,165 +1,223 @@
 from __future__ import annotations
-import zodiax
+
+import equinox as eqx
+import jax.numpy as np
+import jax.random as jr
+import pytest
+import zodiax as zdx
 
 from jax import config
 
 config.update("jax_debug_nans", True)
 
 
-def test_unwrap():
-    """
-    Test the _unwrap method
-    """
-
-    # Test unwrapping
-    wrapped_a = ["a", ["b", ["c", ["d"]]]]
-    wrapped_b = [[[["a"], "b"], "c"], "d"]
-    wrapped_c = ["a", "b", "c", "d"]
-
-    assert zodiax.base._unwrap(wrapped_a) == ["a", "b", "c", "d"]
-    assert zodiax.base._unwrap(wrapped_b) == ["a", "b", "c", "d"]
-    assert zodiax.base._unwrap(wrapped_c) == ["a", "b", "c", "d"]
-
-    # Test with values
-    wrapped_a = ["a", ["b", "c", "d"]]
-    wrapped_b = [["a", "b", "c"], "d"]
-    wrapped_c = ["a", "b", "c", "d"]
-
-    assert zodiax.base._unwrap(wrapped_a, [1, 2])[1] == [1, 2, 2, 2]
-    assert zodiax.base._unwrap(wrapped_b, [1, 2])[1] == [1, 1, 1, 2]
-    assert zodiax.base._unwrap(wrapped_c, [1, 2, 3, 4])[1] == [1, 2, 3, 4]
-
-
-def test_format():
-    """
-    test the _format method
-    """
-
-    # Test formatting
-    path_a = ["a.b", ["b.c", ["c.d", ["d.e"]]]]
-    path_b = [[[["a.b"], "b.c"], "c.d"], "d.e"]
-    path_c = ["a.b", "b.c", "c.d", "d.e"]
-
-    assert zodiax.base._format(path_a) == [
-        ["a", "b"],
-        ["b", "c"],
-        ["c", "d"],
-        ["d", "e"],
-    ]
-    assert zodiax.base._format(path_b) == [
-        ["a", "b"],
-        ["b", "c"],
-        ["c", "d"],
-        ["d", "e"],
-    ]
-    assert zodiax.base._format(path_c) == [
-        ["a", "b"],
-        ["b", "c"],
-        ["c", "d"],
-        ["d", "e"],
-    ]
-
-    # Test with values
-    path_a = ["a.b", ["b.c", "c.d", "d.e"]]
-    path_b = [["a.b", "b.c", "c.d"], "d.e"]
-    path_c = ["a.b", "b.c", "c.d", "d.e"]
-
-    assert zodiax.base._format(path_a, [1, 2])[1] == [1, 2, 2, 2]
-    assert zodiax.base._format(path_b, [1, 2])[1] == [1, 1, 1, 2]
-    assert zodiax.base._format(path_c, [1, 2, 3, 4])[1] == [1, 2, 3, 4]
-
-
 class TestBase:
-    """
-    Tests the Base class.
-    """
+    def test_get_leaf_dict_list_and_missing_key(self):
+        pytree = {"a": [{"b": 3.0}]}
+        assert zdx.base._get_leaf(pytree, ["a", "0", "b"]) == 3.0
 
-    def test_get(self, create_base):
-        """
-        tests the get method
-        """
-        # Test single parameter
-        create_base().get("param")
+        with pytest.raises(KeyError):
+            zdx.base._get_leaf(1.0, ["a"])
 
-        # Test multiple parameters
-        create_base().get(["param", "b.param"])
+    def test_unwrap_raises_on_value_length_mismatch(self):
+        with pytest.raises(ValueError):
+            zdx.base._unwrap(["param", "b.param"], [1.0, 2.0, 3.0])
 
-    def test_set(self, create_base):
-        """
-        tests the set method
-        """
-        # Test single parameter
-        create_base().set("param", 10.0)
+    def test_unwrap_parameters_only_nested(self):
+        output = zdx.base._unwrap(["param", ["b.param", ("c.param",)]])
+        assert output == ["param", "b.param", "c.param"]
 
-        # Test multiple parameters
-        create_base().set(["param", "b.param"], [10.0, 10.0])
+    def test_normalise_mutation_inputs_error_paths(self):
+        with pytest.raises(TypeError):
+            zdx.base._normalise_mutation_inputs(
+                parameters={"param": 1.0},
+                values=2.0,
+                method_name="set",
+            )
 
-    def test_update(self, create_base):
-        """
-        tests the update method
-        """
-        # Test single parameter
-        create_base().update({"param": 10.0})
+        with pytest.raises(TypeError):
+            zdx.base._normalise_mutation_inputs(method_name="set")
 
-        # Test multiple parameters
-        create_base().update({"param": 10.0, "b.param": 10.0})
+        with pytest.raises(TypeError):
+            zdx.base._normalise_mutation_inputs(
+                parameters="param",
+                values=None,
+                method_name="add",
+                require_values=True,
+            )
 
-    def test_add(self, create_base):
-        """
-        tests the add method
-        """
-        # Test single parameter
-        create_base().add("param", 10.0)
+    @pytest.mark.parametrize(
+        "parameters,expected",
+        [
+            ("param", 1.0),
+            (["param", "b.param"], [1.0, 2.0]),
+        ],
+    )
+    def test_get(self, create_base, parameters, expected):
+        assert create_base().get(parameters) == expected
 
-        # Test multiple parameters
-        create_base().add(["param", "b.param"], [10.0, 10.0])
+    @pytest.mark.parametrize(
+        "method,parameters,values,expected",
+        [
+            ("set", "param", 10.0, 10.0),
+            ("add", "param", 10.0, 11.0),
+            ("multiply", "param", 10.0, 10.0),
+            ("divide", "param", 10.0, 0.1),
+            ("power", "param", 3.0, 1.0),
+            ("min", "param", 0.5, 0.5),
+            ("max", "param", 10.0, 10.0),
+        ],
+    )
+    def test_single_path_ops(self, create_base, method, parameters, values, expected):
+        output = getattr(create_base(), method)(parameters, values)
+        assert np.allclose(output.get(parameters), expected)
 
-    def test_multiply(self, create_base):
-        """
-        tests the multiply method
-        """
-        # Test single parameter
-        create_base().multiply("param", 10.0)
+    @pytest.mark.parametrize(
+        "method", ["set", "add", "multiply", "divide", "power", "min", "max"]
+    )
+    def test_multi_path_ops(self, create_base, method):
+        output = getattr(create_base(), method)(["param", "b.param"], [2.0, 3.0])
+        assert len(output.get(["param", "b.param"])) == 2
 
-        # Test multiple parameters
-        create_base().multiply(["param", "b.param"], [10.0, 10.0])
+    @pytest.mark.parametrize(
+        "parameters,values",
+        [
+            (["param", "b.param"], [10.0, 5.0]),
+            (("param", "b.param"), (10.0, 5.0)),
+            (["param", ("b.param",)], [10.0, (5.0,)]),
+            (("param", ["b.param"]), (10.0, [5.0])),
+        ],
+    )
+    def test_set_path_container_parity(self, create_base, parameters, values):
+        output = create_base().set(parameters, values)
+        assert output.get(["param", "b.param"]) == [10.0, 5.0]
 
-    def test_divide(self, create_base):
-        """
-        tests the divide method
-        """
-        # Test single parameter
-        create_base().divide("param", 10.0)
+    def test_set_accepts_mapping(self, create_base):
+        output = create_base().set({"param": 10.0, "b.param": 5.0})
+        assert output.get(["param", "b.param"]) == [10.0, 5.0]
 
-        # Test multiple parameters
-        create_base().divide(["param", "b.param"], [10.0, 10.0])
+    def test_set_accepts_tuple_key(self, create_base):
+        output = create_base().set({("param", "b.param"): 6.0})
+        assert output.get(["param", "b.param"]) == [6.0, 6.0]
 
-    def test_power(self, create_base):
-        """
-        tests the power method
-        """
-        # Test single parameter
-        create_base().power("param", 10.0)
+    def test_set_accepts_mixed_tuple_and_string_keys(self, create_base):
+        output = create_base().set({("param",): 6.0, "b.param": 7.0})
+        assert output.get(["param", "b.param"]) == [6.0, 7.0]
 
-        # Test multiple parameters
-        create_base().power(["param", "b.param"], [10.0, 10.0])
+    def test_set_accepts_kwargs(self, create_base):
+        output = create_base().set(param=6.0, **{"b.param": 7.0})
+        assert output.get(["param", "b.param"]) == [6.0, 7.0]
 
-    def test_min(self, create_base):
-        """
-        tests the min method
-        """
-        # Test single parameter
-        create_base().min("param", 10.0)
+    @pytest.mark.parametrize(
+        "parameters",
+        [
+            ["param", "b.param"],
+            ("param", "b.param"),
+        ],
+    )
+    def test_set_accepts_none_positional(self, create_base, parameters):
+        output = create_base().set(parameters, None)
+        assert output.get(["param", "b.param"]) == [None, None]
 
-        # Test multiple parameters
-        create_base().min(["param", "b.param"], [10.0, 10.0])
+    def test_set_accepts_none_single_string_path(self, create_base):
+        output = create_base().set("param", None)
+        assert output.get("param") is None
 
-    def test_max(self, create_base):
-        """
-        tests the max method
-        """
-        # Test single parameter
-        create_base().max("param", 10.0)
+    def test_set_accepts_none_mapping(self, create_base):
+        output = create_base().set({"param": None, "b.param": None})
+        assert output.get(["param", "b.param"]) == [None, None]
 
-        # Test multiple parameters
-        create_base().max(["param", "b.param"], [10.0, 10.0])
+    def test_set_accepts_none_kwargs(self, create_base):
+        output = create_base().set(param=None, **{"b.param": None})
+        assert output.get(["param", "b.param"]) == [None, None]
+
+    def test_set_accepts_partial_none_positional(self, create_base):
+        output = create_base().set(["param", "b.param"], [None, 7.0])
+        assert output.get(["param", "b.param"]) == [None, 7.0]
+
+    def test_set_accepts_partial_none_mapping(self, create_base):
+        output = create_base().set({"param": None, "b.param": 7.0})
+        assert output.get(["param", "b.param"]) == [None, 7.0]
+
+    def test_set_accepts_partial_none_kwargs(self, create_base):
+        output = create_base().set(param=None, **{"b.param": 7.0})
+        assert output.get(["param", "b.param"]) == [None, 7.0]
+
+    @pytest.mark.parametrize(
+        "method,mapping,expected",
+        [
+            ("set", {"param": 10.0, "b.param": 5.0}, [10.0, 5.0]),
+            ("add", {"param": 1.0, "b.param": 2.0}, [2.0, 4.0]),
+            ("multiply", {"param": 10.0, "b.param": 3.0}, [10.0, 6.0]),
+            ("divide", {"param": 2.0, "b.param": 4.0}, [0.5, 0.5]),
+            ("power", {"param": 3.0, "b.param": 2.0}, [1.0, 4.0]),
+            ("min", {"param": 0.5, "b.param": 3.0}, [0.5, 2.0]),
+            ("max", {"param": 10.0, "b.param": 1.0}, [10.0, 2.0]),
+        ],
+    )
+    def test_mutators_accept_mapping(self, create_base, method, mapping, expected):
+        output = getattr(create_base(), method)(mapping)
+        assert output.get(["param", "b.param"]) == expected
+
+    @pytest.mark.parametrize(
+        "method,kwargs,expected",
+        [
+            ("set", {"param": 10.0, "b.param": 5.0}, [10.0, 5.0]),
+            ("add", {"param": 1.0, "b.param": 2.0}, [2.0, 4.0]),
+            ("multiply", {"param": 10.0, "b.param": 3.0}, [10.0, 6.0]),
+            ("divide", {"param": 2.0, "b.param": 4.0}, [0.5, 0.5]),
+            ("power", {"param": 3.0, "b.param": 2.0}, [1.0, 4.0]),
+            ("min", {"param": 0.5, "b.param": 3.0}, [0.5, 2.0]),
+            ("max", {"param": 10.0, "b.param": 1.0}, [10.0, 2.0]),
+        ],
+    )
+    def test_mutators_accept_kwargs(self, create_base, method, kwargs, expected):
+        output = getattr(create_base(), method)(**kwargs)
+        assert output.get(["param", "b.param"]) == expected
+
+    def test_mutators_reject_mixed_styles(self, create_base):
+        with pytest.raises(TypeError):
+            create_base().set(["param"], [10.0], param=1.0)
+        with pytest.raises(TypeError):
+            create_base().add({"param": 1.0}, param=2.0)
+
+
+class Foo(zdx.WrapperHolder):
+
+    def __init__(self, nn):
+        values, structure = zdx.build_wrapper(nn)
+        self.values = values
+        self.structure = structure
+
+    def __call__(self, x):
+        return self.build(x)
+
+
+def test_WrapperHolder():
+    eqx_model = eqx.nn.MLP(
+        in_size=16, out_size=16, width_size=32, depth=1, key=jr.PRNGKey(0)
+    )
+
+    foo = Foo(eqx_model)
+    x = np.ones(16)
+
+    assert isinstance(foo, zdx.WrapperHolder)
+    assert np.allclose(foo(x), eqx_model(x))
+    assert np.allclose(foo.multiply("values", 0.0)(x), np.zeros_like(x))
+
+
+def test_WrapperHolder_missing_attr_raises():
+    eqx_model = eqx.nn.MLP(
+        in_size=16, out_size=16, width_size=32, depth=1, key=jr.PRNGKey(1)
+    )
+    foo = Foo(eqx_model)
+    with pytest.raises(AttributeError):
+        _ = foo.not_a_real_attribute
+
+
+def test_WrapperHolder_getattr_delegates_to_structure():
+    eqx_model = eqx.nn.MLP(
+        in_size=16, out_size=16, width_size=32, depth=1, key=jr.PRNGKey(2)
+    )
+    foo = Foo(eqx_model)
+    assert foo.shapes == foo.structure.shapes

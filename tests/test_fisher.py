@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pytest
 import zodiax
 
 from jax import config, Array, scipy as jsp, numpy as np
@@ -6,8 +7,7 @@ from jax import config, Array, scipy as jsp, numpy as np
 config.update("jax_debug_nans", True)
 
 
-# Paths
-paths = [
+PATHS = [
     "param",
     "b.param",
     ["param", "b.param"],
@@ -15,73 +15,82 @@ paths = [
 
 
 def poiss_loglike(pytree, data: Array) -> float:
-    """
-    Poissonian log likelihood of the pytree given the data. Assumes the pytree
-    has a .model() function.
-
-    Parameters
-    ----------
-    pytree : Base
-        Pytree with a .model() function.
-    data : Array
-        Data to compare the model to.
-
-    Returns
-    -------
-    log_likelihood : Array
-        Log likelihood of the pytree given the data.
-    """
     return jsp.stats.poisson.logpmf(pytree.model(), data).sum()
 
 
-def test_all_fisher_matrices(create_base):
-    """
-    tests the fisher_matrix, covariance_matrix and hessian functions
-    """
+@pytest.mark.parametrize("param", PATHS)
+@pytest.mark.parametrize("save_memory", [True, False])
+def test_all_fisher_matrices(create_base, param, save_memory):
     pytree = create_base()
     data = pytree.model()
-    loglike_fn = poiss_loglike
     shape_dict = {"param": (1,)}
 
-    for param in paths:
+    hess = zodiax.fisher.hessian(
+        pytree,
+        param,
+        poiss_loglike,
+        data,
+        shape_dict=shape_dict,
+        save_memory=save_memory,
+    )
+    fisher = zodiax.fisher.fisher_matrix(
+        pytree,
+        param,
+        poiss_loglike,
+        data,
+        shape_dict=shape_dict,
+        save_memory=save_memory,
+    )
+    cov = zodiax.fisher.covariance_matrix(
+        pytree,
+        param,
+        poiss_loglike,
+        data,
+        shape_dict=shape_dict,
+        save_memory=save_memory,
+    )
 
-        for save_memory in [True, False]:
-            hess = zodiax.fisher.hessian(
-                pytree,
-                param,
-                loglike_fn,
-                data,
-                shape_dict=shape_dict,
-                save_memory=save_memory,
-            )
-
-        fisher = zodiax.fisher.fisher_matrix(
-            pytree, param, loglike_fn, data, shape_dict=shape_dict
-        )
-
-        cov = zodiax.fisher.covariance_matrix(
-            pytree, param, loglike_fn, data, shape_dict=shape_dict
-        )
-
-        if not np.allclose(hess, -fisher):
-            raise ValueError("Negative Hessian and Fisher matrix are not equal.")
-
-        if not np.allclose(np.linalg.inv(fisher), cov):
-            raise ValueError(
-                "Inverse Fisher matrix and covariance matrix are not equal."
-            )
+    assert np.allclose(hess, -fisher)
+    assert np.allclose(np.linalg.inv(fisher), cov)
 
 
-def test_calc_entropy(create_base):
-    """
-    tests the calc_entropy function
-    """
+def test_hessian_single_parameter_container_path(create_base):
     pytree = create_base()
     data = pytree.model()
-    loglike_fn = poiss_loglike
-    shape_dict = {"param": (1,)}
-    for param in paths:
-        cov = zodiax.fisher.covariance_matrix(
-            pytree, param, loglike_fn, data, shape_dict=shape_dict
-        )
-        zodiax.fisher.calc_entropy(cov)
+    out = zodiax.fisher.hessian(
+        pytree,
+        ("param",),
+        poiss_loglike,
+        data,
+        shape_dict={"param": (1,)},
+        save_memory=False,
+    )
+    assert out.shape == (1, 1)
+
+
+class _VecBase(zodiax.base.Base):
+    vec: Array
+
+    def __init__(self, vec):
+        self.vec = vec
+
+
+def test_perturb_handles_vector_slices():
+    pytree = _VecBase(np.array([1.0, 2.0]))
+    out = zodiax.fisher._perturb(
+        np.array([0.5, -1.5]),
+        pytree,
+        ["vec"],
+        [(2,)],
+        [2],
+    )
+    assert np.allclose(out.get("vec"), np.array([1.5, 0.5]))
+
+
+def test_shape_to_length_singleton_tuple():
+    assert zodiax.fisher._shape_to_length((3,)) == 3
+
+
+def test_shape_to_length_recursive_branch():
+    out = zodiax.fisher._shape_to_length((2, 3), length=1)
+    assert out == 3

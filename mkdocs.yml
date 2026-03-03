@@ -1,107 +1,88 @@
-# Great resource: https://squidfunk.github.io/mkdocs-material/setup/setting-up-navigation/#with-section-index-pages
-# https://squidfunk.github.io/mkdocs-material/reference/buttons/
-
 site_name: Zodiax
-docs_dir: .
+site_url: https://louisdesdoigts.github.io/zodiax/
 site_description: Documentation for Zodiax.
 site_author: Louis Desdoigts
-site_url: https://louisdesdoigts.github.io/zodiax/
 repo_url: https://github.com/LouisDesdoigts/zodiax
-repo_name: louisdesdoigts/zodiax
-edit_uri: "" 
+repo_name: LouisDesdoigts/zodiax
 
-strict: false  # Allow warnings during the build process (change later)
+# Zensical uses the Material look by default but faster
+theme:
+  name: zensical 
+  icon:
+    repo: fontawesome/brands/github  # Sets the logo to the GitHub 'cat'
+  features:
+    # - navigation.sections  # Groups top-level items into sections
+    - navigation.top      # "Back to top" button
+    - navigation.indexes   # Allows a section title to be its own page
+    - content.code.copy   # Copy button on code blocks
+    - toc.integrate       # Put Table of Contents on the left sidebar
+    - content.action.edit   # Adds an "Edit this page" button
+    - content.action.view   # Adds a "View source" button
+  palette:
+    # Light mode
+    - scheme: default
+      primary: amber
+      accent: orange
+      toggle:
+        icon: lucide/sun
+        name: Switch to dark mode
+    # Dark mode
+    - scheme: slate
+      primary: amber
+      accent: orange
+      toggle:
+        icon: lucide/moon
+        name: Switch to light mode
+
+edit_uri: edit/main/docs/   # Directs where the "Edit" link points
 
 plugins:
-  # - mkdocs-jupyter
-  - search
-  - same-dir
-  - autorefs
-  - simple:
-      ignore_folders:
-        - tests
-        - zodiax
-  - mkdocstrings:
-      default_handler: python
+  - zensical/search      # High-performance built-in search
+  - mkdocstrings:        # Auto-generate API docs from code
       handlers:
         python:
           options:
             docstring_style: "numpy"
+            show_root_heading: true      # Highly recommended for module-level docs
+extra:
+  version:
+    provider: mike  # Tells the UI: "Look for mike's version list"
 
 markdown_extensions:
-  - admonition
-  - pymdownx.details
-  - pymdownx.superfences
-  - pymdownx.arithmatex:  # Render LaTeX via MathJax
+  - admonition           # Support for !!! note "Title" blocks
+  - pymdownx.details     # Support for collapsible ??? note blocks
+  - pymdownx.superfences # Allows nesting code inside other blocks
+  - pymdownx.snippets:
+      base_path: [".", "docs"] # Look in the root AND the docs folder
+  - pymdownx.arithmatex: # Required for LaTeX math
       generic: true
-  - pymdownx.snippets:  # Include one Markdown file into another
-      base_path: docs
-  - admonition
   - toc:
-      permalink: "¤"  # Adds a clickable permalink to each section heading
-      toc_depth: 4
-  - def_list
-  - pymdownx.tasklist:
-      custom_checkbox: true
-  - attr_list # Allows images
-  - md_in_html # Allows images
+      permalink: "¤"     # Clickable link next to headers
+  - attr_list            # Required to resize/style images {: width=300}
+  - md_in_html           # Allows using HTML tags inside Markdown
 
-extra_javascript: # Used for MathJax
+
+# MathJax setup for LaTeX rendering
+extra_javascript:
   - javascripts/mathjax.js
-  - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
-theme:
-  icon:
-    repo: fontawesome/brands/github
-    logo: fontawesome/regular/moon
-    logo: octicons/moon-16
-  name: material
-  features:
-    # - navigation.sections
-    - navigation.expand
-    - navigation.path
-    - navigation.indexes 
-    - navigation.top
-    - content.code.copy
-    # - navigation.tabs # Adds tabs for High Level settings
-    # - navigation.tabs.sticky
-    - toc.integrate  # Table of contents is integrated on the left; does not appear separately on the right.
-    # - toc.integrate
-    # - content.action.view
-  palette:
-    # Light mode / dark mode
-    # We deliberately don't automatically use `media` to check a user's preferences. We default to light mode as
-    # (a) it looks more professional, and (b) is more obvious about the fact that it offers a (dark mode) toggle.
-    - scheme: default
-      primary: white
-      accent: amber
-      toggle:
-        icon: material/weather-night
-        name: Switch to dark mode
-    - scheme: slate
-      primary: black
-      accent: amber
-      toggle:
-        icon: material/weather-sunny
-        name: Switch to light mode
-
-# TODO: Add a favicon
-
-# ===== Navigation =====
+# Navigation map
 nav:
-- Overview: README.md
-- Using Zodiax: docs/usage.md
-
-- API: 
-  - Overview:      docs/API/api.md
-  - Base:          docs/API/base.md
-  - Tree:          docs/API/tree.md
-  - Bayes:         docs/API/bayes.md
-  - Equinox (eqx): docs/API/eqx.md
-  - Optimisation:  docs/API/optimisation.md
-  - Serialisation: docs/API/serialisation.md
-
-- FAQ & Troubleshooting: docs/faq.md
-- Change Log: CHANGELOG.md
-- Contributing: CONTRIBUTING.md
+  - Overview: 
+      - index.md
+  - Using Zodiax: 
+      - Building Classes: usage.md
+      - Optimisation: optimisation_tools.md
+  - API:
+      - Base: API/base.md
+      - Optimisation: API/optimisation.md
+      - Stats: API/stats.md
+      - Batching: API/batching.md
+      - Tree: API/tree.md
+      - Fisher: API/fisher.md
+      - Equinox (eqx): API/eqx.md
+  - Previous Versions:
+      - v0.4.1: https://louisdesdoigts.github.io/zodiax/v0.4.1/
+  - FAQ: faq.md
+  - Changelog: CHANGELOG.md

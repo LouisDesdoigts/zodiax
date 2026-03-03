@@ -1,30 +1,5 @@
 # Base
 
-The `Base` class is the foundational object of Zodiax and is what allows for a path-based pytree interface. Classes that inherit from `Base` will gain methods that allow for operations and functions to be applied to leaves specified by their paths. Here is a summary of the methods:
+The `Base` module provides the foundational `Base` class which is the core of Zodiax's path-based pytree interface. This class allows for operations and functions to be applied to leaves specified by their paths, enabling a flexible and powerful way to manipulate complex data structures. 
 
-**Getter Methods**
-
-```python
-value = pytree.get(paths)
-```
-
-**Setter Methods**
-
-```python
-pytree = pytree.set(paths, values)
-pytree = pytree.update(dict)
-```
-
-**Arithmetic Methods**
-
-```python
-pytree = pytree.add(paths, values)
-pytree = pytree.multiply(paths, values)
-pytree = pytree.divide(paths, values)
-pytree = pytree.power(paths, values)
-pytree = pytree.min(paths, values)
-pytree = pytree.max(paths, values)
-```
-
-!!! info "Full API"
-    ::: zodiax.base.Base
+::: zodiax.base
