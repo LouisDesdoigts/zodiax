@@ -1,6 +1,9 @@
 name: automated tests
 on: [push]
 
+permissions:
+  contents: read
+
 jobs:
 
   build:
@@ -24,14 +27,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install --quiet ".[tests]"
 
-      # ===== Tests =====
-      - name: base tests
-        run: pytest --quiet tests/test_base.py
-      - name: tree tests
-        run: pytest --quiet tests/test_tree.py
-      - name: fisher tests
-        run: pytest --quiet tests/test_fisher.py
-      - name: equinox tests
-        run: pytest --quiet tests/test_eqx.py
-      - name: optimisation tests
-        run: pytest --quiet tests/test_optimisation.py
+      # ===== Tests + Coverage =====
+      - name: run tests with coverage
+        run: pytest --quiet --cov=zodiax --cov-report=term-missing --cov-report=xml --cov-report=html tests
+
+      - name: upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python-version }}
+          path: |
+            coverage.xml
+            htmlcov/
+
+      - name: Upload coverage reports to Codecov
+        if: matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          fail_ci_if_error: false

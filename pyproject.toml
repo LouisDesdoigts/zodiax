@@ -9,14 +9,30 @@ authors = [{name = "Louis Desdoigts", email = "louis.desdoigts@sydney.edu.au"}]
 dependencies = ["jax", "jaxlib", "equinox", "optax"]
 
 [project.optional-dependencies]
+tests = [
+    "pytest",
+    "pytest-cov",
+]
+
 dev = [
     "pytest",
+    "pytest-cov",
     "black",
     "ruff",
     "pre-commit",
     "zensical",           # The new documentation engine
     "mkdocstrings-python" # Required for API generation
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["zodiax"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
 
 [tool.ruff]
 line-length = 88

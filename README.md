@@ -4,6 +4,7 @@
 [![PyPI version](https://badge.fury.io/py/zodiax.svg)](https://badge.fury.io/py/zodiax)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![integration](https://github.com/LouisDesdoigts/zodiax/actions/workflows/tests.yml/badge.svg)](https://github.com/LouisDesdoigts/zodiax/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/LouisDesdoigts/zodiax/graph/badge.svg)](https://codecov.io/gh/LouisDesdoigts/zodiax)
 [![Documentation](https://github.com/LouisDesdoigts/zodiax/actions/workflows/documentation.yml/badge.svg)](https://louisdesdoigts.github.io/zodiax/)
 
 ---
@@ -39,6 +40,14 @@ Installation: ```pip install zodiax```
 Docs installation: ```pip install "zodiax[docs]"```
 
 Test installation: ```pip install "zodiax[tests]"```
+
+Coverage:
+
+```bash
+pytest --cov=zodiax --cov-report=term-missing --cov-report=xml --cov-report=html tests
+```
+
+This writes `coverage.xml` and an `htmlcov/` report for local inspection.
 
 ---
 
