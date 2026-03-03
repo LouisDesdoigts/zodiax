@@ -54,6 +54,16 @@ def test_mv_scores_and_loglikes():
     )
 
 
+def test_loglike():
+    x = np.array([0.0, 1.0])
+    mean = np.array([0.0, 0.0])
+    std = np.array([1.0, 2.0])
+    assert np.allclose(
+        zodiax.stats.loglike(x, mean, std),
+        jsp.stats.norm.logpdf(x, mean, std),
+    )
+
+
 def test_ddof_and_matrix_checks():
     params = {"a": np.ones((2,))}
     data = {"x": np.ones((3,)), "y": np.ones((2,))}

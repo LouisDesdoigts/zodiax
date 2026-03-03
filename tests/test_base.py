@@ -12,6 +12,40 @@ config.update("jax_debug_nans", True)
 
 
 class TestBase:
+    def test_get_leaf_dict_list_and_missing_key(self):
+        pytree = {"a": [{"b": 3.0}]}
+        assert zdx.base._get_leaf(pytree, ["a", "0", "b"]) == 3.0
+
+        with pytest.raises(KeyError):
+            zdx.base._get_leaf(1.0, ["a"])
+
+    def test_unwrap_raises_on_value_length_mismatch(self):
+        with pytest.raises(ValueError):
+            zdx.base._unwrap(["param", "b.param"], [1.0, 2.0, 3.0])
+
+    def test_unwrap_parameters_only_nested(self):
+        output = zdx.base._unwrap(["param", ["b.param", ("c.param",)]])
+        assert output == ["param", "b.param", "c.param"]
+
+    def test_normalise_mutation_inputs_error_paths(self):
+        with pytest.raises(TypeError):
+            zdx.base._normalise_mutation_inputs(
+                parameters={"param": 1.0},
+                values=2.0,
+                method_name="set",
+            )
+
+        with pytest.raises(TypeError):
+            zdx.base._normalise_mutation_inputs(method_name="set")
+
+        with pytest.raises(TypeError):
+            zdx.base._normalise_mutation_inputs(
+                parameters="param",
+                values=None,
+                method_name="add",
+                require_values=True,
+            )
+
     @pytest.mark.parametrize(
         "parameters,expected",
         [
@@ -84,6 +118,10 @@ class TestBase:
     def test_set_accepts_none_positional(self, create_base, parameters):
         output = create_base().set(parameters, None)
         assert output.get(["param", "b.param"]) == [None, None]
+
+    def test_set_accepts_none_single_string_path(self, create_base):
+        output = create_base().set("param", None)
+        assert output.get("param") is None
 
     def test_set_accepts_none_mapping(self, create_base):
         output = create_base().set({"param": None, "b.param": None})
@@ -166,3 +204,20 @@ def test_WrapperHolder():
     assert isinstance(foo, zdx.WrapperHolder)
     assert np.allclose(foo(x), eqx_model(x))
     assert np.allclose(foo.multiply("values", 0.0)(x), np.zeros_like(x))
+
+
+def test_WrapperHolder_missing_attr_raises():
+    eqx_model = eqx.nn.MLP(
+        in_size=16, out_size=16, width_size=32, depth=1, key=jr.PRNGKey(1)
+    )
+    foo = Foo(eqx_model)
+    with pytest.raises(AttributeError):
+        _ = foo.not_a_real_attribute
+
+
+def test_WrapperHolder_getattr_delegates_to_structure():
+    eqx_model = eqx.nn.MLP(
+        in_size=16, out_size=16, width_size=32, depth=1, key=jr.PRNGKey(2)
+    )
+    foo = Foo(eqx_model)
+    assert foo.shapes == foo.structure.shapes
