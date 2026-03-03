@@ -31,6 +31,8 @@ Zodiax is directly integrated with both Jax and Equinox, gaining all of their co
 
 Documentation: [louisdesdoigts.github.io/zodiax/](https://louisdesdoigts.github.io/zodiax/)
 
+> Note: The Zodiax tutorials live in a [separate repo](https://github.com/LouisDesdoigts/zodiax_tutorials). This allows users to directly download and run the notebooks, ensuring that the correct packages needed to run them are installed! It also allows for new tutorials and examples to be added quite easily, without needing to update the core library.
+
 Contributors: [Louis Desdoigts](https://github.com/LouisDesdoigts)
 
 Requires: Python 3.9+, Jax 0.4.25+
