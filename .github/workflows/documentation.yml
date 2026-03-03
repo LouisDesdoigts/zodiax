@@ -40,11 +40,11 @@ jobs:
         run: |
           # If this is a normal push to main, update the 'dev' and 'latest' aliases
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            python -m mike deploy --push --update-aliases dev latest
+            mike deploy --push --update-aliases dev latest
           fi
           
           # If this is a tag (e.g. v0.5.0), create a permanent versioned folder
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             VERSION=${GITHUB_REF#refs/tags/v}
-            python -m mike deploy --push --update-aliases $VERSION latest
+            mike deploy --push --update-aliases $VERSION latest
           fi
