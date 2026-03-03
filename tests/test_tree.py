@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pytest
 import zodiax
 
 from jax import config
@@ -6,28 +7,26 @@ from jax import config
 config.update("jax_debug_nans", True)
 
 
-# Paths
-paths = [
+PATHS = [
     "param",
     "b.param",
     ["param", "b.param"],
 ]
 
 
-def test_boolean_filter(create_base):
-    """
-    test the boolean_filter function from zodiax/tree.py
-    """
+@pytest.mark.parametrize("path", PATHS)
+def test_boolean_filter(create_base, path):
     pytree = create_base()
-    for path in paths:
-        zodiax.tree.boolean_filter(pytree, path)
+    out = zodiax.tree.boolean_filter(pytree, path)
+    values = out.get(path)
+    if isinstance(values, list):
+        assert all(values)
+    else:
+        assert values
 
 
-def test_set_array(create_base):
-    """
-    test the set_array function from zodiax/tree.py
-    """
+@pytest.mark.parametrize("params", ["param", None])
+def test_set_array(create_base, params):
     pytree = create_base()
-
-    for params in [paths[0], None]:
-        zodiax.tree.set_array(pytree, params)
+    out = zodiax.tree.set_array(pytree, params)
+    assert hasattr(out.get("param"), "shape")

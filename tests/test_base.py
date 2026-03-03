@@ -1,9 +1,10 @@
 from __future__ import annotations
-import zodiax
 import equinox as eqx
-import zodiax as zdx
 import jax.numpy as np
 import jax.random as jr
+import pytest
+import zodiax
+import zodiax as zdx
 
 
 from jax import config
@@ -11,163 +12,92 @@ from jax import config
 config.update("jax_debug_nans", True)
 
 
-def test_unwrap():
-    """
-    Test the _unwrap method
-    """
-
-    # Test unwrapping
-    wrapped_a = ["a", ["b", ["c", ["d"]]]]
-    wrapped_b = [[[["a"], "b"], "c"], "d"]
-    wrapped_c = ["a", "b", "c", "d"]
-
-    assert zodiax.base._unwrap(wrapped_a) == ["a", "b", "c", "d"]
-    assert zodiax.base._unwrap(wrapped_b) == ["a", "b", "c", "d"]
-    assert zodiax.base._unwrap(wrapped_c) == ["a", "b", "c", "d"]
-
-    # Test with values
-    wrapped_a = ["a", ["b", "c", "d"]]
-    wrapped_b = [["a", "b", "c"], "d"]
-    wrapped_c = ["a", "b", "c", "d"]
-
-    assert zodiax.base._unwrap(wrapped_a, [1, 2])[1] == [1, 2, 2, 2]
-    assert zodiax.base._unwrap(wrapped_b, [1, 2])[1] == [1, 1, 1, 2]
-    assert zodiax.base._unwrap(wrapped_c, [1, 2, 3, 4])[1] == [1, 2, 3, 4]
+@pytest.mark.parametrize(
+    "wrapped",
+    [
+        ["a", ["b", ["c", ["d"]]]],
+        [[[["a"], "b"], "c"], "d"],
+        ["a", "b", "c", "d"],
+    ],
+)
+def test_unwrap(wrapped):
+    assert zodiax.base._unwrap(wrapped) == ["a", "b", "c", "d"]
 
 
-def test_format():
-    """
-    test the _format method
-    """
+@pytest.mark.parametrize(
+    "wrapped,values,expected",
+    [
+        (["a", ["b", "c", "d"]], [1, 2], [1, 2, 2, 2]),
+        ([["a", "b", "c"], "d"], [1, 2], [1, 1, 1, 2]),
+        (["a", "b", "c", "d"], [1, 2, 3, 4], [1, 2, 3, 4]),
+    ],
+)
+def test_unwrap_with_values(wrapped, values, expected):
+    assert zodiax.base._unwrap(wrapped, values)[1] == expected
 
-    # Test formatting
-    path_a = ["a.b", ["b.c", ["c.d", ["d.e"]]]]
-    path_b = [[[["a.b"], "b.c"], "c.d"], "d.e"]
-    path_c = ["a.b", "b.c", "c.d", "d.e"]
 
-    assert zodiax.base._format(path_a) == [
-        ["a", "b"],
-        ["b", "c"],
-        ["c", "d"],
-        ["d", "e"],
-    ]
-    assert zodiax.base._format(path_b) == [
-        ["a", "b"],
-        ["b", "c"],
-        ["c", "d"],
-        ["d", "e"],
-    ]
-    assert zodiax.base._format(path_c) == [
-        ["a", "b"],
-        ["b", "c"],
-        ["c", "d"],
-        ["d", "e"],
-    ]
+@pytest.mark.parametrize(
+    "paths",
+    [
+        ["a.b", ["b.c", ["c.d", ["d.e"]]]],
+        [[[["a.b"], "b.c"], "c.d"], "d.e"],
+        ["a.b", "b.c", "c.d", "d.e"],
+    ],
+)
+def test_format(paths):
+    expected = [["a", "b"], ["b", "c"], ["c", "d"], ["d", "e"]]
+    assert zodiax.base._format(paths) == expected
 
-    # Test with values
-    path_a = ["a.b", ["b.c", "c.d", "d.e"]]
-    path_b = [["a.b", "b.c", "c.d"], "d.e"]
-    path_c = ["a.b", "b.c", "c.d", "d.e"]
 
-    assert zodiax.base._format(path_a, [1, 2])[1] == [1, 2, 2, 2]
-    assert zodiax.base._format(path_b, [1, 2])[1] == [1, 1, 1, 2]
-    assert zodiax.base._format(path_c, [1, 2, 3, 4])[1] == [1, 2, 3, 4]
+@pytest.mark.parametrize(
+    "paths,values,expected",
+    [
+        (["a.b", ["b.c", "c.d", "d.e"]], [1, 2], [1, 2, 2, 2]),
+        ([["a.b", "b.c", "c.d"], "d.e"], [1, 2], [1, 1, 1, 2]),
+        (["a.b", "b.c", "c.d", "d.e"], [1, 2, 3, 4], [1, 2, 3, 4]),
+    ],
+)
+def test_format_with_values(paths, values, expected):
+    assert zodiax.base._format(paths, values)[1] == expected
 
 
 class TestBase:
-    """
-    Tests the Base class.
-    """
+    @pytest.mark.parametrize(
+        "parameters,expected",
+        [
+            ("param", 1.0),
+            (["param", "b.param"], [1.0, 2.0]),
+        ],
+    )
+    def test_get(self, create_base, parameters, expected):
+        assert create_base().get(parameters) == expected
 
-    def test_get(self, create_base):
-        """
-        tests the get method
-        """
-        # Test single parameter
-        create_base().get("param")
+    @pytest.mark.parametrize(
+        "method,parameters,values,expected",
+        [
+            ("set", "param", 10.0, 10.0),
+            ("add", "param", 10.0, 11.0),
+            ("multiply", "param", 10.0, 10.0),
+            ("divide", "param", 10.0, 0.1),
+            ("power", "param", 3.0, 1.0),
+            ("min", "param", 0.5, 0.5),
+            ("max", "param", 10.0, 10.0),
+        ],
+    )
+    def test_single_path_ops(self, create_base, method, parameters, values, expected):
+        output = getattr(create_base(), method)(parameters, values)
+        assert np.allclose(output.get(parameters), expected)
 
-        # Test multiple parameters
-        create_base().get(["param", "b.param"])
-
-    def test_set(self, create_base):
-        """
-        tests the set method
-        """
-        # Test single parameter
-        create_base().set("param", 10.0)
-
-        # Test multiple parameters
-        create_base().set(["param", "b.param"], [10.0, 10.0])
+    @pytest.mark.parametrize(
+        "method", ["set", "add", "multiply", "divide", "power", "min", "max"]
+    )
+    def test_multi_path_ops(self, create_base, method):
+        output = getattr(create_base(), method)(["param", "b.param"], [2.0, 3.0])
+        assert len(output.get(["param", "b.param"])) == 2
 
     def test_update(self, create_base):
-        """
-        tests the update method
-        """
-        # Test single parameter
-        create_base().update({"param": 10.0})
-
-        # Test multiple parameters
-        create_base().update({"param": 10.0, "b.param": 10.0})
-
-    def test_add(self, create_base):
-        """
-        tests the add method
-        """
-        # Test single parameter
-        create_base().add("param", 10.0)
-
-        # Test multiple parameters
-        create_base().add(["param", "b.param"], [10.0, 10.0])
-
-    def test_multiply(self, create_base):
-        """
-        tests the multiply method
-        """
-        # Test single parameter
-        create_base().multiply("param", 10.0)
-
-        # Test multiple parameters
-        create_base().multiply(["param", "b.param"], [10.0, 10.0])
-
-    def test_divide(self, create_base):
-        """
-        tests the divide method
-        """
-        # Test single parameter
-        create_base().divide("param", 10.0)
-
-        # Test multiple parameters
-        create_base().divide(["param", "b.param"], [10.0, 10.0])
-
-    def test_power(self, create_base):
-        """
-        tests the power method
-        """
-        # Test single parameter
-        create_base().power("param", 10.0)
-
-        # Test multiple parameters
-        create_base().power(["param", "b.param"], [10.0, 10.0])
-
-    def test_min(self, create_base):
-        """
-        tests the min method
-        """
-        # Test single parameter
-        create_base().min("param", 10.0)
-
-        # Test multiple parameters
-        create_base().min(["param", "b.param"], [10.0, 10.0])
-
-    def test_max(self, create_base):
-        """
-        tests the max method
-        """
-        # Test single parameter
-        create_base().max("param", 10.0)
-
-        # Test multiple parameters
-        create_base().max(["param", "b.param"], [10.0, 10.0])
+        output = create_base().update({"param": 10.0, "b.param": 5.0})
+        assert output.get(["param", "b.param"]) == [10.0, 5.0]
 
 
 class Foo(zdx.WrapperHolder):
@@ -182,24 +112,13 @@ class Foo(zdx.WrapperHolder):
 
 
 def test_WrapperHolder():
-    """
-    Test the WrapperHolder class
-    """
-
     eqx_model = eqx.nn.MLP(
         in_size=16, out_size=16, width_size=32, depth=1, key=jr.PRNGKey(0)
     )
 
+    foo = Foo(eqx_model)
     x = np.ones(16)
-    foo = Foo(eqx_model)
 
-    # Test the __init__ method
-    foo = Foo(eqx_model)
     assert isinstance(foo, zdx.WrapperHolder)
-
-    # Test the __call__ method
-    x = np.ones(16)
     assert np.allclose(foo(x), eqx_model(x))
-
-    # Test value updating
     assert np.allclose(foo.multiply("values", 0.0)(x), np.zeros_like(x))
