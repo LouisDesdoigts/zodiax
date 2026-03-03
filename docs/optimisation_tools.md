@@ -5,19 +5,22 @@ import zodiax as zdx
 import equinox as eqx
 import jax.numpy as np
 import jax.random as jr
-import matplotlib.pyplot as plt
+import jax.tree as jtu
 import dLux as dl
 import dLux.utils as dlu
 import optax
-from tqdm.auto import tqdm
-import jax.tree as jtu
-import optax
 import optimistix as optx
+from tqdm.auto import tqdm
+import matplotlib.pyplot as plt
 
 # Note we enable 64-bit precision for numerical stability when computing the Hessians
 # later in the tutorial!
 jax.config.update("jax_enable_x64", True)
 ```
+
+    /Users/louis/mambaforge/envs/zdx-tuts/lib/python3.14/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+      from .autonotebook import tqdm as notebook_tqdm
+
 
 
 ```python
@@ -122,7 +125,7 @@ class GaussianModel(zdx.Base):
     def __call__(self, params=None):
 
         if params is not None:
-            self = self.update(params)
+            self = self.set(params)
 
         mean = np.atleast_1d(self.mean)
         std = np.atleast_1d(self.std)
@@ -234,7 +237,7 @@ for step in tqdm(range(500)):
 losses = np.array(losses)
 ```
 
-    100%|██████████| 500/500 [00:00<00:00, 669.56it/s]
+    100%|██████████| 500/500 [00:00<00:00, 671.04it/s]
 
 
 Now we can take a look at our loss curve and check the final value of our reduced chi-squared statistic to see how well we did. We can also look at the final parameters to see how close we got to the true values.
@@ -716,7 +719,7 @@ print("Final reduced chi-squared:", get_reduced_chi2(params, optics, observation
     initial reduced chi-squared: 1553037.1824619938
 
 
-    100%|██████████| 200/200 [00:03<00:00, 54.62it/s, log_loss=3.6472]
+    100%|██████████| 200/200 [00:04<00:00, 48.82it/s, log_loss=3.6472]
 
 
     Final reduced chi-squared: 1478.1168068610625
@@ -917,7 +920,9 @@ print("Final reduced chi-squared:", get_reduced_chi2(params, optics, observation
     initial reduced chi-squared: 1553037.1824619938
 
 
-    100%|██████████| 100/100 [00:01<00:00, 63.26it/s, log_loss=0.4635]
+      0%|          | 0/100 [00:00<?, ?it/s]
+
+    100%|██████████| 100/100 [00:01<00:00, 60.69it/s, log_loss=0.4635]
 
 
     Final reduced chi-squared: 0.9742225768208455
@@ -1226,7 +1231,32 @@ sampler.run(jr.key(0), args)
 sampler.print_summary()
 ```
 
-    warmup:   7%|▋         | 255/3500 [00:27<06:31,  8.28it/s, 15 steps of size 3.17e-01. acc. prob=0.78]
+    sample: 100%|██████████| 3500/3500 [05:49<00:00, 10.02it/s, 7 steps of size 5.42e-01. acc. prob=0.90] 
+
+    
+                    mean       std    median      5.0%     95.0%     n_eff     r_hat
+     Latent[0]     -0.02      1.03     -0.03     -1.74      1.59   4193.92      1.00
+     Latent[1]     -0.01      1.06     -0.01     -1.78      1.68   4498.04      1.00
+     Latent[2]     -0.00      0.98     -0.01     -1.63      1.55   4704.01      1.00
+     Latent[3]     -0.00      0.95      0.01     -1.56      1.49   3757.81      1.00
+     Latent[4]      0.02      0.99      0.02     -1.56      1.68   6129.37      1.00
+     Latent[5]      0.02      1.01      0.01     -1.74      1.56   4113.58      1.00
+     Latent[6]     -0.01      0.99      0.00     -1.75      1.50   4940.96      1.00
+     Latent[7]      0.02      1.04      0.01     -1.72      1.66   5110.49      1.00
+     Latent[8]      0.02      1.03      0.02     -1.47      1.89   4052.82      1.00
+     Latent[9]      0.01      1.03     -0.01     -1.53      1.76   4775.03      1.00
+    Latent[10]     -0.01      0.98      0.00     -1.53      1.65   5026.96      1.00
+    Latent[11]     -0.02      1.01     -0.01     -1.70      1.58   4673.57      1.00
+    Latent[12]      0.00      1.02      0.01     -1.75      1.58   4140.21      1.00
+    Latent[13]     -0.00      0.97      0.01     -1.62      1.56   4972.45      1.00
+    Latent[14]      0.02      1.01      0.03     -1.79      1.57   4560.83      1.00
+    Latent[15]      0.01      0.98      0.01     -1.67      1.55   4722.11      1.00
+    
+    Number of divergences: 0
+
+
+    
+
 
 Great, we can see that our r_hat parameters are all close to unity, indicating good convergence. Lets have a look at the posterior samples, our estimate from the hessian we used to calculate the projection matrix, and what our true values are to see how well we did! Don't worry too much about the code below, its mostly just unpacking things to be plotted which can be quite tedious.
 
