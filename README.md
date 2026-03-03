@@ -68,7 +68,7 @@ class Linear(zdx.Base):
         self.m = m
         self.b = b
 
-    def model(self, x):
+    def __call__(self, x):
         return self.m * x + self.b
 
 linear = Linear(1., 1.)
@@ -80,7 +80,7 @@ Its that simple! The `linear` class is now a fully differentiable object that gi
 @jax.jit
 @jax.grad
 def loss_fn(model, xs, ys):
-    return np.square(model.model(xs) - ys).sum()
+    return np.square(model(xs) - ys).sum()
 
 xs = np.arange(5)
 ys = 2*np.arange(5)
@@ -95,3 +95,24 @@ print(grads.m, grads.b)
 ```
 
 The `grads` object is an instance of the `Linear` class with the gradients of the parameters with respect to the loss function!
+
+### Update Signatures (Minimal Overview)
+
+Most Zodiax update methods (`set`, `add`, `multiply`, `divide`, `power`, `min`, `max`) support three equivalent input styles:
+
+1. **`(parameters, values)` positional style**
+2. **`{parameter: value}` dictionary style**
+3. **`param=value` keyword style** (and `**{"nested.path": value}` for nested paths)
+
+```python
+# 1) Positional: (parameters, values)
+linear = linear.set(["m", "b"], [2.0, 0.5])
+
+# 2) Dictionary: {parameter: value}
+linear = linear.add({"m": 0.1, "b": -0.2})
+
+# 3) Keyword: param=value
+linear = linear.multiply(m=2.0, b=0.5)
+```
+
+Use whichever style is clearest for your workflow. The operations remain immutable and return new objects.

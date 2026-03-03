@@ -20,9 +20,10 @@ _Zodiax_ is built from both _Jax_ and _Equinox_, so if you are unfamiliar with t
 
 Let's examine how these methods work by looking at an example class structure. We will start with a simple class that models a normal distribution and then build a class that contains multiple instances of this class:
 
+
 ```python
 import zodiax as zdx
-from jax import numpy as np
+import jax.numpy as np
 import jax.scipy as scp
 
 
@@ -38,13 +39,14 @@ class Normal(zdx.Base):
         self.scale = np.asarray(scale, dtype=float)
         self.amplitude = np.asarray(amplitude, dtype=float)
 
-    def model(self, width=10):
+    def __call__(self, width=10):
         """Evaluates the normal distribution"""
         xs = np.linspace(-width, width, 128)
         return self.amplitude * scp.stats.norm.pdf(xs, self.mean, self.scale)
 ```
 
-This class simply models a normal distribution with a mean, scale and amplitude, and has a `.model()` method that is used to actually perform the calculation of the normal distribution.
+
+This class simply models a normal distribution with a mean, scale and amplitude, and has a `.__call__()` method that is used to actually perform the calculation of the normal distribution.
 
 !!! info "Declaring attributes: `mean : np.ndarray`"
     When using `equinox` or `zodiax` the attibutes of the class must be
@@ -53,17 +55,8 @@ This class simply models a normal distribution with a mean, scale and amplitude,
     adding a type hint to the attribute which can be any valid python type
     and is **not** type checked!
 
-!!! tip " `.model()` vs `.__call__()`"
-    It is common in Equinox to not define a `.model()` method but rather a `.__call__()` method so that the instance of the class can be called like a function, ie:
-
-    ```python
-    normal = Normal(0, 1, 1)
-    distribution = normal(10)
-    ```
-
-    This is a matter of personal preference, *however* when using Optax if you try to optimise a class that has a `.__call__()` method, you can thrown unhelpful errors. Becuase of this I recommend avoiding `.__call__()` methods and instead using `.model()` method.
-
 Now we construct a class to store and model a set of multiple normals.
+
 
 ```python
 class NormalSet(zdx.Base):
@@ -86,17 +79,17 @@ class NormalSet(zdx.Base):
         else:
             raise AttributeError(f"{key} not in {self.normals.keys()}")
 
-    def model(self):
+    def __call__(self):
         """Evaluates the set of normal distributions"""
         return np.array(
-            [normal.model(self.width) for normal in self.normals.values()]
+            [normal(self.width) for normal in self.normals.values()]
         ).sum(0)
 
 
 sources = NormalSet([-1.0, 2.0], [1.0, 2.0], [2.0, 4.0], ["alpha", "beta"])
 ```
 
-This `NormalSet` class now lets us store an arbitrary number of `Normal` objects in a dictionary, and allows us to access them by their dictionary key. We can also model the sum of all the normals using the `.model()` method.
+This `NormalSet` class now lets us store an arbitrary number of `Normal` objects in a dictionary, and allows us to access them by their dictionary key. We can also model the sum of all the normals using the `.__call__()` method.
 
 This is all the class set-up we need, now we can look at how to perform different types of optimisation and inference using this model.
 
@@ -114,21 +107,21 @@ This is all the class set-up we need, now we can look at how to perform differen
 
 Let's print this object to have a look at what it looks like:
 
-```python
-print(source)
-```
+
 
 ```python
-> NormalSet(
->   normals={
->     'alpha':
->     Normal(mean=f32[], scale=f32[], amplitude=f32[]),
->     'beta':
->     Normal(mean=f32[], scale=f32[], amplitude=f32[])
->   },
->   width=f32[]
-> )
+print(sources)
 ```
+
+    NormalSet(
+      normals={
+        'alpha': Normal(mean=f32[], scale=f32[], amplitude=f32[]),
+        'beta': Normal(mean=f32[], scale=f32[], amplitude=f32[])
+      },
+      width=f32[]
+    )
+
+
 
 !!! question "Whats with the f32[2]?"
     The `f32[2]` is the `jax` representation of a `numpy` array. The `f32` is the dtype and the `[2]` is the shape. The `jax` representation of a scalar is `f32[]`.
@@ -163,16 +156,18 @@ Zodiax adds a series of methods that can be used to manipulate the nodes or leav
 
 Let's change our 'alpha` source to a unit normal:
 
+
+
 ```python
-sources = sources.set('alpha.mean', 0.)
-sources = sources.set('alpha.scale', 1.)
-sources = sources.set('alpha.amplitude', 1.)
+sources = sources.set("alpha.mean", 0.0)
+sources = sources.set("alpha.scale", 1.0)
+sources = sources.set("alpha.amplitude", 1.0)
 print(sources.alpha)
 ```
 
-```python
-> Normal(mean=0.0, scale=1.0, amplitude=1.0)
-```
+    Normal(mean=0.0, scale=1.0, amplitude=1.0)
+
+
 
 !!! question "Wait where did the `f32[]` go?"
     This is because we have replaced the `jax` array with a python float!. It is important to note that the `set` method does not perform any type checking and will simply replace the leaf with whatever is passed in. Be careful when setting leaves to make sure they are the correct type and that you dont get unexpected errors down the line!
@@ -200,17 +195,67 @@ Zodiax is very flexible in how you can use the paths to access and manipulate th
 
 Let's add all of the paths to the means together so we can have a simple variable that we can use to globally shift all of the `sources` at the same time.
 
+
 ```python
-means = ['alpha.mean', 'beta.mean', 'gamma.mean']
+means = ["alpha.mean", "beta.mean"]
 shifted_sources = sources.add(means, 2.5)
 ```
 
+
 It's that easy! We can also nest paths in order to perform complex operations simply. Let's say we want to change the scale of both the 'alpha' and 'beta' source together and the 'gamma' source independently.
 
+
 ```python
-scales = [['alpha.scale', 'beta.scale'], 'gamma.scale']
-values = [2., 4.]
+scales = [["alpha.scale", "beta.scale"], "beta.mean"]
+values = [2.0, 4.0]
 scaled_sources = sources.multiply(scales, values)
 ```
 
-This concept apllies to **all** of Zodiax and can be used with any of its methods. Similarly, Zodiax is designed so that every update operations is performed **simultaneously**. This prevents the unnessecary overhead of copy the entire contents of the pytree for every update which is especially beneficial for large models!
+This concept applies to **all** of Zodiax and can be used with any of its methods. Similarly, Zodiax is designed so that every update operation is performed **simultaneously**. This prevents the unnecessary overhead of copying the entire contents of the pytree for every update, which is especially beneficial for large models.
+
+### **Alternative Input Styles**
+
+So far we have used the explicit `(paths, values)` style. Zodiax also supports two additional input styles for update methods like `set`, `add`, `multiply`, `divide`, `power`, `min`, and `max`:
+
+- **Dictionary style**: pass `{path: value}`.
+- **Keyword style**: pass `param=value` (and for nested paths use `**{"nested.path": value}`).
+
+These are equivalent ways to express the same operations, so you can choose whichever is most readable in your workflow.
+
+!!! tip "When to use which style?"
+    Dictionary style is often nicest when building updates programmatically.
+    Keyword style is often nicest for quick, explicit updates in notebooks.
+
+Here is a minimal example of both styles:
+
+
+```python
+sources = sources.set({"alpha.mean": -0.5, "beta.amplitude": 3.0})
+
+print(sources)
+```
+
+    NormalSet(
+      normals={
+        'alpha': Normal(mean=-0.5, scale=1.0, amplitude=1.0),
+        'beta': Normal(mean=f32[], scale=f32[], amplitude=3.0)
+      },
+      width=f32[]
+    )
+
+
+
+```python
+sources = sources.add(width=1.0, **{"beta.scale": 0.5})
+
+print(sources)
+```
+
+    NormalSet(
+      normals={
+        'alpha': Normal(mean=-0.5, scale=1.0, amplitude=1.0),
+        'beta': Normal(mean=f32[], scale=f32[], amplitude=3.0)
+      },
+      width=f32[]
+    )
+
