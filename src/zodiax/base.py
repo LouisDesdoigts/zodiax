@@ -111,7 +111,9 @@ def _unwrap(parameters: Params, values_in: list = None) -> list:
     # If values are provided, apply transformation to both
     if values_in is not None:
         # Make sure values is list
-        values = values_in if isinstance(values_in, list) else [values_in]
+        values = (
+            list(values_in) if isinstance(values_in, (list, tuple)) else [values_in]
+        )
 
         # Repeat values to match length of parameters
         if len(values) == 1:
@@ -126,7 +128,7 @@ def _unwrap(parameters: Params, values_in: list = None) -> list:
         # Iterate over parameters and values
         for param, value in zip(parameters, values):
             # Recurse and add in the case of list inputs
-            if isinstance(param, list):
+            if isinstance(param, (list, tuple)):
                 new_parameters, new_values = _unwrap(param, value)
                 parameters_out += new_parameters
                 values_out += new_values
@@ -142,7 +144,7 @@ def _unwrap(parameters: Params, values_in: list = None) -> list:
         # Iterate over parameters
         for param in parameters:
             # Recurse and add in the case of list inputs
-            if isinstance(param, list):
+            if isinstance(param, (list, tuple)):
                 new_parameters = _unwrap(param)
                 parameters_out += new_parameters
 
@@ -171,14 +173,18 @@ def _format(parameters: Params, values: list = None) -> list:
         The list of unwrapped parameters or parameters and values.
     """
     # Nested/multiple inputs
-    if isinstance(parameters, list):
+    if isinstance(parameters, (list, tuple)):
+        parameters = list(parameters)
+
         # If there is nesting, ensure correct dis
         if (
             len(parameters) > 1
             and values is not None
-            and True in [isinstance(p, list) for p in parameters]
+            and True in [isinstance(p, (list, tuple)) for p in parameters]
         ):
-            assert isinstance(values, list) and len(values) == len(parameters), (
+            assert isinstance(values, (list, tuple)) and len(values) == len(
+                parameters
+            ), (
                 "If a list of parameters is provided, the list of values must be "
                 "of equal length."
             )
@@ -204,6 +210,47 @@ def _format(parameters: Params, values: list = None) -> list:
     return new_parameters if values is None else (new_parameters, new_values)
 
 
+def _normalise_mutation_inputs(
+    parameters: Params = None,
+    values: Values = None,
+    updates: dict = None,
+    method_name: str = "method",
+) -> tuple:
+    """
+    Normalises mutation inputs for methods that can accept either:
+    - (parameters, values)
+    - a mapping of parameter->value
+    - keyword arguments of parameter=value
+    """
+    updates = {} if updates is None else updates
+
+    if len(updates) > 0:
+        if parameters is not None or values is not None:
+            raise TypeError(
+                f"{method_name}() received mixed input styles. Use either "
+                "(parameters, values), a mapping, or keyword arguments."
+            )
+        mapping = _unpack(updates)
+        return list(mapping.keys()), list(mapping.values())
+
+    if isinstance(parameters, dict):
+        if values is not None:
+            raise TypeError(
+                f"{method_name}() received both a mapping and values. "
+                "Provide only one input style."
+            )
+        mapping = _unpack(parameters)
+        return list(mapping.keys()), list(mapping.values())
+
+    if parameters is None:
+        raise TypeError(
+            f"{method_name}() requires input via (parameters, values), "
+            "a mapping, or keyword arguments."
+        )
+
+    return parameters, values
+
+
 class Base(eqx.Module):
     """
     Extend the Equinox.Module class to give a user-friendly 'param based' API
@@ -218,7 +265,11 @@ class Base(eqx.Module):
         Parameters
         ----------
         parameters : Params
-            A list/tuple of nested parameters to unwrap.
+            Parameter selector. Supported forms are:
+            - ``"param"`` (single path string)
+            - ``["param", "b.param"]`` (list of path strings)
+            - ``("param", "b.param")`` (tuple of path strings)
+            - Interleaved list/tuple nesting of path strings.
 
         Returns
         -------
@@ -229,23 +280,44 @@ class Base(eqx.Module):
         values = _get_leaves(self, new_parameters)
         return values[0] if len(new_parameters) == 1 else values
 
-    def set(self: PyTree, parameters: Params, values: Values) -> PyTree:
+    def set(
+        self: PyTree,
+        parameters: Params = None,
+        values: Values = None,
+        /,
+        **updates,
+    ) -> PyTree:
         """
         Set the leaves specified by parameters with values.
 
         Parameters
         ----------
-        parameters : Params
-            A param or list of parameters or list of nested parameters.
-        values : Values
-            The list of values to set at the leaves specified by parameters.
+        parameters : Params, optional
+            Parameter selector for positional style. Supported forms are:
+            - ``"param"``
+            - list/tuple of path strings
+            - interleaved list/tuple nesting of path strings
+            - a mapping ``{path: value}`` (dictionary style)
+        values : Values, optional
+            Values for positional style ``set(parameters, values)``.
+            Can be a scalar, list, or tuple matching ``parameters``.
+        **updates
+            Keyword update style, e.g. ``set(param=1.0)`` and nested via
+            ``set(**{"b.param": 2.0})``.
 
         Returns
         -------
         pytree : PyTree
             The pytree with leaves specified by parameters updated with values.
         """
-        # Allow None inputs
+        parameters, values = _normalise_mutation_inputs(
+            parameters,
+            values,
+            updates=updates,
+            method_name="set",
+        )
+
+        # Allow explicit None values
         if values is None:
             values = [None]
             if isinstance(parameters, str):
@@ -260,44 +332,45 @@ class Base(eqx.Module):
             leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None
         )
 
-    def update(self: PyTree, dict: dict) -> PyTree:
-        """
-        Calls the set method to update the leaves specified by the keys
-        of the dictionary with the values of the dictionary.
-
-        Parameters
-        ----------
-        dict : dict
-            The dictionary of parameters and values to update the leaves with.
-
-        Returns
-        -------
-        pytree : PyTree
-            The pytree with updated parameters.
-        """
-
-        dict = _unpack(dict)
-        parameters, values = list(dict.keys()), list(dict.values())
-
-        # Calling the set method
-        return self.set(parameters, values)
-
-    def add(self: PyTree, parameters: Params, values: Values) -> PyTree:
+    def add(
+        self: PyTree,
+        parameters: Params = None,
+        values: Values = None,
+        /,
+        **updates,
+    ) -> PyTree:
         """
         Add to the the leaves specified by parameters with values.
 
         Parameters
         ----------
-        parameters : Params
-            A param or list of parameters or list of nested parameters.
-        values : Values
-            The list of values to add to the leaves specified by parameters.
+        parameters : Params, optional
+            Parameter selector or mapping. Supported forms are:
+            - path string
+            - list/tuple (including interleaved nesting) of path strings
+            - mapping ``{path: value}``
+        values : Values, optional
+            Values for positional style ``add(parameters, values)``.
+        **updates
+            Keyword update style, e.g. ``add(param=1.0)`` and nested via
+            ``add(**{"b.param": 2.0})``.
 
         Returns
         -------
         pytree : PyTree
             The pytree with values added to leaves specified by parameters.
         """
+        parameters, values = _normalise_mutation_inputs(
+            parameters,
+            values,
+            updates=updates,
+            method_name="add",
+        )
+        if values is None:
+            raise TypeError(
+                "add() missing values. Use (parameters, values), a mapping, "
+                "or keyword arguments."
+            )
         new_parameters, new_values = _format(parameters, values)
         new_values = [
             leaf + value
@@ -312,22 +385,43 @@ class Base(eqx.Module):
             leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None
         )
 
-    def multiply(self: PyTree, parameters: Params, values: Values) -> PyTree:
+    def multiply(
+        self: PyTree,
+        parameters: Params = None,
+        values: Values = None,
+        /,
+        **updates,
+    ) -> PyTree:
         """
         Multiplies the the leaves specified by parameters with values.
 
         Parameters
         ----------
-        parameters : Params
-            A param or list of parameters or list of nested parameters.
-        values : Values
-            The list of values to multiply the leaves specified by parameters.
+        parameters : Params, optional
+            Parameter selector or mapping (string, list/tuple paths, nested
+            list/tuple paths, or ``{path: value}``).
+        values : Values, optional
+            Values for positional style ``multiply(parameters, values)``.
+        **updates
+            Keyword update style, e.g. ``multiply(param=2.0)`` and nested via
+            ``multiply(**{"b.param": 3.0})``.
 
         Returns
         -------
         pytree : PyTree
             The pytree with values multiplied by leaves specified by parameters.
         """
+        parameters, values = _normalise_mutation_inputs(
+            parameters,
+            values,
+            updates=updates,
+            method_name="multiply",
+        )
+        if values is None:
+            raise TypeError(
+                "multiply() missing values. Use (parameters, values), a mapping, "
+                "or keyword arguments."
+            )
         new_parameters, new_values = _format(parameters, values)
         new_values = [
             leaf * value
@@ -342,22 +436,43 @@ class Base(eqx.Module):
             leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None
         )
 
-    def divide(self: PyTree, parameters: Params, values: Values) -> PyTree:
+    def divide(
+        self: PyTree,
+        parameters: Params = None,
+        values: Values = None,
+        /,
+        **updates,
+    ) -> PyTree:
         """
         Divides the the leaves specified by parameters with values.
 
         Parameters
         ----------
-        parameters : Params
-            A param or list of parameters or list of nested parameters.
-        values : Values
-            The list of values to divide the leaves specified by parameters.
+        parameters : Params, optional
+            Parameter selector or mapping (string, list/tuple paths, nested
+            list/tuple paths, or ``{path: value}``).
+        values : Values, optional
+            Values for positional style ``divide(parameters, values)``.
+        **updates
+            Keyword update style, e.g. ``divide(param=2.0)`` and nested via
+            ``divide(**{"b.param": 4.0})``.
 
         Returns
         -------
         pytree : PyTree
             The pytree with values divided by leaves specified by parameters.
         """
+        parameters, values = _normalise_mutation_inputs(
+            parameters,
+            values,
+            updates=updates,
+            method_name="divide",
+        )
+        if values is None:
+            raise TypeError(
+                "divide() missing values. Use (parameters, values), a mapping, "
+                "or keyword arguments."
+            )
         new_parameters, new_values = _format(parameters, values)
         new_values = [
             leaf / value
@@ -372,17 +487,26 @@ class Base(eqx.Module):
             leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None
         )
 
-    def power(self: PyTree, parameters: Params, values: Values) -> PyTree:
+    def power(
+        self: PyTree,
+        parameters: Params = None,
+        values: Values = None,
+        /,
+        **updates,
+    ) -> PyTree:
         """
         Raises th leaves specified by parameters to the power of values.
 
         Parameters
         ----------
-        parameters : Params
-            A param or list of parameters or list of nested parameters.
-        values : Values
-            The list of values to take the leaves specified by parameters to the
-            power of.
+        parameters : Params, optional
+            Parameter selector or mapping (string, list/tuple paths, nested
+            list/tuple paths, or ``{path: value}``).
+        values : Values, optional
+            Values for positional style ``power(parameters, values)``.
+        **updates
+            Keyword update style, e.g. ``power(param=3.0)`` and nested via
+            ``power(**{"b.param": 2.0})``.
 
         Returns
         -------
@@ -390,6 +514,17 @@ class Base(eqx.Module):
             The pytree with the leaves specified by parameters raised to the power
             of values.
         """
+        parameters, values = _normalise_mutation_inputs(
+            parameters,
+            values,
+            updates=updates,
+            method_name="power",
+        )
+        if values is None:
+            raise TypeError(
+                "power() missing values. Use (parameters, values), a mapping, "
+                "or keyword arguments."
+            )
         new_parameters, new_values = _format(parameters, values)
         new_values = [
             leaf**value
@@ -404,17 +539,27 @@ class Base(eqx.Module):
             leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None
         )
 
-    def min(self: PyTree, parameters: Params, values: Values) -> PyTree:
+    def min(
+        self: PyTree,
+        parameters: Params = None,
+        values: Values = None,
+        /,
+        **updates,
+    ) -> PyTree:
         """
         Updates the leaves specified by parameters with the minimum value of the
         leaves and values.
 
         Parameters
         ----------
-        parameters : Params
-            A param or list of parameters or list of nested parameters.
-        values : Values
-            The list of values to take the minimum of and the leaf.
+        parameters : Params, optional
+            Parameter selector or mapping (string, list/tuple paths, nested
+            list/tuple paths, or ``{path: value}``).
+        values : Values, optional
+            Values for positional style ``min(parameters, values)``.
+        **updates
+            Keyword update style, e.g. ``min(param=0.5)`` and nested via
+            ``min(**{"b.param": 3.0})``.
 
         Returns
         -------
@@ -422,6 +567,17 @@ class Base(eqx.Module):
             The pytree with the leaves specified by parameters updated with the
             minimum value of the leaf and values.
         """
+        parameters, values = _normalise_mutation_inputs(
+            parameters,
+            values,
+            updates=updates,
+            method_name="min",
+        )
+        if values is None:
+            raise TypeError(
+                "min() missing values. Use (parameters, values), a mapping, "
+                "or keyword arguments."
+            )
         new_parameters, new_values = _format(parameters, values)
         new_values = [
             np.minimum(leaf, value)
@@ -436,7 +592,13 @@ class Base(eqx.Module):
             leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None
         )
 
-    def max(self: PyTree, parameters: Params, values: Values) -> PyTree:
+    def max(
+        self: PyTree,
+        parameters: Params = None,
+        values: Values = None,
+        /,
+        **updates,
+    ) -> PyTree:
         """
         Updates the leaves specified by parameters with the maximum value of the
         leaves and values.
@@ -444,10 +606,14 @@ class Base(eqx.Module):
 
         Parameters
         ----------
-        parameters : Params
-            A param or list of parameters or list of nested parameters.
-        values : Values
-            The list of values to take the maximum of and the leaf.
+        parameters : Params, optional
+            Parameter selector or mapping (string, list/tuple paths, nested
+            list/tuple paths, or ``{path: value}``).
+        values : Values, optional
+            Values for positional style ``max(parameters, values)``.
+        **updates
+            Keyword update style, e.g. ``max(param=10.0)`` and nested via
+            ``max(**{"b.param": 1.0})``.
 
         Returns
         -------
@@ -455,6 +621,17 @@ class Base(eqx.Module):
             The pytree with the leaves specified by parameters updated with the
             maximum value of the leaf and values.
         """
+        parameters, values = _normalise_mutation_inputs(
+            parameters,
+            values,
+            updates=updates,
+            method_name="max",
+        )
+        if values is None:
+            raise TypeError(
+                "max() missing values. Use (parameters, values), a mapping, "
+                "or keyword arguments."
+            )
         new_parameters, new_values = _format(parameters, values)
         new_values = [
             np.maximum(leaf, value)

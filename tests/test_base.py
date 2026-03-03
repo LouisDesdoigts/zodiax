@@ -58,21 +58,52 @@ class TestBase:
         output = create_base().set(parameters, values)
         assert output.get(["param", "b.param"]) == [10.0, 5.0]
 
-    def test_update(self, create_base):
-        output = create_base().update({"param": 10.0, "b.param": 5.0})
+    def test_set_accepts_mapping(self, create_base):
+        output = create_base().set({"param": 10.0, "b.param": 5.0})
         assert output.get(["param", "b.param"]) == [10.0, 5.0]
 
-    def test_update_accepts_tuple_key(self, create_base):
-        output = create_base().update({("param", "b.param"): 6.0})
+    def test_set_accepts_tuple_key(self, create_base):
+        output = create_base().set({("param", "b.param"): 6.0})
         assert output.get(["param", "b.param"]) == [6.0, 6.0]
 
-    def test_update_accepts_mixed_tuple_and_string_keys(self, create_base):
-        output = create_base().update({("param",): 6.0, "b.param": 7.0})
+    def test_set_accepts_mixed_tuple_and_string_keys(self, create_base):
+        output = create_base().set({("param",): 6.0, "b.param": 7.0})
         assert output.get(["param", "b.param"]) == [6.0, 7.0]
 
-    def test_update_accepts_kwargs(self, create_base):
-        output = create_base().update(param=6.0, **{"b.param": 7.0})
+    def test_set_accepts_kwargs(self, create_base):
+        output = create_base().set(param=6.0, **{"b.param": 7.0})
         assert output.get(["param", "b.param"]) == [6.0, 7.0]
+
+    @pytest.mark.parametrize(
+        "parameters",
+        [
+            ["param", "b.param"],
+            ("param", "b.param"),
+        ],
+    )
+    def test_set_accepts_none_positional(self, create_base, parameters):
+        output = create_base().set(parameters, None)
+        assert output.get(["param", "b.param"]) == [None, None]
+
+    def test_set_accepts_none_mapping(self, create_base):
+        output = create_base().set({"param": None, "b.param": None})
+        assert output.get(["param", "b.param"]) == [None, None]
+
+    def test_set_accepts_none_kwargs(self, create_base):
+        output = create_base().set(param=None, **{"b.param": None})
+        assert output.get(["param", "b.param"]) == [None, None]
+
+    def test_set_accepts_partial_none_positional(self, create_base):
+        output = create_base().set(["param", "b.param"], [None, 7.0])
+        assert output.get(["param", "b.param"]) == [None, 7.0]
+
+    def test_set_accepts_partial_none_mapping(self, create_base):
+        output = create_base().set({"param": None, "b.param": 7.0})
+        assert output.get(["param", "b.param"]) == [None, 7.0]
+
+    def test_set_accepts_partial_none_kwargs(self, create_base):
+        output = create_base().set(param=None, **{"b.param": 7.0})
+        assert output.get(["param", "b.param"]) == [None, 7.0]
 
     @pytest.mark.parametrize(
         "method,mapping,expected",
@@ -88,7 +119,7 @@ class TestBase:
     )
     def test_mutators_accept_mapping(self, create_base, method, mapping, expected):
         output = getattr(create_base(), method)(mapping)
-        assert np.allclose(output.get(["param", "b.param"]), expected)
+        assert output.get(["param", "b.param"]) == expected
 
     @pytest.mark.parametrize(
         "method,kwargs,expected",
@@ -104,7 +135,7 @@ class TestBase:
     )
     def test_mutators_accept_kwargs(self, create_base, method, kwargs, expected):
         output = getattr(create_base(), method)(**kwargs)
-        assert np.allclose(output.get(["param", "b.param"]), expected)
+        assert output.get(["param", "b.param"]) == expected
 
     def test_mutators_reject_mixed_styles(self, create_base):
         with pytest.raises(TypeError):
