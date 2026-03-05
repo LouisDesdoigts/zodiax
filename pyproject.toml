@@ -5,7 +5,7 @@ description = "Equinox extension for scientific programming."
 readme = "README.md"
 requires-python = ">=3.10" # Zensical requires 3.10+
 license = {file = "LICENSE.md"}
-authors = [{name = "Louis Desdoigts", email = "louis.desdoigts@sydney.edu.au"}]
+authors = [{name = "Louis Desdoigts", email = "louis.desdoigts@gmail.com"}]
 dependencies = ["jax", "jaxlib", "equinox", "optax"]
 
 [project.optional-dependencies]
