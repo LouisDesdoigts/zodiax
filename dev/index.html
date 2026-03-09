@@ -899,10 +899,13 @@
 <p>Note: The Zodiax tutorials live in a <a href="https://github.com/LouisDesdoigts/zodiax_tutorials">separate repo</a>. This allows users to directly download and run the notebooks, ensuring that the correct packages needed to run them are installed! It also allows for new tutorials and examples to be added quite easily, without needing to update the core library.</p>
 </blockquote>
 <p>Contributors: <a href="https://github.com/LouisDesdoigts">Louis Desdoigts</a></p>
-<p>Requires: Python 3.9+, Jax 0.4.25+</p>
-<p>Installation: <code>pip install zodiax</code></p>
-<p>Docs installation: <code>pip install "zodiax[docs]"</code></p>
-<p>Test installation: <code>pip install "zodiax[tests]"</code></p>
+<p>Requires: Python 3.10+, Jax 0.4.25+</p>
+<p>Installation: </p>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>zodiax
+</code></pre></div>
+<p>Development installation: </p>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;zodiax[dev]&quot;</span>
+</code></pre></div>
 <p>Coverage:</p>
 <div class="highlight"><pre><span></span><code>pytest<span class="w"> </span>--cov<span class="o">=</span>zodiax<span class="w"> </span>--cov-report<span class="o">=</span>term-missing<span class="w"> </span>--cov-report<span class="o">=</span>xml<span class="w"> </span>--cov-report<span class="o">=</span>html<span class="w"> </span>tests
 </code></pre></div>
