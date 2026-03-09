@@ -35,13 +35,19 @@ Documentation: [louisdesdoigts.github.io/zodiax/](https://louisdesdoigts.github.
 
 Contributors: [Louis Desdoigts](https://github.com/LouisDesdoigts)
 
-Requires: Python 3.9+, Jax 0.4.25+
+Requires: Python 3.10+, Jax 0.4.25+
 
-Installation: ```pip install zodiax```
+Installation: 
 
-Docs installation: ```pip install "zodiax[docs]"```
+```bash
+pip install zodiax
+```
 
-Test installation: ```pip install "zodiax[tests]"```
+Development installation: 
+
+```bash
+pip install "zodiax[dev]"
+```
 
 Coverage:
 
