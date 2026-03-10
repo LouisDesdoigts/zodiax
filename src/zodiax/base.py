@@ -269,7 +269,12 @@ class Base(eqx.Module):
     with the leaves of the pytree using parameters.
     """
 
-    def get(self: PyTree, parameters: Params, return_dict: bool = False) -> Any:
+    def get(
+        self: PyTree,
+        parameters: Params,
+        return_dict: bool = False,
+        to_array: bool = True,
+    ) -> Any:
         """
         Get the leaf specified by param.
 
@@ -284,6 +289,10 @@ class Base(eqx.Module):
         return_dict : bool = False
             If True, returns a dictionary mapping parameters to their values. If False,
             returns a list of values in the same order as the input parameters.
+        to_array : bool = True
+            If True, converts the output to an float Array for later jax
+            transformations. If False, returns the raw value (which may be a scalar or
+            other type).
 
         Returns
         -------
@@ -296,6 +305,8 @@ class Base(eqx.Module):
         """
         new_parameters = _format(parameters)
         values = _get_leaves(self, new_parameters)
+        if to_array:
+            jtu.map(lambda x: np.array(x, float), values)
         if return_dict:
             return dict(zip(new_parameters, values))
         return values[0] if len(new_parameters) == 1 else values
