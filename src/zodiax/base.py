@@ -306,9 +306,10 @@ class Base(eqx.Module):
         new_parameters = _format(parameters)
         values = _get_leaves(self, new_parameters)
         if to_array:
-            jtu.map(lambda x: np.array(x, float), values)
+            values = jtu.map(lambda x: np.array(x, float), values)
         if return_dict:
-            return dict(zip(new_parameters, values))
+            keys = [".".join(param) for param in new_parameters]
+            return dict(zip(keys, values))
         return values[0] if len(new_parameters) == 1 else values
 
     def set(

@@ -51,10 +51,26 @@ class TestBase:
         [
             ("param", 1.0),
             (["param", "b.param"], [1.0, 2.0]),
+            (("param", "b.param"), [1.0, 2.0]),
+            (["param", ("b.param",)], [1.0, 2.0]),
         ],
     )
     def test_get(self, create_base, parameters, expected):
         assert create_base().get(parameters) == expected
+
+    def test_get_return_dict_single_and_multi(self, create_base):
+        base = create_base()
+        assert base.get("param", return_dict=True) == {"param": 1.0}
+        assert base.get(["param", "b.param"], return_dict=True) == {
+            "param": 1.0,
+            "b.param": 2.0,
+        }
+
+    def test_get_to_array_casts_output(self, create_base):
+        base = create_base(param=1, b=2)
+        output = base.get("param", to_array=True)
+        assert hasattr(output, "dtype")
+        assert np.issubdtype(output.dtype, np.floating)
 
     @pytest.mark.parametrize(
         "method,parameters,values,expected",
