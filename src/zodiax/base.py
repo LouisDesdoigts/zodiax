@@ -269,7 +269,12 @@ class Base(eqx.Module):
     with the leaves of the pytree using parameters.
     """
 
-    def get(self: PyTree, parameters: Params) -> Any:
+    def get(
+        self: PyTree,
+        parameters: Params,
+        return_dict: bool = False,
+        to_array: bool = True,
+    ) -> Any:
         """
         Get the leaf specified by param.
 
@@ -281,14 +286,30 @@ class Base(eqx.Module):
             - ``["param", "b.param"]`` (list of path strings)
             - ``("param", "b.param")`` (tuple of path strings)
             - Interleaved list/tuple nesting of path strings.
+        return_dict : bool = False
+            If True, returns a dictionary mapping parameters to their values. If False,
+            returns a list of values in the same order as the input parameters.
+        to_array : bool = True
+            If True, converts the output to an float Array for later jax
+            transformations. If False, returns the raw value (which may be a scalar or
+            other type).
 
         Returns
         -------
-        leaf, leaves : Any, list
-            The leaf or list of leaves specified by parameters.
+        values : Any
+            The value(s) corresponding to the input parameter(s). If `return_dict`
+            is True, returns a dictionary mapping parameters to their values. If False,
+            returns a list of values in the same order as the input parameters. If only
+            a single parameter is provided and `return_dict` is False, returns the
+            single value corresponding to that parameter.
         """
         new_parameters = _format(parameters)
         values = _get_leaves(self, new_parameters)
+        if to_array:
+            values = jtu.map(lambda x: np.array(x, float), values)
+        if return_dict:
+            keys = [".".join(param) for param in new_parameters]
+            return dict(zip(keys, values))
         return values[0] if len(new_parameters) == 1 else values
 
     def set(
