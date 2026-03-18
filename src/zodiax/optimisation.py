@@ -85,7 +85,7 @@ def map_optimisers(params: dict, optimisers: dict, strict: bool = False) -> tupl
     # Check for keys in params that aren't in optimisers, and paste an empty optimiser
     for key in params.keys():
         if key not in optimisers.keys():
-            optimisers[key] = optax.identity()
+            optimisers[key] = optax.set_to_zero()
 
     # Check for keys in optimisers that aren't in params, and set to zero
     for key in optimisers.keys():
