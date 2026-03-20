@@ -58,10 +58,10 @@ class TestBase:
     def test_get(self, create_base, parameters, expected):
         assert create_base().get(parameters) == expected
 
-    def test_get_return_dict_single_and_multi(self, create_base):
+    def test_get_as_dict_single_and_multi(self, create_base):
         base = create_base()
-        assert base.get("param", return_dict=True) == {"param": 1.0}
-        assert base.get(["param", "b.param"], return_dict=True) == {
+        assert base.get("param", as_dict=True) == {"param": 1.0}
+        assert base.get(["param", "b.param"], as_dict=True) == {
             "param": 1.0,
             "b.param": 2.0,
         }
