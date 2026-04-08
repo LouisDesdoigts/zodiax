@@ -1,46 +1,37 @@
 ```python
-import jax
-
-import zodiax as zdx
-import equinox as eqx
-import jax.numpy as np
-import jax.random as jr
-import jax.tree as jtu
-import dLux as dl
-import dLux.utils as dlu
-import optax
-import optimistix as optx
-from tqdm.auto import tqdm
-import matplotlib.pyplot as plt
-
-# Note we enable 64-bit precision for numerical stability when computing the Hessians
-# later in the tutorial!
-jax.config.update("jax_enable_x64", True)
-```
-
-    /Users/louis/mambaforge/envs/zdx-tuts/lib/python3.14/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
-      from .autonotebook import tqdm as notebook_tqdm
-
-
-
-```python
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-from matplotlib.colors import CenteredNorm
-
-# Plotting set up
-%matplotlib inline
-plt.rcParams["image.cmap"] = "inferno"
-plt.rcParams["font.family"] = "serif"
-plt.rcParams["image.origin"] = "lower"
-plt.rcParams["figure.dpi"] = 90
-
-inferno = mpl.colormaps["inferno"]
-seismic = mpl.colormaps["seismic"]
-coolwarm = mpl.colormaps["coolwarm"]
-inferno.set_bad("k", 0.5)
-seismic.set_bad("k", 0.5)
-coolwarm.set_bad("k", 0.5)
+???+ info "Imports"
+    import jax
+    import zodiax as zdx
+    import equinox as eqx
+    import jax.numpy as np
+    import jax.random as jr
+    import jax.tree as jtu
+    import dLux as dl
+    import dLux.utils as dlu
+    import optax
+    import optimistix as optx
+    from tqdm.auto import tqdm
+    import matplotlib.pyplot as plt
+    import matplotlib as mpl
+    from matplotlib.colors import CenteredNorm
+    
+    # Note we enable 64-bit precision for numerical stability when computing the Hessians
+    # later in the tutorial!
+    jax.config.update("jax_enable_x64", True)
+    
+    # Plotting set up
+    %matplotlib inline
+    plt.rcParams["image.cmap"] = "inferno"
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["image.origin"] = "lower"
+    plt.rcParams["figure.dpi"] = 90
+    
+    inferno = mpl.colormaps["inferno"]
+    seismic = mpl.colormaps["seismic"]
+    coolwarm = mpl.colormaps["coolwarm"]
+    inferno.set_bad("k", 0.5)
+    seismic.set_bad("k", 0.5)
+    coolwarm.set_bad("k", 0.5)
 ```
 
 
@@ -55,10 +46,10 @@ print(f"dLux version: {dl.__version__}")
 ```
 
     zodiax version: 0.5.0
-    equinox version: 0.13.4
-    optax version: 0.2.7
+    equinox version: 0.13.6
+    optax version: 0.2.8
     optimistix version: 0.1.0
-    jax version: 0.8.3
+    jax version: 0.9.2
     dLux version: 0.14.0
 
 
@@ -78,6 +69,7 @@ We will cover a large number of topics in this notebook, slowly stepping up the 
 5. Natural gradient descent using the Fisher information matrix
 6. Reparametrisation with the Fisher information matrix
 7. Posterior sampling with [Numpyro](https://num.pyro.ai/en/stable/)
+8. Posterior sampling with [Blackjax](https://blackjax-devs.github.io/blackjax/)
 
 This should provide a comprehensive overview of all the tools and techniques needed to do inference with scientific models with Zodiax!
 
@@ -171,24 +163,29 @@ initial = model(params)
 chi2r = stats.chi2r(initial, data, error, stats.ddof(params, data))
 print("Initial reduced chi-squared:", chi2r)
 
-# Look at the data and the true values
-fig, ax = plt.subplots(figsize=(9, 4))
-ax.plot(model.xs, true_values, label="True", c="k")
-ax.scatter(model.xs, data, s=10, alpha=1.0, label="Data")
-ax.plot(model.xs, initial, c="C1", label="Initial Guess")
-ax.axhline(0, color="k", linestyle="--")
-ax.set(xlabel="x", ylabel="f(x)", title="Data, True Values, Initial Guess")
-ax.legend()
-plt.tight_layout()
-plt.show()
 ```
 
     Initial reduced chi-squared: 7.525943757570605
 
 
 
+```python
+???+ info "Plotting"
+    # Look at the data and the true values
+    fig, ax = plt.subplots(figsize=(9, 4))
+    ax.plot(model.xs, true_values, label="True", c="k")
+    ax.scatter(model.xs, data, s=10, alpha=1.0, label="Data")
+    ax.plot(model.xs, initial, c="C1", label="Initial Guess")
+    ax.axhline(0, color="k", linestyle="--")
+    ax.set(xlabel="x", ylabel="f(x)", title="Data, True Values, Initial Guess")
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
+```
+
+
     
-![png](assets/optimisation_tools_files/output_7_1.png)
+![png](assets/optimisation_tools_files/output_7_0.png)
     
 
 
@@ -235,58 +232,61 @@ for step in tqdm(range(500)):
     params = optax.apply_updates(params, updates)
     losses.append(loss)
 losses = np.array(losses)
+
+# Check the final reduced chi-squared statistic
+chi2r = stats.chi2r(model(params), data, error, stats.ddof(params, data))
+print("Final reduced chi-squared:", chi2r)
 ```
 
-    100%|██████████| 500/500 [00:00<00:00, 671.04it/s]
+
+      0%|          | 0/500 [00:00<?, ?it/s]
+
+
+    Final reduced chi-squared: 1.0707949059930015
 
 
 Now we can take a look at our loss curve and check the final value of our reduced chi-squared statistic to see how well we did. We can also look at the final parameters to see how close we got to the true values.
 
 
 ```python
-# Check the final reduced chi-squared statistic
-chi2r = stats.chi2r(model(params), data, error, stats.ddof(params, data))
-print("Final reduced chi-squared:", chi2r)
-
-plt.figure(figsize=(12, 4))
-ax = plt.subplot(1, 2, 1)
-ax.plot(losses)
-ax.set(title="Loss value", xlabel="Step", ylabel="Loss")
-
-ax = plt.subplot(1, 2, 2)
-ax.plot(np.log10(losses))
-ax.set(title="Logarithm of Loss value", xlabel="Step", ylabel="Log10(Loss)")
-
-plt.tight_layout()
-plt.show()
+???+ info "Plotting"
+    plt.figure(figsize=(12, 4))
+    ax = plt.subplot(1, 2, 1)
+    ax.plot(losses)
+    ax.set(title="Loss value", xlabel="Step", ylabel="Loss")
+    
+    ax = plt.subplot(1, 2, 2)
+    ax.plot(np.log10(losses))
+    ax.set(title="Logarithm of Loss value", xlabel="Step", ylabel="Log10(Loss)")
+    
+    plt.tight_layout()
+    plt.show()
 ```
-
-    Final reduced chi-squared: 1.0707949059930015
-
 
 
     
-![png](assets/optimisation_tools_files/output_11_1.png)
+![png](assets/optimisation_tools_files/output_11_0.png)
     
 
 
 
 ```python
-# Get the final model values
-final = model(params)
-
-# Look at the data, true values, initial and final model
-plt.figure(figsize=(9, 4))
-ax = plt.subplot(1, 1, 1)
-ax.plot(model.xs, true_values, label="True", c="k")
-ax.scatter(model.xs, data, s=10, alpha=0.6, label="Data", c="C0")
-ax.plot(model.xs, initial, label="Initial", c="C2")
-ax.plot(model.xs, final, label="Final", c="C1")
-ax.axhline(0, color="k", linestyle="--")
-ax.set(xlabel="x", ylabel="f(x)", title="Initial guess")
-ax.legend()
-plt.tight_layout()
-plt.show()
+???+ info "Plotting"
+    # Get the final model values
+    final = model(params)
+    
+    # Look at the data, true values, initial and final model
+    plt.figure(figsize=(9, 4))
+    ax = plt.subplot(1, 1, 1)
+    ax.plot(model.xs, true_values, label="True", c="k")
+    ax.scatter(model.xs, data, s=10, alpha=0.6, label="Data", c="C0")
+    ax.plot(model.xs, initial, label="Initial", c="C2")
+    ax.plot(model.xs, final, label="Final", c="C1")
+    ax.axhline(0, color="k", linestyle="--")
+    ax.set(xlabel="x", ylabel="f(x)", title="Initial guess")
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
 ```
 
 
@@ -319,38 +319,39 @@ params = {
 args = (model, data, error)
 solver = optx.BestSoFarMinimiser(optx.BFGS(rtol=1e-12, atol=1e-12))
 sol = optx.minimise(loss_fn, solver, params, args)
-```
 
-Now we can take a quick look at our results after optimisation. We can see that we have successfully recovered our original parameters, and our reduced chi-squared statistic is very close to unity, indicating a good fit to the data.
-
-
-```python
 # Check the final reduced chi-squared statistic
 chi2r = stats.chi2r(model(sol.value), data, error, stats.ddof(params, data))
 print("Final reduced chi-squared:", chi2r)
 print("Steps:", int(sol.stats["num_steps"]))
-
-# Check the outputs of the optimiser
-plt.figure(figsize=(9, 4))
-ax = plt.subplot(1, 1, 1)
-ax.plot(model.xs, true_values, label="True", c="k")
-ax.scatter(model.xs, data, s=10, alpha=0.6, label="Data", c="C0")
-ax.plot(model.xs, initial, label="Initial", c="C2")
-ax.plot(model.xs, final, label="Final", c="C1")
-ax.axhline(0, color="k", linestyle="--")
-ax.set(xlabel="x", ylabel="f(x)", title="Initial guess")
-ax.legend()
-plt.tight_layout()
-plt.show()
 ```
 
     Final reduced chi-squared: 1.0282461240223641
     Steps: 27
 
 
+Now we can take a quick look at our results after optimisation. We can see that we have successfully recovered our original parameters, and our reduced chi-squared statistic is very close to unity, indicating a good fit to the data.
+
+
+```python
+???+ info "Plotting"
+    # Check the outputs of the optimiser
+    plt.figure(figsize=(9, 4))
+    ax = plt.subplot(1, 1, 1)
+    ax.plot(model.xs, true_values, label="True", c="k")
+    ax.scatter(model.xs, data, s=10, alpha=0.6, label="Data", c="C0")
+    ax.plot(model.xs, initial, label="Initial", c="C2")
+    ax.plot(model.xs, final, label="Final", c="C1")
+    ax.axhline(0, color="k", linestyle="--")
+    ax.set(xlabel="x", ylabel="f(x)", title="Initial guess")
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
+```
+
 
     
-![png](assets/optimisation_tools_files/output_16_1.png)
+![png](assets/optimisation_tools_files/output_16_0.png)
     
 
 
@@ -398,19 +399,20 @@ Great now lets have a look at our hessian and covariance matrix!
 
 
 ```python
-plt.figure(figsize=(10, 4))
-plt.subplot(1, 2, 1)
-plt.title("Hessian")
-plt.imshow(H, seismic, norm=CenteredNorm())
-plt.colorbar()
-
-plt.subplot(1, 2, 2)
-plt.title("Covariance (Inverse Hessian)")
-plt.imshow(covariance, seismic, norm=CenteredNorm())
-plt.colorbar()
-
-plt.tight_layout()
-plt.show()
+???+ info "Plotting"
+    plt.figure(figsize=(10, 4))
+    plt.subplot(1, 2, 1)
+    plt.title("Hessian")
+    plt.imshow(H, seismic, norm=CenteredNorm())
+    plt.colorbar()
+    
+    plt.subplot(1, 2, 2)
+    plt.title("Covariance (Inverse Hessian)")
+    plt.imshow(covariance, seismic, norm=CenteredNorm())
+    plt.colorbar()
+    
+    plt.tight_layout()
+    plt.show()
 ```
 
 
@@ -423,26 +425,27 @@ Now lets look at our parameter uncertainties directly
 
 
 ```python
-labels, y, yerr = [], [], []
-for k in sol.value:
-    v = np.atleast_1d(np.asarray(sol.value[k]))
-    e = np.atleast_1d(5 * np.asarray(std[k]))
-
-    for i in range(v.size):
-        labels += [f"{k}[{i}]"]
-        y += [float(v.reshape(-1)[i])]
-        yerr += [float(e.reshape(-1)[i])]
-
-x = np.arange(len(labels))
-
-plt.figure(figsize=(8, 4))
-plt.title("Parameter estimates with ±5σ error bars")
-plt.errorbar(x, y, yerr=yerr, fmt="o", capsize=5, ms=5)
-plt.xticks(x, labels, rotation=45, ha="right")
-plt.ylabel("value (±5σ)")
-plt.axhline(0, color="k", linestyle="--")
-plt.tight_layout()
-plt.show()
+???+ info "Plotting"
+    labels, y, yerr = [], [], []
+    for k in sol.value:
+        v = np.atleast_1d(np.asarray(sol.value[k]))
+        e = np.atleast_1d(5 * np.asarray(std[k]))
+    
+        for i in range(v.size):
+            labels += [f"{k}[{i}]"]
+            y += [float(v.reshape(-1)[i])]
+            yerr += [float(e.reshape(-1)[i])]
+    
+    x = np.arange(len(labels))
+    
+    plt.figure(figsize=(8, 4))
+    plt.title("Parameter estimates with ±5σ error bars")
+    plt.errorbar(x, y, yerr=yerr, fmt="o", capsize=5, ms=5)
+    plt.xticks(x, labels, rotation=45, ha="right")
+    plt.ylabel("value (±5σ)")
+    plt.axhline(0, color="k", linestyle="--")
+    plt.tight_layout()
+    plt.show()
 ```
 
 
@@ -628,17 +631,18 @@ Now we can look at our simulated data, an image of a single star in each filter.
 
 
 ```python
-plt.figure(figsize=(15, 4))
-plt.suptitle("Simulated observations")
-
-for i, obs in enumerate(observations):
-    plt.subplot(1, 3, i + 1)
-    plt.title(f"{obs.filter} filter")
-    plt.imshow(obs.data**0.25, inferno)
-    plt.colorbar()
-
-plt.tight_layout()
-plt.show()
+???+ info "Plotting"
+    plt.figure(figsize=(15, 4))
+    plt.suptitle("Simulated observations")
+    
+    for i, obs in enumerate(observations):
+        plt.subplot(1, 3, i + 1)
+        plt.title(f"{obs.filter} filter")
+        plt.imshow(obs.data**0.25, inferno)
+        plt.colorbar()
+    
+    plt.tight_layout()
+    plt.show()
 ```
 
 
@@ -719,7 +723,8 @@ print("Final reduced chi-squared:", get_reduced_chi2(params, optics, observation
     initial reduced chi-squared: 1553037.1824619938
 
 
-    100%|██████████| 200/200 [00:04<00:00, 48.82it/s, log_loss=3.6472]
+
+      0%|          | 0/200 [00:00<?, ?it/s]
 
 
     Final reduced chi-squared: 1478.1168068610625
@@ -729,62 +734,63 @@ Hmm, it looks like our our final reduced chi-squared is still quite high. Lets h
 
 
 ```python
-# Map the parameter history to arrays for plotting
-positions = np.array([jtu.leaves(params["position"]) for params in params_history])
-fluxes = np.array([jtu.leaves(params["flux"]) for params in params_history])
-wfe = np.array([jtu.leaves(params["wfe"]) for params in params_history])
-
-# Shift the parameters to show the delta from the initial value
-delta_pos = (positions - positions[0]).reshape(epochs, -1)
-delta_flux = (fluxes - fluxes[0]).reshape(epochs, -1)
-delta_wfe = (wfe - wfe[0]).reshape(epochs, -1)
-
-
-# Plot the losses
-plt.figure(figsize=(15, 4))
-ax = plt.subplot(1, 2, 1)
-ax.plot(losses)
-ax.set(title="Loss value", xlabel="Step", ylabel="Loss")
-
-ax = plt.subplot(1, 2, 2)
-ax.plot(np.log10(losses))
-ax.set(title="Log Loss value", xlabel="Step", ylabel="Log10(Loss)")
-
-plt.tight_layout()
-plt.show()
-
-
-# Plot the parameter evolution
-plt.figure(figsize=(15, 4))
-plt.suptitle("Parameter evolution")
-ax = plt.subplot(1, 3, 1)
-ax.set(title="Position (arcsec)", xlabel="Step", ylabel="Delta Position (arcsec)")
-plt.plot(delta_pos)
-
-ax = plt.subplot(1, 3, 2)
-ax.set(title="WFE", xlabel="Step", ylabel="Delta WFE")
-plt.plot(delta_wfe)
-
-ax = plt.subplot(1, 3, 3)
-ax.set(title="Flux", xlabel="Step", ylabel="Delta Flux")
-plt.plot(delta_flux)
-
-plt.tight_layout()
-plt.show()
-
-plt.figure(figsize=(15, 4))
-plt.suptitle("Z-scores")
-
-for i, obs in enumerate(observations):
-    res = (obs.data - obs(params, optics)) / obs.error
-    v = np.nanmax(np.abs(res))
-    plt.subplot(1, 3, i + 1)
-    plt.title(f"{obs.filter} Filter")
-    plt.imshow(res, cmap="seismic", vmin=-v, vmax=v)
-    plt.colorbar(label="Z-score")
-
-plt.tight_layout()
-plt.show()
+???+ info "Plotting"
+    # Map the parameter history to arrays for plotting
+    positions = np.array([jtu.leaves(params["position"]) for params in params_history])
+    fluxes = np.array([jtu.leaves(params["flux"]) for params in params_history])
+    wfe = np.array([jtu.leaves(params["wfe"]) for params in params_history])
+    
+    # Shift the parameters to show the delta from the initial value
+    delta_pos = (positions - positions[0]).reshape(epochs, -1)
+    delta_flux = (fluxes - fluxes[0]).reshape(epochs, -1)
+    delta_wfe = (wfe - wfe[0]).reshape(epochs, -1)
+    
+    
+    # Plot the losses
+    plt.figure(figsize=(15, 4))
+    ax = plt.subplot(1, 2, 1)
+    ax.plot(losses)
+    ax.set(title="Loss value", xlabel="Step", ylabel="Loss")
+    
+    ax = plt.subplot(1, 2, 2)
+    ax.plot(np.log10(losses))
+    ax.set(title="Log Loss value", xlabel="Step", ylabel="Log10(Loss)")
+    
+    plt.tight_layout()
+    plt.show()
+    
+    
+    # Plot the parameter evolution
+    plt.figure(figsize=(15, 4))
+    plt.suptitle("Parameter evolution")
+    ax = plt.subplot(1, 3, 1)
+    ax.set(title="Position (arcsec)", xlabel="Step", ylabel="Delta Position (arcsec)")
+    plt.plot(delta_pos)
+    
+    ax = plt.subplot(1, 3, 2)
+    ax.set(title="WFE", xlabel="Step", ylabel="Delta WFE")
+    plt.plot(delta_wfe)
+    
+    ax = plt.subplot(1, 3, 3)
+    ax.set(title="Flux", xlabel="Step", ylabel="Delta Flux")
+    plt.plot(delta_flux)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    plt.figure(figsize=(15, 4))
+    plt.suptitle("Z-scores")
+    
+    for i, obs in enumerate(observations):
+        res = (obs.data - obs(params, optics)) / obs.error
+        v = np.nanmax(np.abs(res))
+        plt.subplot(1, 3, i + 1)
+        plt.title(f"{obs.filter} Filter")
+        plt.imshow(res, cmap="seismic", vmin=-v, vmax=v)
+        plt.colorbar(label="Z-score")
+    
+    plt.tight_layout()
+    plt.show()
 ```
 
 
@@ -846,27 +852,28 @@ C = np.linalg.inv(F)
 
 
 ```python
-plt.figure(figsize=(10, 4))
-ax = plt.subplot(1, 2, 1)
-plt.imshow(np.log10(np.abs(F + 1e-6)))
-plt.colorbar()
-ax.set(
-    title="Log 10 Fisher Information Matrix",
-    xlabel="Parameter index",
-    ylabel="Parameter index",
-)
-
-ax = plt.subplot(1, 2, 2)
-plt.imshow(np.log10(np.abs(C)))
-plt.colorbar()
-ax.set(
-    title="Log 10 Covariance Matrix",
-    xlabel="Parameter index",
-    ylabel="Parameter index",
-)
-
-plt.tight_layout()
-plt.show()
+???+ info "Plotting"
+    plt.figure(figsize=(10, 4))
+    ax = plt.subplot(1, 2, 1)
+    plt.imshow(np.log10(np.abs(F + 1e-6)))
+    plt.colorbar()
+    ax.set(
+        title="Log 10 Fisher Information Matrix",
+        xlabel="Parameter index",
+        ylabel="Parameter index",
+    )
+    
+    ax = plt.subplot(1, 2, 2)
+    plt.imshow(np.log10(np.abs(C)))
+    plt.colorbar()
+    ax.set(
+        title="Log 10 Covariance Matrix",
+        xlabel="Parameter index",
+        ylabel="Parameter index",
+    )
+    
+    plt.tight_layout()
+    plt.show()
 ```
 
 
@@ -920,70 +927,70 @@ print("Final reduced chi-squared:", get_reduced_chi2(params, optics, observation
     initial reduced chi-squared: 1553037.1824619938
 
 
+
       0%|          | 0/100 [00:00<?, ?it/s]
 
-    100%|██████████| 100/100 [00:01<00:00, 60.69it/s, log_loss=0.4635]
 
-
-    Final reduced chi-squared: 0.9742225768208455
+    Final reduced chi-squared: 0.9742225768208457
 
 
 
 ```python
-# Map the parameter history to arrays for plotting
-positions = np.array([jtu.leaves(params["position"]) for params in params_history])
-fluxes = np.array([jtu.leaves(params["flux"]) for params in params_history])
-wfe = np.array([jtu.leaves(params["wfe"]) for params in params_history])
-
-# Shift the parameters to show the delta from the initial value
-delta_pos = (positions - positions[0]).reshape(epochs, -1)
-delta_flux = (fluxes - fluxes[0]).reshape(epochs, -1)
-delta_wfe = (wfe - wfe[0]).reshape(epochs, -1)
-
-# Plot the losses
-plt.figure(figsize=(15, 4))
-ax = plt.subplot(1, 2, 1)
-ax.plot(losses)
-ax.set(title="Loss value", xlabel="Step", ylabel="Loss")
-
-ax = plt.subplot(1, 2, 2)
-ax.plot(np.log10(losses))
-ax.set(title="Log Loss value", xlabel="Step", ylabel="Log10(Loss)")
-
-plt.tight_layout()
-plt.show()
-
-# Plot the parameter evolution
-plt.figure(figsize=(15, 4))
-plt.suptitle("Parameter evolution")
-ax = plt.subplot(1, 3, 1)
-ax.set(title="Position (arcsec)", xlabel="Step", ylabel="Delta Position (arcsec)")
-plt.plot(delta_pos)
-
-ax = plt.subplot(1, 3, 2)
-ax.set(title="WFE", xlabel="Step", ylabel="Delta WFE")
-plt.plot(delta_wfe)
-
-ax = plt.subplot(1, 3, 3)
-ax.set(title="Flux", xlabel="Step", ylabel="Delta Flux")
-plt.plot(delta_flux)
-
-plt.tight_layout()
-plt.show()
-
-plt.figure(figsize=(15, 4))
-plt.suptitle("Z-scores")
-
-for i, obs in enumerate(observations):
-    res = (obs.data - obs(params, optics)) / obs.error
-    v = np.nanmax(np.abs(res))
-    plt.subplot(1, 3, i + 1)
-    plt.title(f"{obs.filter} Filter")
-    plt.imshow(res, cmap="seismic", vmin=-v, vmax=v)
-    plt.colorbar(label="Z-score")
-
-plt.tight_layout()
-plt.show()
+???+ info "Plotting"
+    # Map the parameter history to arrays for plotting
+    positions = np.array([jtu.leaves(params["position"]) for params in params_history])
+    fluxes = np.array([jtu.leaves(params["flux"]) for params in params_history])
+    wfe = np.array([jtu.leaves(params["wfe"]) for params in params_history])
+    
+    # Shift the parameters to show the delta from the initial value
+    delta_pos = (positions - positions[0]).reshape(epochs, -1)
+    delta_flux = (fluxes - fluxes[0]).reshape(epochs, -1)
+    delta_wfe = (wfe - wfe[0]).reshape(epochs, -1)
+    
+    # Plot the losses
+    plt.figure(figsize=(15, 4))
+    ax = plt.subplot(1, 2, 1)
+    ax.plot(losses)
+    ax.set(title="Loss value", xlabel="Step", ylabel="Loss")
+    
+    ax = plt.subplot(1, 2, 2)
+    ax.plot(np.log10(losses))
+    ax.set(title="Log Loss value", xlabel="Step", ylabel="Log10(Loss)")
+    
+    plt.tight_layout()
+    plt.show()
+    
+    # Plot the parameter evolution
+    plt.figure(figsize=(15, 4))
+    plt.suptitle("Parameter evolution")
+    ax = plt.subplot(1, 3, 1)
+    ax.set(title="Position (arcsec)", xlabel="Step", ylabel="Delta Position (arcsec)")
+    plt.plot(delta_pos)
+    
+    ax = plt.subplot(1, 3, 2)
+    ax.set(title="WFE", xlabel="Step", ylabel="Delta WFE")
+    plt.plot(delta_wfe)
+    
+    ax = plt.subplot(1, 3, 3)
+    ax.set(title="Flux", xlabel="Step", ylabel="Delta Flux")
+    plt.plot(delta_flux)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    plt.figure(figsize=(15, 4))
+    plt.suptitle("Z-scores")
+    
+    for i, obs in enumerate(observations):
+        res = (obs.data - obs(params, optics)) / obs.error
+        v = np.nanmax(np.abs(res))
+        plt.subplot(1, 3, i + 1)
+        plt.title(f"{obs.filter} Filter")
+        plt.imshow(res, cmap="seismic", vmin=-v, vmax=v)
+        plt.colorbar(label="Z-score")
+    
+    plt.tight_layout()
+    plt.show()
 ```
 
 
@@ -1044,19 +1051,20 @@ print(optx.RESULTS[sol.result])
 
 
 ```python
-plt.figure(figsize=(15, 4))
-plt.suptitle("Z-scores")
-
-for i, obs in enumerate(observations):
-    res = (obs.data - obs(sol.value, optics)) / obs.error
-    v = np.nanmax(np.abs(res))
-    plt.subplot(1, 3, i + 1)
-    plt.title(f"{obs.filter} Filter")
-    plt.imshow(res, cmap="seismic", vmin=-v, vmax=v)
-    plt.colorbar(label="Z-score")
-
-plt.tight_layout()
-plt.show()
+???+ info "Plotting"
+    plt.figure(figsize=(15, 4))
+    plt.suptitle("Z-scores")
+    
+    for i, obs in enumerate(observations):
+        res = (obs.data - obs(sol.value, optics)) / obs.error
+        v = np.nanmax(np.abs(res))
+        plt.subplot(1, 3, i + 1)
+        plt.title(f"{obs.filter} Filter")
+        plt.imshow(res, cmap="seismic", vmin=-v, vmax=v)
+        plt.colorbar(label="Z-score")
+    
+    plt.tight_layout()
+    plt.show()
 ```
 
 
@@ -1104,25 +1112,26 @@ print("Steps:", int(sol.stats["num_steps"]))
 ```
 
     Initial reduced chi-squared: 1553037.1824619938
-    Final reduced chi-squared: 0.9742223079396721
+    Final reduced chi-squared: 0.9742223079396958
     Steps: 29
 
 
 
 ```python
-plt.figure(figsize=(15, 4))
-plt.suptitle("Z-scores")
-
-for i, obs in enumerate(observations):
-    res = (obs.data - obs(mle_params, optics)) / obs.error
-    v = np.nanmax(np.abs(res))
-    plt.subplot(1, 3, i + 1)
-    plt.title(f"{obs.filter} Filter")
-    plt.imshow(res, cmap="seismic", vmin=-v, vmax=v)
-    plt.colorbar(label="Z-score")
-
-plt.tight_layout()
-plt.show()
+???+ info "Plotting"
+    plt.figure(figsize=(15, 4))
+    plt.suptitle("Z-scores")
+    
+    for i, obs in enumerate(observations):
+        res = (obs.data - obs(mle_params, optics)) / obs.error
+        v = np.nanmax(np.abs(res))
+        plt.subplot(1, 3, i + 1)
+        plt.title(f"{obs.filter} Filter")
+        plt.imshow(res, cmap="seismic", vmin=-v, vmax=v)
+        plt.colorbar(label="Z-score")
+    
+    plt.tight_layout()
+    plt.show()
 ```
 
 
@@ -1139,7 +1148,7 @@ Excellent, not only can we see that now we recover the _correct_ solution, but w
 
 Now if we want to truly understand what our posteriors look like, we need to sample them directly. We can do this with [Numpyro](https://num.pyro.ai/en/stable/) which is a probabilistic programming library built on top of JAX. Numpyro is a _very_ powerful library, however in this also means that it can be quite complex to use for a lot of the simple problems we want to tackle. One of the main issues we face is that the samplers are much more stable when sampling from a _unit normal_ distribution. We could manually define unit priors and then transform them to the correct scales within our model, but this can be quite tedious and error prone. Luckily, we can use the same reparametrisation technique we used for optimisation to transform our problem into a unit normal space, which makes it much easier to sample from with numpyro! Lets look at how to do this with our hierarchical optical model.
 
-It should be noted here that MCCM algorithms are _not_ optimisers, which means we need to first fit our data (which we have) in order to correctly sample our posteriors!
+It should be noted here that MCMC algorithms are _not_ optimisers, which means we need to first fit our data (which we have) in order to correctly sample our posteriors!
 
 
 ```python
@@ -1164,27 +1173,28 @@ mle_project_fn = lambda u: unravel(X0 + np.dot(P, u))
 
 
 ```python
-plt.figure(figsize=(10, 4))
-ax = plt.subplot(1, 2, 1)
-plt.imshow(np.log10(np.abs(H_mle + 1e-6)))
-plt.colorbar()
-ax.set(
-    title="Log 10 Fisher Information Matrix",
-    xlabel="Parameter index",
-    ylabel="Parameter index",
-)
-
-ax = plt.subplot(1, 2, 2)
-plt.imshow(np.log10(np.abs(np.linalg.inv(H_mle))))
-plt.colorbar()
-ax.set(
-    title="Log 10 Covariance Matrix",
-    xlabel="Parameter index",
-    ylabel="Parameter index",
-)
-
-plt.tight_layout()
-plt.show()
+???+ info "Plotting"
+    plt.figure(figsize=(10, 4))
+    ax = plt.subplot(1, 2, 1)
+    plt.imshow(np.log10(np.abs(H_mle + 1e-6)))
+    plt.colorbar()
+    ax.set(
+        title="Log 10 Fisher Information Matrix",
+        xlabel="Parameter index",
+        ylabel="Parameter index",
+    )
+    
+    ax = plt.subplot(1, 2, 2)
+    plt.imshow(np.log10(np.abs(np.linalg.inv(H_mle))))
+    plt.colorbar()
+    ax.set(
+        title="Log 10 Covariance Matrix",
+        xlabel="Parameter index",
+        ylabel="Parameter index",
+    )
+    
+    plt.tight_layout()
+    plt.show()
 ```
 
 
@@ -1231,100 +1241,235 @@ sampler.run(jr.key(0), args)
 sampler.print_summary()
 ```
 
-    sample: 100%|██████████| 3500/3500 [05:49<00:00, 10.02it/s, 7 steps of size 5.42e-01. acc. prob=0.90] 
+    sample: 100%|██████████| 3500/3500 [05:26<00:00, 10.72it/s, 7 steps of size 5.51e-01. acc. prob=0.90] 
+
 
     
                     mean       std    median      5.0%     95.0%     n_eff     r_hat
-     Latent[0]     -0.02      1.03     -0.03     -1.74      1.59   4193.92      1.00
-     Latent[1]     -0.01      1.06     -0.01     -1.78      1.68   4498.04      1.00
-     Latent[2]     -0.00      0.98     -0.01     -1.63      1.55   4704.01      1.00
-     Latent[3]     -0.00      0.95      0.01     -1.56      1.49   3757.81      1.00
-     Latent[4]      0.02      0.99      0.02     -1.56      1.68   6129.37      1.00
-     Latent[5]      0.02      1.01      0.01     -1.74      1.56   4113.58      1.00
-     Latent[6]     -0.01      0.99      0.00     -1.75      1.50   4940.96      1.00
-     Latent[7]      0.02      1.04      0.01     -1.72      1.66   5110.49      1.00
-     Latent[8]      0.02      1.03      0.02     -1.47      1.89   4052.82      1.00
-     Latent[9]      0.01      1.03     -0.01     -1.53      1.76   4775.03      1.00
-    Latent[10]     -0.01      0.98      0.00     -1.53      1.65   5026.96      1.00
-    Latent[11]     -0.02      1.01     -0.01     -1.70      1.58   4673.57      1.00
-    Latent[12]      0.00      1.02      0.01     -1.75      1.58   4140.21      1.00
-    Latent[13]     -0.00      0.97      0.01     -1.62      1.56   4972.45      1.00
-    Latent[14]      0.02      1.01      0.03     -1.79      1.57   4560.83      1.00
-    Latent[15]      0.01      0.98      0.01     -1.67      1.55   4722.11      1.00
+     Latent[0]     -0.03      1.00     -0.05     -1.72      1.53   4053.74      1.00
+     Latent[1]     -0.01      1.05      0.00     -1.70      1.74   5026.20      1.00
+     Latent[2]     -0.01      0.98     -0.00     -1.60      1.60   4483.49      1.00
+     Latent[3]      0.00      0.94     -0.01     -1.53      1.49   4380.39      1.00
+     Latent[4]      0.03      0.99      0.03     -1.47      1.75   4829.25      1.00
+     Latent[5]      0.03      1.01      0.02     -1.62      1.67   4193.21      1.00
+     Latent[6]     -0.01      0.99      0.00     -1.69      1.56   5048.03      1.00
+     Latent[7]      0.01      1.03      0.02     -1.74      1.59   4957.89      1.00
+     Latent[8]      0.01      1.03      0.01     -1.60      1.72   4533.83      1.00
+     Latent[9]     -0.00      1.04     -0.02     -1.63      1.70   4927.66      1.00
+    Latent[10]     -0.01      0.98     -0.00     -1.49      1.72   4811.68      1.00
+    Latent[11]     -0.01      1.03     -0.00     -1.60      1.73   5802.38      1.00
+    Latent[12]     -0.01      1.00      0.00     -1.76      1.57   4658.82      1.00
+    Latent[13]     -0.01      0.97     -0.01     -1.64      1.55   5339.10      1.00
+    Latent[14]      0.02      1.00      0.03     -1.74      1.60   4675.08      1.00
+    Latent[15]      0.01      0.98      0.01     -1.41      1.78   4671.97      1.00
     
     Number of divergences: 0
-
-
-    
 
 
 Great, we can see that our r_hat parameters are all close to unity, indicating good convergence. Lets have a look at the posterior samples, our estimate from the hessian we used to calculate the projection matrix, and what our true values are to see how well we did! Don't worry too much about the code below, its mostly just unpacking things to be plotted which can be quite tedious.
 
 
 ```python
-import itertools
-import pandas as pd
-from chainconsumer import ChainConsumer, Chain, Truth
-
-# Helper function to get the scalar parameter names from the tree structure of the parameters
-def scalar_names_from_tree(tree):
-    names = []
-    for path, leaf in jtu.leaves_with_path(tree):
-        base = "_".join([str(p.key if hasattr(p, "key") else p) for p in path])
-        leaf = np.asarray(leaf)
-        if leaf.ndim == 0:
-            names.append(base)
-        else:
-            for idx in itertools.product(*[range(s) for s in leaf.shape]):
-                names.append(f"{base}_{'_'.join(map(str, idx))}")
-    return names
-
-
-# Unpack the latent samples into a dataframe
-samples = sampler.get_samples()
-
-# Project latent samples -> original parameter space
-samples_dict = eqx.filter_vmap(mle_project_fn)(samples["Latent"])
-flat_samples = jax.vmap(lambda p: ravel_pytree(p)[0])(samples_dict)
-
-# Unpack the MLE parameters into a flat array for plotting
-flat_mle, _ = ravel_pytree(mle_params)
-flat_true, _ = ravel_pytree(true_params)
-
-# Get the parameter names for the dataframe columns and the truth dict
-param_names = scalar_names_from_tree(mle_params)
-mcmc_df = pd.DataFrame(np.asarray(flat_samples), columns=param_names)
-truth_dict = {k: float(v) for k, v in zip(param_names, np.asarray(flat_true))}
-
-# Build chains
-mcmc_chain = Chain(samples=mcmc_df, name="MCMC posterior")
-cov_chain = Chain.from_covariance(
-    mean=np.asarray(flat_mle),
-    covariance=np.asarray(np.linalg.inv(H_mle)),
-    columns=param_names,
-    name="Hessian covariance",
-    color="k",
-    shade=True,
-    linewidth=2.0,
-    shade_alpha=0.1,
-)
-
-# Plot
-c = ChainConsumer()
-c.add_chain(mcmc_chain)
-c.add_chain(cov_chain)
-c.add_truth(Truth(location=truth_dict))
-fig = c.plotter.plot()
+???+ info "Plotting"
+    import itertools
+    import pandas as pd
+    from chainconsumer import ChainConsumer, Chain, Truth
+    
+    # Helper function to get the scalar parameter names from the tree structure of the parameters
+    def scalar_names_from_tree(tree):
+        names = []
+        for path, leaf in jtu.leaves_with_path(tree):
+            base = "_".join([str(p.key if hasattr(p, "key") else p) for p in path])
+            leaf = np.asarray(leaf)
+            if leaf.ndim == 0:
+                names.append(base)
+            else:
+                for idx in itertools.product(*[range(s) for s in leaf.shape]):
+                    names.append(f"{base}_{'_'.join(map(str, idx))}")
+        return names
+    
+    
+    # Unpack the latent samples into a dataframe
+    samples = sampler.get_samples()
+    
+    # Project latent samples -> original parameter space
+    samples_dict = eqx.filter_vmap(mle_project_fn)(samples["Latent"])
+    flat_samples = jax.vmap(lambda p: ravel_pytree(p)[0])(samples_dict)
+    
+    # Unpack the MLE parameters into a flat array for plotting
+    flat_mle, _ = ravel_pytree(mle_params)
+    flat_true, _ = ravel_pytree(true_params)
+    
+    # Get the parameter names for the dataframe columns and the truth dict
+    param_names = scalar_names_from_tree(mle_params)
+    mcmc_df = pd.DataFrame(np.asarray(flat_samples), columns=param_names)
+    truth_dict = {k: float(v) for k, v in zip(param_names, np.asarray(flat_true))}
+    
+    # Build chains
+    mcmc_chain = Chain(samples=mcmc_df, name="MCMC posterior")
+    cov_chain = Chain.from_covariance(
+        mean=np.asarray(flat_mle),
+        covariance=np.asarray(np.linalg.inv(H_mle)),
+        columns=param_names,
+        name="Hessian covariance",
+        color="k",
+        shade=True,
+        linewidth=2.0,
+        shade_alpha=0.1,
+    )
+    
+    # Plot
+    c = ChainConsumer()
+    c.add_chain(mcmc_chain)
+    c.add_chain(cov_chain)
+    c.add_truth(Truth(location=truth_dict))
+    fig = c.plotter.plot()
 ```
 
-    Parameter wfe_0 in chain MCMC posterior is not constrained
+
+    
+![png](assets/optimisation_tools_files/output_53_0.png)
+    
+
+
+## 8. Posterior Sampling with Blackjax
+
+Although very powerful, Numpyro can often be unnecessarily complex and unwieldly.  If we can already express a log-likelihood function for our model (as is the case for all the models considered in this tutorial), it can be more straightforward to use [Blackjax](https://blackjax-devs.github.io/blackjax/index.html), which provides dedicated sampling functionality.  
+
+Note that the same caveats that apply to Numpyro also largely apply to Blackjax - it is necessary to optimise first before performing MCMC, and parameter transformation using the Hessian can substantially improve convergence in tricky cases.  It is also possible to set custom mass matrices and use more sophisticated samplers provided by Blackjax, although this is beyond the scope of this tutorial.  
+
+
+```python
+import blackjax
+
+# define a sampling function which transforms to the latent space and calculates the log-likelihood
+def sampling_fn(latent_params, args):
+    project_fn, optics, observations = args
+    # Project the latent parameters
+    params = project_fn(latent_params)
+
+    return loglike_fn(params, (optics, observations))
+
+# wrap all the extra parameters into a dedicated log likelihood
+loglike = lambda params: sampling_fn(params, (mle_project_fn, optics, observations))
+
+# inference loop from Blackjax docs
+def inference_loop(rng_key, kernel, initial_state, num_samples):
+    @jax.jit
+    def one_step(state, rng_key):
+        state, _ = kernel(rng_key, state)
+        return state, state
+
+    keys = jax.random.split(rng_key, num_samples)
+    _, states = jax.lax.scan(one_step, initial_state, keys)
+
+    return states
+
+# initialise at the centre of our transformed distribution
+initial_position = np.zeros_like(X0)
+
+rng_key = jr.key(0)
+rng_key, warmup_key, sample_key = jax.random.split(rng_key, 3)
+
+#  perform a warmup to adapt the mass matrix
+warmup = blackjax.window_adaptation(blackjax.nuts, loglike, progress_bar=True)
+(state, parameters), _ = warmup.run(warmup_key, initial_position, num_steps=1000)
+
+# run inference with the known mass matrix
+kernel = blackjax.nuts(loglike, **parameters).step
+states = inference_loop(sample_key, kernel, state, 2500)
+
+# extract samples, blocking avoids lazy evaluation for timing purposes
+blackjax_samples = states.position.block_until_ready()
+```
+
+    Running window adaptation
+
+
+
+
+<style>
+    progress { appearance: none; border: none; border-radius: 4px; width: 300px;
+        height: 20px; vertical-align: middle; background: #e0e0e0; }
+
+    progress::-webkit-progress-bar { background: #e0e0e0; border-radius: 4px; }
+    progress::-webkit-progress-value { background: #2196F3; border-radius: 4px; }
+    progress::-moz-progress-bar { background: #2196F3; border-radius: 4px; }
+
+    progress:not([value]) {
+        background: repeating-linear-gradient(45deg, #7e7e7e, #7e7e7e 10px, #5c5c5c 10px, #5c5c5c 20px); }
+
+    progress.progress-bar-interrupted::-webkit-progress-value { background: #F44336; }
+    progress.progress-bar-interrupted::-moz-progress-value { background: #F44336; }
+    progress.progress-bar-interrupted::-webkit-progress-bar { background: #F44336; }
+    progress.progress-bar-interrupted::-moz-progress-bar { background: #F44336; }
+    progress.progress-bar-interrupted { background: #F44336; }    
+
+    table.fastprogress { border-collapse: collapse; margin: 1em 0; font-size: 0.9em; }
+    table.fastprogress th, table.fastprogress td { padding: 8px 12px; border: 1px solid #ddd; text-align: left; }
+    table.fastprogress thead tr { background: #f8f9fa; font-weight: bold; }
+    table.fastprogress tbody tr:nth-of-type(even) { background: #f8f9fa; }
+</style>
+
+
+
+
+<div><progress max="1000" value="1000"></progress> 100.00% [1000/1000 00:00&lt;?]</div>
+
+
+
+```python
+???+ info "Plotting"
+    # Project latent samples -> original parameter space
+    samples_dict = eqx.filter_vmap(mle_project_fn)(blackjax_samples)
+    flat_samples = jax.vmap(lambda p: ravel_pytree(p)[0])(samples_dict)
+    
+    # Unpack the MLE parameters into a flat array for plotting
+    flat_mle, _ = ravel_pytree(mle_params)
+    flat_true, _ = ravel_pytree(true_params)
+    
+    # Get the parameter names for the dataframe columns and the truth dict
+    param_names = scalar_names_from_tree(mle_params)
+    mcmc_df = pd.DataFrame(np.asarray(flat_samples), columns=param_names)
+    truth_dict = {k: float(v) for k, v in zip(param_names, np.asarray(flat_true))}
+    
+    # Build chains
+    mcmc_chain = Chain(samples=mcmc_df, name="MCMC posterior")
+    cov_chain = Chain.from_covariance(
+        mean=np.asarray(flat_mle),
+        covariance=np.asarray(np.linalg.inv(H_mle)),
+        columns=param_names,
+        name="Hessian covariance",
+        color="k",
+        shade=True,
+        linewidth=2.0,
+        shade_alpha=0.1,
+    )
+    
+    # Plot
+    c = ChainConsumer()
+    c.add_chain(mcmc_chain)
+    c.add_chain(cov_chain)
+    c.add_truth(Truth(location=truth_dict))
+    fig = c.plotter.plot()
+```
+
+    Parameter wfe_2 in chain MCMC posterior is not constrained
 
 
 
     
-![png](assets/optimisation_tools_files/output_53_1.png)
+![png](assets/optimisation_tools_files/output_56_1.png)
     
 
+
+As expected, the sampling results of Blackjax agree with both the Hessian calculation and those of Numpyro
+
+---
+
+## Laplace Evidence Estimation (coming soon)
+
+Bayesian evidence estimation via the Laplace approximation
 
 ---
 
