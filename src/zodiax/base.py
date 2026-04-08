@@ -272,7 +272,7 @@ class Base(eqx.Module):
     def get(
         self: PyTree,
         parameters: Params,
-        return_dict: bool = False,
+        as_dict: bool = False,
         to_array: bool = True,
     ) -> Any:
         """
@@ -286,7 +286,7 @@ class Base(eqx.Module):
             - ``["param", "b.param"]`` (list of path strings)
             - ``("param", "b.param")`` (tuple of path strings)
             - Interleaved list/tuple nesting of path strings.
-        return_dict : bool = False
+        as_dict : bool = False
             If True, returns a dictionary mapping parameters to their values. If False,
             returns a list of values in the same order as the input parameters.
         to_array : bool = True
@@ -297,17 +297,17 @@ class Base(eqx.Module):
         Returns
         -------
         values : Any
-            The value(s) corresponding to the input parameter(s). If `return_dict`
+            The value(s) corresponding to the input parameter(s). If `as_dict`
             is True, returns a dictionary mapping parameters to their values. If False,
             returns a list of values in the same order as the input parameters. If only
-            a single parameter is provided and `return_dict` is False, returns the
+            a single parameter is provided and `as_dict` is False, returns the
             single value corresponding to that parameter.
         """
         new_parameters = _format(parameters)
         values = _get_leaves(self, new_parameters)
         if to_array:
             values = jtu.map(lambda x: np.array(x, float), values)
-        if return_dict:
+        if as_dict:
             keys = [".".join(param) for param in new_parameters]
             return dict(zip(keys, values))
         return values[0] if len(new_parameters) == 1 else values

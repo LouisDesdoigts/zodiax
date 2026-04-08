@@ -6,7 +6,7 @@ from .tree import set_array
 import warnings
 
 __all__ = [
-    "hessian",
+    "hessian_old",
     "fisher_matrix",
     "covariance_matrix",
 ]
@@ -17,7 +17,7 @@ Params = Union[str, list[str], tuple[str]]
 Values = Union[Any, list[Any], tuple[Any]]
 
 
-def hessian(
+def hessian_old(
     pytree: PyTree,
     parameters: Params,
     fn: callable,
@@ -100,7 +100,7 @@ def fisher_matrix(
         DeprecationWarning,
     )
 
-    return -hessian(
+    return -hessian_old(
         pytree,
         parameters,
         loglike_fn,
