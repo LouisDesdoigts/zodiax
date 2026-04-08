@@ -6,3 +6,4 @@ dist/
 zodiax.egg-info/
 coverage.xml
 htmlcov/
+site/
