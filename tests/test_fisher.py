@@ -25,7 +25,7 @@ def test_all_fisher_matrices(create_base, param, save_memory):
     data = pytree.model()
     shape_dict = {"param": (1,)}
 
-    hess = zodiax.fisher.hessian(
+    hess = zodiax.fisher.hessian_old(
         pytree,
         param,
         poiss_loglike,
@@ -57,7 +57,7 @@ def test_all_fisher_matrices(create_base, param, save_memory):
 def test_hessian_single_parameter_container_path(create_base):
     pytree = create_base()
     data = pytree.model()
-    out = zodiax.fisher.hessian(
+    out = zodiax.fisher.hessian_old(
         pytree,
         ("param",),
         poiss_loglike,
