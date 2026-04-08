@@ -1,37 +1,36 @@
 ```python
-???+ info "Imports"
-    import jax
-    import zodiax as zdx
-    import equinox as eqx
-    import jax.numpy as np
-    import jax.random as jr
-    import jax.tree as jtu
-    import dLux as dl
-    import dLux.utils as dlu
-    import optax
-    import optimistix as optx
-    from tqdm.auto import tqdm
-    import matplotlib.pyplot as plt
-    import matplotlib as mpl
-    from matplotlib.colors import CenteredNorm
-    
-    # Note we enable 64-bit precision for numerical stability when computing the Hessians
-    # later in the tutorial!
-    jax.config.update("jax_enable_x64", True)
-    
-    # Plotting set up
-    %matplotlib inline
-    plt.rcParams["image.cmap"] = "inferno"
-    plt.rcParams["font.family"] = "serif"
-    plt.rcParams["image.origin"] = "lower"
-    plt.rcParams["figure.dpi"] = 90
-    
-    inferno = mpl.colormaps["inferno"]
-    seismic = mpl.colormaps["seismic"]
-    coolwarm = mpl.colormaps["coolwarm"]
-    inferno.set_bad("k", 0.5)
-    seismic.set_bad("k", 0.5)
-    coolwarm.set_bad("k", 0.5)
+import jax
+import zodiax as zdx
+import equinox as eqx
+import jax.numpy as np
+import jax.random as jr
+import jax.tree as jtu
+import dLux as dl
+import dLux.utils as dlu
+import optax
+import optimistix as optx
+from tqdm.auto import tqdm
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+from matplotlib.colors import CenteredNorm
+
+# Note we enable 64-bit precision for numerical stability when computing the Hessians
+# later in the tutorial!
+jax.config.update("jax_enable_x64", True)
+
+# Plotting set up
+%matplotlib inline
+plt.rcParams["image.cmap"] = "inferno"
+plt.rcParams["font.family"] = "serif"
+plt.rcParams["image.origin"] = "lower"
+plt.rcParams["figure.dpi"] = 90
+
+inferno = mpl.colormaps["inferno"]
+seismic = mpl.colormaps["seismic"]
+coolwarm = mpl.colormaps["coolwarm"]
+inferno.set_bad("k", 0.5)
+seismic.set_bad("k", 0.5)
+coolwarm.set_bad("k", 0.5)
 ```
 
 
@@ -169,8 +168,8 @@ print("Initial reduced chi-squared:", chi2r)
 
 
 
-```python
-???+ info "Plotting"
+??? info "Plotting"
+    ```python
     # Look at the data and the true values
     fig, ax = plt.subplots(figsize=(9, 4))
     ax.plot(model.xs, true_values, label="True", c="k")
@@ -181,7 +180,7 @@ print("Initial reduced chi-squared:", chi2r)
     ax.legend()
     plt.tight_layout()
     plt.show()
-```
+    ```
 
 
     
@@ -248,8 +247,8 @@ print("Final reduced chi-squared:", chi2r)
 Now we can take a look at our loss curve and check the final value of our reduced chi-squared statistic to see how well we did. We can also look at the final parameters to see how close we got to the true values.
 
 
-```python
-???+ info "Plotting"
+??? info "Plotting"
+    ```python
     plt.figure(figsize=(12, 4))
     ax = plt.subplot(1, 2, 1)
     ax.plot(losses)
@@ -261,7 +260,7 @@ Now we can take a look at our loss curve and check the final value of our reduce
     
     plt.tight_layout()
     plt.show()
-```
+    ```
 
 
     
@@ -270,8 +269,8 @@ Now we can take a look at our loss curve and check the final value of our reduce
 
 
 
-```python
-???+ info "Plotting"
+??? info "Plotting"
+    ```python
     # Get the final model values
     final = model(params)
     
@@ -287,7 +286,7 @@ Now we can take a look at our loss curve and check the final value of our reduce
     ax.legend()
     plt.tight_layout()
     plt.show()
-```
+    ```
 
 
     
@@ -333,8 +332,8 @@ print("Steps:", int(sol.stats["num_steps"]))
 Now we can take a quick look at our results after optimisation. We can see that we have successfully recovered our original parameters, and our reduced chi-squared statistic is very close to unity, indicating a good fit to the data.
 
 
-```python
-???+ info "Plotting"
+??? info "Plotting"
+    ```python
     # Check the outputs of the optimiser
     plt.figure(figsize=(9, 4))
     ax = plt.subplot(1, 1, 1)
@@ -347,7 +346,7 @@ Now we can take a quick look at our results after optimisation. We can see that 
     ax.legend()
     plt.tight_layout()
     plt.show()
-```
+    ```
 
 
     
@@ -398,8 +397,8 @@ std = unflatten(np.diag(covariance) ** 0.5)
 Great now lets have a look at our hessian and covariance matrix!
 
 
-```python
-???+ info "Plotting"
+??? info "Plotting"
+    ```python
     plt.figure(figsize=(10, 4))
     plt.subplot(1, 2, 1)
     plt.title("Hessian")
@@ -413,7 +412,7 @@ Great now lets have a look at our hessian and covariance matrix!
     
     plt.tight_layout()
     plt.show()
-```
+    ```
 
 
     
@@ -424,8 +423,8 @@ Great now lets have a look at our hessian and covariance matrix!
 Now lets look at our parameter uncertainties directly
 
 
-```python
-???+ info "Plotting"
+??? info "Plotting"
+    ```python
     labels, y, yerr = [], [], []
     for k in sol.value:
         v = np.atleast_1d(np.asarray(sol.value[k]))
@@ -446,7 +445,7 @@ Now lets look at our parameter uncertainties directly
     plt.axhline(0, color="k", linestyle="--")
     plt.tight_layout()
     plt.show()
-```
+    ```
 
 
     
@@ -630,8 +629,8 @@ observations = [
 Now we can look at our simulated data, an image of a single star in each filter. Note that the blue filter shows nan values, but thats just because the read-noise results in the average value across the 1000 simulated images being negative, which results in nans when we take the square root to get the error, which is to be expected!
 
 
-```python
-???+ info "Plotting"
+??? info "Plotting"
+    ```python
     plt.figure(figsize=(15, 4))
     plt.suptitle("Simulated observations")
     
@@ -643,7 +642,7 @@ Now we can look at our simulated data, an image of a single star in each filter.
     
     plt.tight_layout()
     plt.show()
-```
+    ```
 
 
     
@@ -733,8 +732,8 @@ print("Final reduced chi-squared:", get_reduced_chi2(params, optics, observation
 Hmm, it looks like our our final reduced chi-squared is still quite high. Lets have a look at our results and parameters to see whats going on (and why we may want to use more advanced optimisation techniques to solve this problem!)
 
 
-```python
-???+ info "Plotting"
+??? info "Plotting"
+    ```python
     # Map the parameter history to arrays for plotting
     positions = np.array([jtu.leaves(params["position"]) for params in params_history])
     fluxes = np.array([jtu.leaves(params["flux"]) for params in params_history])
@@ -791,7 +790,7 @@ Hmm, it looks like our our final reduced chi-squared is still quite high. Lets h
     
     plt.tight_layout()
     plt.show()
-```
+    ```
 
 
     
@@ -851,8 +850,8 @@ C = np.linalg.inv(F)
 ```
 
 
-```python
-???+ info "Plotting"
+??? info "Plotting"
+    ```python
     plt.figure(figsize=(10, 4))
     ax = plt.subplot(1, 2, 1)
     plt.imshow(np.log10(np.abs(F + 1e-6)))
@@ -874,7 +873,7 @@ C = np.linalg.inv(F)
     
     plt.tight_layout()
     plt.show()
-```
+    ```
 
 
     
@@ -935,8 +934,8 @@ print("Final reduced chi-squared:", get_reduced_chi2(params, optics, observation
 
 
 
-```python
-???+ info "Plotting"
+??? info "Plotting"
+    ```python
     # Map the parameter history to arrays for plotting
     positions = np.array([jtu.leaves(params["position"]) for params in params_history])
     fluxes = np.array([jtu.leaves(params["flux"]) for params in params_history])
@@ -991,7 +990,7 @@ print("Final reduced chi-squared:", get_reduced_chi2(params, optics, observation
     
     plt.tight_layout()
     plt.show()
-```
+    ```
 
 
     
@@ -1050,8 +1049,8 @@ print(optx.RESULTS[sol.result])
 
 
 
-```python
-???+ info "Plotting"
+??? info "Plotting"
+    ```python
     plt.figure(figsize=(15, 4))
     plt.suptitle("Z-scores")
     
@@ -1065,7 +1064,7 @@ print(optx.RESULTS[sol.result])
     
     plt.tight_layout()
     plt.show()
-```
+    ```
 
 
     
@@ -1117,8 +1116,8 @@ print("Steps:", int(sol.stats["num_steps"]))
 
 
 
-```python
-???+ info "Plotting"
+??? info "Plotting"
+    ```python
     plt.figure(figsize=(15, 4))
     plt.suptitle("Z-scores")
     
@@ -1132,7 +1131,7 @@ print("Steps:", int(sol.stats["num_steps"]))
     
     plt.tight_layout()
     plt.show()
-```
+    ```
 
 
     
@@ -1172,8 +1171,8 @@ mle_project_fn = lambda u: unravel(X0 + np.dot(P, u))
 ```
 
 
-```python
-???+ info "Plotting"
+??? info "Plotting"
+    ```python
     plt.figure(figsize=(10, 4))
     ax = plt.subplot(1, 2, 1)
     plt.imshow(np.log10(np.abs(H_mle + 1e-6)))
@@ -1195,7 +1194,7 @@ mle_project_fn = lambda u: unravel(X0 + np.dot(P, u))
     
     plt.tight_layout()
     plt.show()
-```
+    ```
 
 
     
@@ -1269,8 +1268,8 @@ sampler.print_summary()
 Great, we can see that our r_hat parameters are all close to unity, indicating good convergence. Lets have a look at the posterior samples, our estimate from the hessian we used to calculate the projection matrix, and what our true values are to see how well we did! Don't worry too much about the code below, its mostly just unpacking things to be plotted which can be quite tedious.
 
 
-```python
-???+ info "Plotting"
+??? info "Plotting"
+    ```python
     import itertools
     import pandas as pd
     from chainconsumer import ChainConsumer, Chain, Truth
@@ -1324,7 +1323,7 @@ Great, we can see that our r_hat parameters are all close to unity, indicating g
     c.add_chain(cov_chain)
     c.add_truth(Truth(location=truth_dict))
     fig = c.plotter.plot()
-```
+    ```
 
 
     
@@ -1418,8 +1417,8 @@ blackjax_samples = states.position.block_until_ready()
 
 
 
-```python
-???+ info "Plotting"
+??? info "Plotting"
+    ```python
     # Project latent samples -> original parameter space
     samples_dict = eqx.filter_vmap(mle_project_fn)(blackjax_samples)
     flat_samples = jax.vmap(lambda p: ravel_pytree(p)[0])(samples_dict)
@@ -1452,7 +1451,7 @@ blackjax_samples = states.position.block_until_ready()
     c.add_chain(cov_chain)
     c.add_truth(Truth(location=truth_dict))
     fig = c.plotter.plot()
-```
+    ```
 
     Parameter wfe_2 in chain MCMC posterior is not constrained
 
