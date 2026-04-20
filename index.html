@@ -774,36 +774,7 @@
 <a href="https://codecov.io/gh/LouisDesdoigts/zodiax"><img alt="codecov" src="https://codecov.io/gh/LouisDesdoigts/zodiax/graph/badge.svg" /></a>
 <a href="https://louisdesdoigts.github.io/zodiax/"><img alt="Documentation" src="https://github.com/LouisDesdoigts/zodiax/actions/workflows/documentation.yml/badge.svg" /></a></p>
 <hr />
-<p><a href="https://github.com/LouisDesdoigts/zodiax"><em>Zodiax</em></a> is a lightweight extension to the object-oriented <a href="https://github.com/google/jax"><em>Jax</em></a> framework <a href="https://github.com/patrick-kidger/equinox"><em>Equinox</em></a>. <em>Equinox</em> allows for <strong>differentiable classes</strong> that are recognised as a valid <em>Jax</em> type and <em>Zodiax</em> adds lightweight methods to simplify interfacing with these classes! <em>Zodiax</em> was originially built in the development of <a href="https://github.com/LouisDesdoigts/dLux">dLux</a> and was designed to make working with large nested classes structures simple and flexible.</p>
-<p>Zodiax is directly integrated with both Jax and Equinox, gaining all of their core features:</p>
-<blockquote>
-<ul>
-<li>
-<p><a href="https://jax.readthedocs.io/en/latest/jax-101/01-jax-basics.html">Accelerated Numpy</a>: a Numpy like API that can run on GPU and TPU</p>
-</li>
-<li>
-<p><a href="https://jax.readthedocs.io/en/latest/jax-101/04-advanced-autodiff.html">Automatic Differentiation</a>: Allows for optimisation and inference in extremely high dimensional spaces</p>
-</li>
-<li>
-<p><a href="https://jax.readthedocs.io/en/latest/jax-101/02-jitting.html">Just-In-Time Compilation</a>: Compliles code into XLA at runtime and optimising execution across hardware</p>
-</li>
-<li>
-<p><a href="https://jax.readthedocs.io/en/latest/jax-101/03-vectorization.html">Automatic Vectorisation</a>: Allows for simple parallelism across hardware and asynchronys execution</p>
-</li>
-<li>
-<p><a href="https://docs.kidger.site/equinox/all-of-equinox/">Object Oriented Jax</a>: Allows for differentiable classes that are recognised as a valid <em>Jax</em> type</p>
-</li>
-<li>
-<p><a href="https://docs.kidger.site/equinox/api/nn/linear/">Inbuilt Neural Networks</a>: Has pre-built neural network layers classes</p>
-</li>
-<li>
-<p><a href="docs/usage/">Path-Based Pytree Interface</a>: Path based indexing allows for easy interfacing with large and highly nested physical models</p>
-</li>
-<li>
-<p><a href="docs/usage/">Leaf Manipulation Methods</a>: Inbuilt methods allow for easy manipulation of Pytrees mirroring the <em>Jax</em> Array API</p>
-</li>
-</ul>
-</blockquote>
+<p><a href="https://github.com/LouisDesdoigts/zodiax"><em>Zodiax</em></a> is an differentiable object-oriented framework geared towards scientific programming and physical modelling. Its built on the <a href="https://github.com/google/jax"><em>JAX</em></a> + <a href="https://github.com/patrick-kidger/equinox"><em>Equinox</em></a> ecosystem, inherits all of their functionality, and adds a series of extra methods to make working with physically representative classes simple and flexible. On top of that, it also adds a number of helpful optimisation and statistics tools often found in the physical sciences but not in the machine learning field. Zodiax was spun out from the development of <a href="https://github.com/LouisDesdoigts/dLux">dLux</a>, a differentiable optics framework that still uses Zodiax as its core class structure.</p>
 <p>Documentation: <a href="https://louisdesdoigts.github.io/zodiax/">louisdesdoigts.github.io/zodiax/</a></p>
 <blockquote>
 <p>Note: The Zodiax tutorials live in a <a href="https://github.com/LouisDesdoigts/zodiax_tutorials">separate repo</a>. This allows users to directly download and run the notebooks, ensuring that the correct packages needed to run them are installed! It also allows for new tutorials and examples to be added quite easily, without needing to update the core library.</p>
@@ -814,13 +785,8 @@
 <div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>zodiax
 </code></pre></div>
 <p>Development installation: </p>
-<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;zodiax[dev]&quot;</span>
-</code></pre></div>
-<p>Coverage:</p>
-<div class="highlight"><pre><span></span><code>pytest<span class="w"> </span>--cov<span class="o">=</span>zodiax<span class="w"> </span>--cov-report<span class="o">=</span>term-missing<span class="w"> </span>--cov-report<span class="o">=</span>xml<span class="w"> </span>--cov-report<span class="o">=</span>html<span class="w"> </span>tests
-</code></pre></div>
-<p>This writes <code>coverage.xml</code> and an <code>htmlcov/</code> report for local inspection.</p>
-<hr />
+<h2 id="pip-install-zodiaxdev"><div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;zodiax[dev]&quot;</span>
+</code></pre></div><a class="headerlink" href="#pip-install-zodiaxdev" title="Permanent link">¤</a></h2>
 <h3 id="quickstart">Quickstart<a class="headerlink" href="#quickstart" title="Permanent link">¤</a></h3>
 <p>Create a regular class that inherits from <code>zodiax.Base</code></p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
@@ -840,28 +806,13 @@
 
 <span class="n">linear</span> <span class="o">=</span> <span class="n">Linear</span><span class="p">(</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">)</span>
 </code></pre></div>
-<p>Its that simple! The <code>linear</code> class is now a fully differentiable object that gives us <strong>all</strong> the benefits of jax with an object-oriented interface! Lets see how we can jit-compile and take gradients of this class.</p>
-<div class="highlight"><pre><span></span><code><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
-<span class="nd">@jax</span><span class="o">.</span><span class="n">grad</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">loss_fn</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">xs</span><span class="p">,</span> <span class="n">ys</span><span class="p">):</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">model</span><span class="p">(</span><span class="n">xs</span><span class="p">)</span> <span class="o">-</span> <span class="n">ys</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
-
-<span class="n">xs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
-<span class="n">ys</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
-<span class="n">grads</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">linear</span><span class="p">,</span> <span class="n">xs</span><span class="p">,</span> <span class="n">ys</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">grads</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">grads</span><span class="o">.</span><span class="n">m</span><span class="p">,</span> <span class="n">grads</span><span class="o">.</span><span class="n">b</span><span class="p">)</span>
-</code></pre></div>
-<div class="highlight"><pre><span></span><code><span class="o">&gt;</span> <span class="n">Linear</span><span class="p">(</span><span class="n">m</span><span class="o">=</span><span class="n">f32</span><span class="p">[],</span> <span class="n">b</span><span class="o">=</span><span class="n">f32</span><span class="p">[])</span>
-<span class="o">&gt;</span> <span class="o">-</span><span class="mf">40.0</span> <span class="o">-</span><span class="mf">10.0</span>
-</code></pre></div>
-<p>The <code>grads</code> object is an instance of the <code>Linear</code> class with the gradients of the parameters with respect to the loss function!</p>
-<h3 id="update-signatures-minimal-overview">Update Signatures (Minimal Overview)<a class="headerlink" href="#update-signatures-minimal-overview" title="Permanent link">¤</a></h3>
-<p>Most Zodiax update methods (<code>set</code>, <code>add</code>, <code>multiply</code>, <code>divide</code>, <code>power</code>, <code>min</code>, <code>max</code>) support three equivalent input styles:</p>
+<p>Its that simple! The <code>linear</code> class is now a fully differentiable object that gives us <strong>all</strong> the benefits of jax with an object-oriented interface!</p>
+<h3 id="manipulating-leaves">Manipulating leaves<a class="headerlink" href="#manipulating-leaves" title="Permanent link">¤</a></h3>
+<p>Zodiax provides a number of methods to manipulate the leaves of a class. These methods allow you to update, add, multiply, divide, and perform other operations on the parameters of a class in a flexible and intuitive way. These update methods support three equivalent input styles:</p>
 <ol>
 <li><strong><code>(parameters, values)</code> positional style</strong></li>
 <li><strong><code>{parameter: value}</code> dictionary style</strong></li>
-<li><strong><code>param=value</code> keyword style</strong> (and <code>**{"nested.path": value}</code> for nested paths)</li>
+<li><strong><code>param=value</code> keyword style</strong></li>
 </ol>
 <div class="highlight"><pre><span></span><code><span class="c1"># 1) Positional: (parameters, values)</span>
 <span class="n">linear</span> <span class="o">=</span> <span class="n">linear</span><span class="o">.</span><span class="n">set</span><span class="p">([</span><span class="s2">&quot;m&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">],</span> <span class="p">[</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">])</span>
@@ -873,6 +824,8 @@
 <span class="n">linear</span> <span class="o">=</span> <span class="n">linear</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">m</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
 </code></pre></div>
 <p>Use whichever style is clearest for your workflow. The operations remain immutable and return new objects.</p>
+<h3 id="next-steps">Next steps<a class="headerlink" href="#next-steps" title="Permanent link">¤</a></h3>
+<p>There are two main tutorials for Zodiax. The first is the <a href="https://louisdesdoigts.github.io/zodiax/usage/">Building Classes</a> tutorial, which give s a detailed overview of how to construct classes, how neasted object and paths work, and how to manipulate them. The second is the <a href="https://louisdesdoigts.github.io/zodiax/optimisation_tools/">Optimisation and Inference</a> tutorial, which gives an relatively complete overview of the how to perform the most common optimisation and inference problems using Zodiax objects, and introduces a lot of the various tools and methods provided by the repo. If you are familiar with both of those, then you pretty much know all of Zodiax!</p>
 
 
 
