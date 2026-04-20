@@ -438,12 +438,6 @@
       
         
       
-        
-      
-        
-      
-        
-      
     
     
     
@@ -592,17 +586,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#zodiax.optimisation.adam" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        adam
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#zodiax.optimisation.debug_nan_check" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -647,43 +630,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#zodiax.optimisation.get_optimiser" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        get_optimiser
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#zodiax.optimisation.map_optimisers" class="md-nav__link">
     <span class="md-ellipsis">
       
         map_optimisers
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#zodiax.optimisation.scheduler" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        scheduler
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#zodiax.optimisation.sgd" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        sgd
       
     </span>
   </a>
@@ -750,98 +700,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../batching/" class="md-nav__link">
+      <a href="../diffops/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Batching
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../tree/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Tree
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../fisher/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Fisher
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../eqx/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Equinox (eqx)
+    DiffOps
   
 
     
@@ -1072,162 +938,6 @@
 <div class="doc doc-object doc-function">
 
 
-<h3 id="zodiax.optimisation.adam" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">adam</span><span class="p">(</span><span class="n">lr</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="o">*</span><span class="n">schedule</span><span class="p">)</span></code>
-
-<a href="#zodiax.optimisation.adam" class="headerlink" title="Permanent link">¤</a></h3>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Wrapper for the optax Adam optimiser with a piecewise constant learning rate
-schedule.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>lr</code>
-            </td>
-            <td>
-                  <code><span title="float">float</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The initial learning rate.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>start</code>
-            </td>
-            <td>
-                  <code><span title="int">int</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The starting step (learning rate will be ~0 before this).</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>args</code>
-            </td>
-            <td>
-                  <code><span title="tuple">tuple</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>A variable number of tuples, each containing a step and a multiplier.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-<th>Name</th>          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-<td><code>optimiser</code></td>            <td>
-                  <code><span title="optax.adam">adam</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The optimiser with the piecewise constant learning rate schedule.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-            <details class="mkdocstrings-source">
-              <summary>Source code in <code>zodiax/optimisation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">271</span>
-<span class="normal">272</span>
-<span class="normal">273</span>
-<span class="normal">274</span>
-<span class="normal">275</span>
-<span class="normal">276</span>
-<span class="normal">277</span>
-<span class="normal">278</span>
-<span class="normal">279</span>
-<span class="normal">280</span>
-<span class="normal">281</span>
-<span class="normal">282</span>
-<span class="normal">283</span>
-<span class="normal">284</span>
-<span class="normal">285</span>
-<span class="normal">286</span>
-<span class="normal">287</span>
-<span class="normal">288</span>
-<span class="normal">289</span>
-<span class="normal">290</span>
-<span class="normal">291</span>
-<span class="normal">292</span>
-<span class="normal">293</span>
-<span class="normal">294</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">adam</span><span class="p">(</span><span class="n">lr</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">*</span><span class="n">schedule</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Wrapper for the optax Adam optimiser with a piecewise constant learning rate</span>
-<span class="sd">    schedule.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    lr : float</span>
-<span class="sd">        The initial learning rate.</span>
-<span class="sd">    start : int</span>
-<span class="sd">        The starting step (learning rate will be ~0 before this).</span>
-<span class="sd">    args : tuple</span>
-<span class="sd">        A variable number of tuples, each containing a step and a multiplier.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    optimiser : optax.adam</span>
-<span class="sd">        The optimiser with the piecewise constant learning rate schedule.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-        <span class="s2">&quot;adam is deprecated as of v0.5.0 and will be removed in v0.6.0&quot;</span><span class="p">,</span>
-        <span class="ne">DeprecationWarning</span><span class="p">,</span>
-    <span class="p">)</span>
-    <span class="k">return</span> <span class="n">_base_adam</span><span class="p">(</span><span class="n">scheduler</span><span class="p">(</span><span class="n">lr</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="o">*</span><span class="n">schedule</span><span class="p">))</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
 <h3 id="zodiax.optimisation.debug_nan_check" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">debug_nan_check</span><span class="p">(</span><span class="n">grads</span><span class="p">)</span></code>
 
@@ -1295,7 +1005,14 @@ schedule.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>zodiax/optimisation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">31</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
 <span class="normal">32</span>
 <span class="normal">33</span>
 <span class="normal">34</span>
@@ -1305,14 +1022,7 @@ schedule.</p>
 <span class="normal">38</span>
 <span class="normal">39</span>
 <span class="normal">40</span>
-<span class="normal">41</span>
-<span class="normal">42</span>
-<span class="normal">43</span>
-<span class="normal">44</span>
-<span class="normal">45</span>
-<span class="normal">46</span>
-<span class="normal">47</span>
-<span class="normal">48</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">debug_nan_check</span><span class="p">(</span><span class="n">grads</span><span class="p">:</span> <span class="n">PyTree</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+<span class="normal">41</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">debug_nan_check</span><span class="p">(</span><span class="n">grads</span><span class="p">:</span> <span class="n">PyTree</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Checks for NaN values in the gradients and triggers a breakpoint if any are found.</span>
 
@@ -1354,7 +1064,14 @@ schedule.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>zodiax/optimisation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">109</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
 <span class="normal">110</span>
 <span class="normal">111</span>
 <span class="normal">112</span>
@@ -1368,14 +1085,7 @@ schedule.</p>
 <span class="normal">120</span>
 <span class="normal">121</span>
 <span class="normal">122</span>
-<span class="normal">123</span>
-<span class="normal">124</span>
-<span class="normal">125</span>
-<span class="normal">126</span>
-<span class="normal">127</span>
-<span class="normal">128</span>
-<span class="normal">129</span>
-<span class="normal">130</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">decompose</span><span class="p">(</span>
+<span class="normal">123</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">decompose</span><span class="p">(</span>
     <span class="n">matrix</span><span class="p">:</span> <span class="n">Array</span><span class="p">,</span> <span class="n">hermitian</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">normalise</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Array</span><span class="p">,</span> <span class="n">Array</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1420,12 +1130,12 @@ learning rate over a specified number of steps.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>zodiax/optimisation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">101</span>
-<span class="normal">102</span>
-<span class="normal">103</span>
-<span class="normal">104</span>
-<span class="normal">105</span>
-<span class="normal">106</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">delay</span><span class="p">(</span><span class="n">lr</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">optax</span><span class="o">.</span><span class="n">Schedule</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">94</span>
+<span class="normal">95</span>
+<span class="normal">96</span>
+<span class="normal">97</span>
+<span class="normal">98</span>
+<span class="normal">99</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">delay</span><span class="p">(</span><span class="n">lr</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">optax</span><span class="o">.</span><span class="n">Schedule</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Delays the learning rate by starting at 0 and linearly increasing to the specified</span>
 <span class="sd">    learning rate over a specified number of steps.</span>
@@ -1454,7 +1164,14 @@ learning rate over a specified number of steps.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>zodiax/optimisation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">133</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
 <span class="normal">134</span>
 <span class="normal">135</span>
 <span class="normal">136</span>
@@ -1500,14 +1217,7 @@ learning rate over a specified number of steps.</p>
 <span class="normal">176</span>
 <span class="normal">177</span>
 <span class="normal">178</span>
-<span class="normal">179</span>
-<span class="normal">180</span>
-<span class="normal">181</span>
-<span class="normal">182</span>
-<span class="normal">183</span>
-<span class="normal">184</span>
-<span class="normal">185</span>
-<span class="normal">186</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">eigen_projection</span><span class="p">(</span><span class="n">fmat</span><span class="p">:</span> <span class="n">Array</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">cov</span><span class="p">:</span> <span class="n">Array</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
+<span class="normal">179</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">eigen_projection</span><span class="p">(</span><span class="n">fmat</span><span class="p">:</span> <span class="n">Array</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">cov</span><span class="p">:</span> <span class="n">Array</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Projects the parameter space into the an orthonormal basis</span>
 
@@ -1570,243 +1280,6 @@ learning rate over a specified number of steps.</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="zodiax.optimisation.get_optimiser" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">get_optimiser</span><span class="p">(</span><span class="n">pytree</span><span class="p">,</span> <span class="n">parameters</span><span class="p">,</span> <span class="n">optimisers</span><span class="p">)</span></code>
-
-<a href="#zodiax.optimisation.get_optimiser" class="headerlink" title="Permanent link">¤</a></h3>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Returns an Optax.GradientTransformion object, with the optimisers
-specified by optimisers applied to the leaves specified by parameters.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>pytree</code>
-            </td>
-            <td>
-                  <code><span title="zodiax.optimisation.PyTree">PyTree</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>A zodiax.base.PyTree object.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>parameters</code>
-            </td>
-            <td>
-                  <code><span title="zodiax.optimisation.Params">Params</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>A path or list of parameters or list of nested parameters.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>optimisers</code>
-            </td>
-            <td>
-                  <code><span title="zodiax.optimisation.Optimisers">Optimisers</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>A optax.GradientTransformation or list of
-optax.GradientTransformation objects to be applied to the leaves
-specified by parameters.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-<th>Name</th>          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-<td><code>optimiser</code></td>            <td>
-                  <code><span title="optax.GradientTransformion">GradientTransformion</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>TODO Update
-A tuple of (Optax.GradientTransformion, optax.MultiTransformState)
-objects, with the optimisers applied to the leaves specified by
-parameters, and the initialised optimisation state.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-<td><code>state</code></td>            <td>
-                  <code><span title="optax.MultiTransformState">MultiTransformState</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-            <details class="mkdocstrings-source">
-              <summary>Source code in <code>zodiax/optimisation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">298</span>
-<span class="normal">299</span>
-<span class="normal">300</span>
-<span class="normal">301</span>
-<span class="normal">302</span>
-<span class="normal">303</span>
-<span class="normal">304</span>
-<span class="normal">305</span>
-<span class="normal">306</span>
-<span class="normal">307</span>
-<span class="normal">308</span>
-<span class="normal">309</span>
-<span class="normal">310</span>
-<span class="normal">311</span>
-<span class="normal">312</span>
-<span class="normal">313</span>
-<span class="normal">314</span>
-<span class="normal">315</span>
-<span class="normal">316</span>
-<span class="normal">317</span>
-<span class="normal">318</span>
-<span class="normal">319</span>
-<span class="normal">320</span>
-<span class="normal">321</span>
-<span class="normal">322</span>
-<span class="normal">323</span>
-<span class="normal">324</span>
-<span class="normal">325</span>
-<span class="normal">326</span>
-<span class="normal">327</span>
-<span class="normal">328</span>
-<span class="normal">329</span>
-<span class="normal">330</span>
-<span class="normal">331</span>
-<span class="normal">332</span>
-<span class="normal">333</span>
-<span class="normal">334</span>
-<span class="normal">335</span>
-<span class="normal">336</span>
-<span class="normal">337</span>
-<span class="normal">338</span>
-<span class="normal">339</span>
-<span class="normal">340</span>
-<span class="normal">341</span>
-<span class="normal">342</span>
-<span class="normal">343</span>
-<span class="normal">344</span>
-<span class="normal">345</span>
-<span class="normal">346</span>
-<span class="normal">347</span>
-<span class="normal">348</span>
-<span class="normal">349</span>
-<span class="normal">350</span>
-<span class="normal">351</span>
-<span class="normal">352</span>
-<span class="normal">353</span>
-<span class="normal">354</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_optimiser</span><span class="p">(</span>
-    <span class="n">pytree</span><span class="p">:</span> <span class="n">PyTree</span><span class="p">,</span>
-    <span class="n">parameters</span><span class="p">:</span> <span class="n">Params</span><span class="p">,</span>
-    <span class="n">optimisers</span><span class="p">:</span> <span class="n">Optimisers</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Returns an Optax.GradientTransformion object, with the optimisers</span>
-<span class="sd">    specified by optimisers applied to the leaves specified by parameters.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    pytree : PyTree</span>
-<span class="sd">        A zodiax.base.PyTree object.</span>
-<span class="sd">    parameters : Params</span>
-<span class="sd">        A path or list of parameters or list of nested parameters.</span>
-<span class="sd">    optimisers : Optimisers</span>
-<span class="sd">        A optax.GradientTransformation or list of</span>
-<span class="sd">        optax.GradientTransformation objects to be applied to the leaves</span>
-<span class="sd">        specified by parameters.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    optimiser : optax.GradientTransformion</span>
-<span class="sd">        TODO Update</span>
-<span class="sd">        A tuple of (Optax.GradientTransformion, optax.MultiTransformState)</span>
-<span class="sd">        objects, with the optimisers applied to the leaves specified by</span>
-<span class="sd">        parameters, and the initialised optimisation state.</span>
-<span class="sd">    state : optax.MultiTransformState</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-        <span class="s2">&quot;get_optimiser is deprecated as of v0.5.0 and will be removed in v0.6.0&quot;</span><span class="p">,</span>
-        <span class="ne">DeprecationWarning</span><span class="p">,</span>
-    <span class="p">)</span>
-
-    <span class="c1"># Pre-wrap single inputs into a list since optimisers have a length of 2</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">optimisers</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
-        <span class="n">optimisers</span> <span class="o">=</span> <span class="p">[</span><span class="n">optimisers</span><span class="p">]</span>
-
-    <span class="c1"># parameters have to default be wrapped in a list to match optimiser</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">parameters</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-        <span class="n">parameters</span> <span class="o">=</span> <span class="p">[</span><span class="n">parameters</span><span class="p">]</span>
-
-    <span class="c1"># Construct groups and get param_spec</span>
-    <span class="n">groups</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">optimisers</span><span class="p">))]</span>
-    <span class="n">param_spec</span> <span class="o">=</span> <span class="n">jtu</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">_</span><span class="p">:</span> <span class="s2">&quot;null&quot;</span><span class="p">,</span> <span class="n">pytree</span><span class="p">)</span>
-    <span class="n">param_spec</span> <span class="o">=</span> <span class="n">param_spec</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">parameters</span><span class="p">,</span> <span class="n">groups</span><span class="p">)</span>
-
-    <span class="c1"># Generate optimiser dictionary and Assign the null group</span>
-    <span class="n">opt_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([(</span><span class="n">groups</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">optimisers</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">groups</span><span class="p">))])</span>
-    <span class="n">opt_dict</span><span class="p">[</span><span class="s2">&quot;null&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">optax</span><span class="o">.</span><span class="n">sgd</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
-
-    <span class="c1"># Get optimiser object and filtered optimiser</span>
-    <span class="n">optim</span> <span class="o">=</span> <span class="n">optax</span><span class="o">.</span><span class="n">multi_transform</span><span class="p">(</span><span class="n">opt_dict</span><span class="p">,</span> <span class="n">param_spec</span><span class="p">)</span>
-    <span class="n">opt_state</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">eqx</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pytree</span><span class="p">,</span> <span class="n">eqx</span><span class="o">.</span><span class="n">is_array</span><span class="p">))</span>
-
-    <span class="c1"># Return</span>
-    <span class="k">return</span> <span class="p">(</span><span class="n">optim</span><span class="p">,</span> <span class="n">opt_state</span><span class="p">)</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
 <h3 id="zodiax.optimisation.map_optimisers" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">map_optimisers</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">optimisers</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
 
@@ -1821,7 +1294,14 @@ parameters, and the initialised optimisation state.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>zodiax/optimisation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">68</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
 <span class="normal">69</span>
 <span class="normal">70</span>
 <span class="normal">71</span>
@@ -1844,14 +1324,7 @@ parameters, and the initialised optimisation state.</p>
 <span class="normal">88</span>
 <span class="normal">89</span>
 <span class="normal">90</span>
-<span class="normal">91</span>
-<span class="normal">92</span>
-<span class="normal">93</span>
-<span class="normal">94</span>
-<span class="normal">95</span>
-<span class="normal">96</span>
-<span class="normal">97</span>
-<span class="normal">98</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">map_optimisers</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">optimisers</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">strict</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="normal">91</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">map_optimisers</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">optimisers</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">strict</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Maps optimiser from a dictionary of optax optimisers to a dictionary of parameters.</span>
 
@@ -1882,343 +1355,6 @@ parameters, and the initialised optimisation state.</p>
     <span class="n">optim</span> <span class="o">=</span> <span class="n">optax</span><span class="o">.</span><span class="n">multi_transform</span><span class="p">(</span><span class="n">optimisers</span><span class="p">,</span> <span class="n">param_spec</span><span class="p">)</span>
     <span class="n">state</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">optim</span><span class="p">,</span> <span class="n">state</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="zodiax.optimisation.scheduler" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">scheduler</span><span class="p">(</span><span class="n">lr</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span></code>
-
-<a href="#zodiax.optimisation.scheduler" class="headerlink" title="Permanent link">¤</a></h3>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Function to easily interface with the optax library to create a piecewise
-constant learning rate schedule. The function takes a learning rate, a
-starting step and optionally, a variable number of tuples. Each tuple
-should contain a step and a multiplier; the learning rate will be multiplied
-by the corresponding multiplier at the specified step.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>lr</code>
-            </td>
-            <td>
-                  <code><span title="float">float</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The initial learning rate.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>start</code>
-            </td>
-            <td>
-                  <code><span title="int">int</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The starting step (learning rate will be ~0 before this).</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>args</code>
-            </td>
-            <td>
-                  <code><span title="tuple">tuple</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>A variable number of tuples, each containing a step and a multiplier.</p>
-              </div>
-            </td>
-            <td>
-                  <code>()</code>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-<th>Name</th>          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-<td><code>schedule</code></td>            <td>
-                  <code><span title="optax.schedule">schedule</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The piecewise constant learning rate schedule.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-            <details class="mkdocstrings-source">
-              <summary>Source code in <code>zodiax/optimisation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">200</span>
-<span class="normal">201</span>
-<span class="normal">202</span>
-<span class="normal">203</span>
-<span class="normal">204</span>
-<span class="normal">205</span>
-<span class="normal">206</span>
-<span class="normal">207</span>
-<span class="normal">208</span>
-<span class="normal">209</span>
-<span class="normal">210</span>
-<span class="normal">211</span>
-<span class="normal">212</span>
-<span class="normal">213</span>
-<span class="normal">214</span>
-<span class="normal">215</span>
-<span class="normal">216</span>
-<span class="normal">217</span>
-<span class="normal">218</span>
-<span class="normal">219</span>
-<span class="normal">220</span>
-<span class="normal">221</span>
-<span class="normal">222</span>
-<span class="normal">223</span>
-<span class="normal">224</span>
-<span class="normal">225</span>
-<span class="normal">226</span>
-<span class="normal">227</span>
-<span class="normal">228</span>
-<span class="normal">229</span>
-<span class="normal">230</span>
-<span class="normal">231</span>
-<span class="normal">232</span>
-<span class="normal">233</span>
-<span class="normal">234</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">scheduler</span><span class="p">(</span><span class="n">lr</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Function to easily interface with the optax library to create a piecewise</span>
-<span class="sd">    constant learning rate schedule. The function takes a learning rate, a</span>
-<span class="sd">    starting step and optionally, a variable number of tuples. Each tuple</span>
-<span class="sd">    should contain a step and a multiplier; the learning rate will be multiplied</span>
-<span class="sd">    by the corresponding multiplier at the specified step.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    lr : float</span>
-<span class="sd">        The initial learning rate.</span>
-<span class="sd">    start : int</span>
-<span class="sd">        The starting step (learning rate will be ~0 before this).</span>
-<span class="sd">    args : tuple</span>
-<span class="sd">        A variable number of tuples, each containing a step and a multiplier.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    schedule : optax.schedule</span>
-<span class="sd">        The piecewise constant learning rate schedule.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-        <span class="s2">&quot;scheduler is deprecated as of v0.5.0 and will be removed in v0.6.0&quot;</span><span class="p">,</span>
-        <span class="ne">DeprecationWarning</span><span class="p">,</span>
-    <span class="p">)</span>
-
-    <span class="c1"># Create a dictionary to store the schedule</span>
-    <span class="n">sched_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">start</span><span class="p">:</span> <span class="n">BIG</span><span class="p">}</span>
-
-    <span class="c1"># looping over learning rate updates</span>
-    <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">mul</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
-        <span class="n">sched_dict</span><span class="p">[</span><span class="n">start</span><span class="p">]</span> <span class="o">=</span> <span class="n">mul</span>
-
-    <span class="k">return</span> <span class="n">optax</span><span class="o">.</span><span class="n">piecewise_constant_schedule</span><span class="p">(</span><span class="n">lr</span> <span class="o">/</span> <span class="n">BIG</span><span class="p">,</span> <span class="n">sched_dict</span><span class="p">)</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="zodiax.optimisation.sgd" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">sgd</span><span class="p">(</span><span class="n">lr</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="o">*</span><span class="n">schedule</span><span class="p">)</span></code>
-
-<a href="#zodiax.optimisation.sgd" class="headerlink" title="Permanent link">¤</a></h3>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Wrapper for the optax SGD optimiser with a piecewise constant learning rate
-schedule.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>lr</code>
-            </td>
-            <td>
-                  <code><span title="float">float</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The initial learning rate.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>start</code>
-            </td>
-            <td>
-                  <code><span title="int">int</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The starting step (learning rate will be ~0 before this).</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>args</code>
-            </td>
-            <td>
-                  <code><span title="tuple">tuple</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>A variable number of tuples, each containing a step and a multiplier.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-<th>Name</th>          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-<td><code>optimiser</code></td>            <td>
-                  <code><span title="optax.sgd">sgd</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The optimiser with the piecewise constant learning rate schedule.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-            <details class="mkdocstrings-source">
-              <summary>Source code in <code>zodiax/optimisation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">245</span>
-<span class="normal">246</span>
-<span class="normal">247</span>
-<span class="normal">248</span>
-<span class="normal">249</span>
-<span class="normal">250</span>
-<span class="normal">251</span>
-<span class="normal">252</span>
-<span class="normal">253</span>
-<span class="normal">254</span>
-<span class="normal">255</span>
-<span class="normal">256</span>
-<span class="normal">257</span>
-<span class="normal">258</span>
-<span class="normal">259</span>
-<span class="normal">260</span>
-<span class="normal">261</span>
-<span class="normal">262</span>
-<span class="normal">263</span>
-<span class="normal">264</span>
-<span class="normal">265</span>
-<span class="normal">266</span>
-<span class="normal">267</span>
-<span class="normal">268</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">sgd</span><span class="p">(</span><span class="n">lr</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">*</span><span class="n">schedule</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Wrapper for the optax SGD optimiser with a piecewise constant learning rate</span>
-<span class="sd">    schedule.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    lr : float</span>
-<span class="sd">        The initial learning rate.</span>
-<span class="sd">    start : int</span>
-<span class="sd">        The starting step (learning rate will be ~0 before this).</span>
-<span class="sd">    args : tuple</span>
-<span class="sd">        A variable number of tuples, each containing a step and a multiplier.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    optimiser : optax.sgd</span>
-<span class="sd">        The optimiser with the piecewise constant learning rate schedule.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-        <span class="s2">&quot;sgd is deprecated as of v0.5.0 and will be removed in v0.6.0&quot;</span><span class="p">,</span>
-        <span class="ne">DeprecationWarning</span><span class="p">,</span>
-    <span class="p">)</span>
-    <span class="k">return</span> <span class="n">_base_sgd</span><span class="p">(</span><span class="n">scheduler</span><span class="p">(</span><span class="n">lr</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="o">*</span><span class="n">schedule</span><span class="p">))</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -2295,21 +1431,21 @@ schedule.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>zodiax/optimisation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">51</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
 <span class="normal">52</span>
 <span class="normal">53</span>
 <span class="normal">54</span>
 <span class="normal">55</span>
 <span class="normal">56</span>
 <span class="normal">57</span>
-<span class="normal">58</span>
-<span class="normal">59</span>
-<span class="normal">60</span>
-<span class="normal">61</span>
-<span class="normal">62</span>
-<span class="normal">63</span>
-<span class="normal">64</span>
-<span class="normal">65</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">zero_nan_check</span><span class="p">(</span><span class="n">grads</span><span class="p">:</span> <span class="n">PyTree</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
+<span class="normal">58</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">zero_nan_check</span><span class="p">(</span><span class="n">grads</span><span class="p">:</span> <span class="n">PyTree</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PyTree</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Replaces any NaN values in the gradients and with zeros.</span>
 
