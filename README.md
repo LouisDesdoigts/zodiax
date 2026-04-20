@@ -9,25 +9,7 @@
 
 ---
 
-[_Zodiax_](https://github.com/LouisDesdoigts/zodiax) is a lightweight extension to the object-oriented [_Jax_](https://github.com/google/jax) framework [_Equinox_](https://github.com/patrick-kidger/equinox). _Equinox_ allows for **differentiable classes** that are recognised as a valid _Jax_ type and _Zodiax_ adds lightweight methods to simplify interfacing with these classes! _Zodiax_ was originially built in the development of [dLux](https://github.com/LouisDesdoigts/dLux) and was designed to make working with large nested classes structures simple and flexible.
-
-Zodiax is directly integrated with both Jax and Equinox, gaining all of their core features:
-
-> - [Accelerated Numpy](https://jax.readthedocs.io/en/latest/jax-101/01-jax-basics.html): a Numpy like API that can run on GPU and TPU
->
-> - [Automatic Differentiation](https://jax.readthedocs.io/en/latest/jax-101/04-advanced-autodiff.html): Allows for optimisation and inference in extremely high dimensional spaces
->
-> - [Just-In-Time Compilation](https://jax.readthedocs.io/en/latest/jax-101/02-jitting.html): Compliles code into XLA at runtime and optimising execution across hardware
->
-> - [Automatic Vectorisation](https://jax.readthedocs.io/en/latest/jax-101/03-vectorization.html): Allows for simple parallelism across hardware and asynchronys execution
->
-> - [Object Oriented Jax](https://docs.kidger.site/equinox/all-of-equinox/): Allows for differentiable classes that are recognised as a valid _Jax_ type
->
-> - [Inbuilt Neural Networks](https://docs.kidger.site/equinox/api/nn/linear/): Has pre-built neural network layers classes
->
-> - [Path-Based Pytree Interface](docs/usage.md): Path based indexing allows for easy interfacing with large and highly nested physical models
->
-> - [Leaf Manipulation Methods](docs/usage.md): Inbuilt methods allow for easy manipulation of Pytrees mirroring the _Jax_ Array API
+[_Zodiax_](https://github.com/LouisDesdoigts/zodiax) is an differentiable object-oriented framework geared towards scientific programming and physical modelling. Its built on the [_JAX_](https://github.com/google/jax) + [_Equinox_](https://github.com/patrick-kidger/equinox) ecosystem, inherits all of their functionality, and adds a series of extra methods to make working with physically representative classes simple and flexible. On top of that, it also adds a number of helpful optimisation and statistics tools often found in the physical sciences but not in the machine learning field. Zodiax was spun out from the development of [dLux](https://github.com/LouisDesdoigts/dLux), a differentiable optics framework that still uses Zodiax as its core class structure.
 
 Documentation: [louisdesdoigts.github.io/zodiax/](https://louisdesdoigts.github.io/zodiax/)
 
@@ -48,15 +30,6 @@ Development installation:
 ```bash
 pip install "zodiax[dev]"
 ```
-
-Coverage:
-
-```bash
-pytest --cov=zodiax --cov-report=term-missing --cov-report=xml --cov-report=html tests
-```
-
-This writes `coverage.xml` and an `htmlcov/` report for local inspection.
-
 ---
 
 ### Quickstart
@@ -82,35 +55,15 @@ class Linear(zdx.Base):
 linear = Linear(1., 1.)
 ```
 
-Its that simple! The `linear` class is now a fully differentiable object that gives us **all** the benefits of jax with an object-oriented interface! Lets see how we can jit-compile and take gradients of this class.
+Its that simple! The `linear` class is now a fully differentiable object that gives us **all** the benefits of jax with an object-oriented interface!
 
-```python
-@jax.jit
-@jax.grad
-def loss_fn(model, xs, ys):
-    return np.square(model(xs) - ys).sum()
+### Manipulating leaves
 
-xs = np.arange(5)
-ys = 2*np.arange(5)
-grads = loss_fn(linear, xs, ys)
-print(grads)
-print(grads.m, grads.b)
-```
-
-```python
-> Linear(m=f32[], b=f32[])
-> -40.0 -10.0
-```
-
-The `grads` object is an instance of the `Linear` class with the gradients of the parameters with respect to the loss function!
-
-### Update Signatures (Minimal Overview)
-
-Most Zodiax update methods (`set`, `add`, `multiply`, `divide`, `power`, `min`, `max`) support three equivalent input styles:
+Zodiax provides a number of methods to manipulate the leaves of a class. These methods allow you to update, add, multiply, divide, and perform other operations on the parameters of a class in a flexible and intuitive way. These update methods support three equivalent input styles:
 
 1. **`(parameters, values)` positional style**
 2. **`{parameter: value}` dictionary style**
-3. **`param=value` keyword style** (and `**{"nested.path": value}` for nested paths)
+3. **`param=value` keyword style**
 
 ```python
 # 1) Positional: (parameters, values)
@@ -124,3 +77,7 @@ linear = linear.multiply(m=2.0, b=0.5)
 ```
 
 Use whichever style is clearest for your workflow. The operations remain immutable and return new objects.
+
+### Next steps
+
+There are two main tutorials for Zodiax. The first is the [Building Classes](https://louisdesdoigts.github.io/zodiax/usage/) tutorial, which give s a detailed overview of how to construct classes, how neasted object and paths work, and how to manipulate them. The second is the [Optimisation and Inference](https://louisdesdoigts.github.io/zodiax/optimisation_tools/) tutorial, which gives an relatively complete overview of the how to perform the most common optimisation and inference problems using Zodiax objects, and introduces a lot of the various tools and methods provided by the repo. If you are familiar with both of those, then you pretty much know all of Zodiax!
