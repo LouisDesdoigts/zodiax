@@ -78,10 +78,7 @@ nav:
       - Base: API/base.md
       - Optimisation: API/optimisation.md
       - Stats: API/stats.md
-      - Batching: API/batching.md
-      - Tree: API/tree.md
-      - Fisher: API/fisher.md
-      - Equinox (eqx): API/eqx.md
+      - DiffOps: API/diffops.md
   - Previous Versions:
       - v0.4.1: https://louisdesdoigts.github.io/zodiax/0.4.1/
   - FAQ: faq.md

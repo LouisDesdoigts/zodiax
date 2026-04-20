@@ -1,6 +1,5 @@
 from __future__ import annotations
 import jax.scipy as jsp
-import pytest
 import zodiax
 from jax import config, numpy as np
 
@@ -12,22 +11,6 @@ PATHS = [
     "b.param",
     ["param", "b.param"],
 ]
-
-
-def poiss_loglike(pytree, data):
-    return jsp.stats.poisson.logpmf(pytree.model(), data).sum()
-
-
-@pytest.mark.parametrize("param", PATHS)
-def test_calc_entropy(create_base, param):
-    pytree = create_base()
-    data = pytree.model()
-    shape_dict = {"param": (1,)}
-    cov = zodiax.fisher.covariance_matrix(
-        pytree, param, poiss_loglike, data, shape_dict=shape_dict
-    )
-    entropy = zodiax.stats.calc_entropy(cov)
-    assert entropy is not None
 
 
 def test_z_score_and_chi2_helpers():
