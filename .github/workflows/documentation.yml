@@ -51,10 +51,13 @@ jobs:
             cp -R site/. .publish/latest/
           fi
           
-          # If this is a tag (e.g. v0.5.0), create a permanent versioned folder
+          # If this is a tag (e.g. v0.5.0), create permanent versioned folders
+          # with and without the 'v' prefix for robust backwards compatibility.
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            VERSION=${GITHUB_REF#refs/tags/v}
-            mkdir -p ".publish/$VERSION" .publish/latest
+            VERSION_TAG=${GITHUB_REF#refs/tags/}
+            VERSION=${VERSION_TAG#v}
+            mkdir -p ".publish/$VERSION_TAG" ".publish/$VERSION" .publish/latest
+            cp -R site/. ".publish/$VERSION_TAG/"
             cp -R site/. ".publish/$VERSION/"
             cp -R site/. .publish/latest/
           fi
