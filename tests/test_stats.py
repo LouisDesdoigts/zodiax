@@ -13,6 +13,12 @@ PATHS = [
 ]
 
 
+def test_calc_entropy():
+    cov = np.array([[2.0, 0.5], [0.5, 1.0]])
+    entropy = zodiax.stats.calc_entropy(cov)
+    assert entropy is not None
+
+
 def test_z_score_and_chi2_helpers():
     x = np.array([1.0, 3.0])
     mean = np.array([2.0, 1.0])
