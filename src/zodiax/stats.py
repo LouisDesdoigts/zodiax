@@ -20,7 +20,7 @@ __all__ = [
 
 
 def z_score(x: Array, mean: Array, std: Array) -> Array:
-    """
+    r"""
     Calculates the z-score $(\mu - x) / \sigma$ of a value given a mean and standard
     deviation.
 
@@ -42,7 +42,7 @@ def z_score(x: Array, mean: Array, std: Array) -> Array:
 
 
 def mv_z_score(x: Array, mean: Array, cov: Array) -> Array:
-    """
+    r"""
     Calculates the squared Mahalanobis distance $(\mu - x)^\top\Sigma^{-1}(\mu - x)$
     of a value given a mean and covariance matrix.
 
