@@ -2343,7 +2343,7 @@ identity weighting is assumed.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Calculates the squared Mahalanobis distance <span class="arithmatex">\((\mu - x)^     op\Sigma^{-1}(\mu - x)\)</span>
+        <p>Calculates the squared Mahalanobis distance <span class="arithmatex">\((\mu - x)^\top\Sigma^{-1}(\mu - x)\)</span>
 of a value given a mean and covariance matrix.</p>
 
 
@@ -2457,7 +2457,7 @@ of a value given a mean and covariance matrix.</p>
 <span class="normal">63</span>
 <span class="normal">64</span>
 <span class="normal">65</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">mv_z_score</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Array</span><span class="p">,</span> <span class="n">mean</span><span class="p">:</span> <span class="n">Array</span><span class="p">,</span> <span class="n">cov</span><span class="p">:</span> <span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Calculates the squared Mahalanobis distance $(\mu - x)^\top\Sigma^{-1}(\mu - x)$</span>
 <span class="sd">    of a value given a mean and covariance matrix.</span>
 
@@ -2607,7 +2607,7 @@ deviation.</p>
 <span class="normal">39</span>
 <span class="normal">40</span>
 <span class="normal">41</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">z_score</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Array</span><span class="p">,</span> <span class="n">mean</span><span class="p">:</span> <span class="n">Array</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Array</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Calculates the z-score $(\mu - x) / \sigma$ of a value given a mean and standard</span>
 <span class="sd">    deviation.</span>
 
