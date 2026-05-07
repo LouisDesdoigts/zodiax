@@ -36,12 +36,6 @@ theme:
 
 edit_uri: edit/main/docs/   # Directs where the "Edit" link points
 
-# Jupyter notebook outputs contain patterns like [2], [00:00<?, ?it/s] that
-# the markdown parser mistakes for link references. Suppress those warnings.
-validation:
-  links:
-    unrecognized_links: ignore
-
 plugins:
   - zensical/search      # High-performance built-in search
   - mkdocstrings:        # Auto-generate API docs from code
@@ -57,7 +51,8 @@ extra:
 markdown_extensions:
   - admonition           # Support for !!! note "Title" blocks
   - pymdownx.details     # Support for collapsible ??? note blocks
-  - pymdownx.superfences # Allows nesting code inside other blocks
+  - pymdownx.superfences: # Allows nesting code inside other blocks
+      disable_indented_code_blocks: false  # Preserve 4-space indented code blocks (e.g. notebook outputs)
   - pymdownx.snippets:
       base_path: [".", "docs"] # Look in the root AND the docs folder
   - pymdownx.arithmatex: # Required for LaTeX math
