@@ -7,7 +7,7 @@ repo_name: LouisDesdoigts/zodiax
 
 # Zensical uses the Material look by default but faster
 theme:
-  name: zensical 
+  name: material
   icon:
     repo: fontawesome/brands/github  # Sets the logo to the GitHub 'cat'
   features:
