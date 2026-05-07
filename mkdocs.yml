@@ -36,6 +36,12 @@ theme:
 
 edit_uri: edit/main/docs/   # Directs where the "Edit" link points
 
+# Jupyter notebook outputs contain patterns like [2], [00:00<?, ?it/s] that
+# the markdown parser mistakes for link references. Suppress those warnings.
+validation:
+  links:
+    unrecognized_links: ignore
+
 plugins:
   - zensical/search      # High-performance built-in search
   - mkdocstrings:        # Auto-generate API docs from code
