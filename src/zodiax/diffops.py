@@ -44,13 +44,33 @@ def jacobian(
     checkpoint: bool = False,
 ) -> tuple[Array, callable]:
     """
-    A batched version of jax.jacobian designed to save memory by computing the Jacobian
-    in column blocks. To lower memory usage, increase the number of batches (nbatches),
-    which reduces the block size. If memory is still an issue, set checkpoint=True to
-    checkpoint the function and save memory at the cost of extra computation.
+    A batched version of `jax.jacobian` that computes the Jacobian in column blocks
+    to reduce peak memory. Increase `nbatches` to reduce block size. Set
+    `checkpoint=True` to trade extra computation for further memory savings.
 
-    Return the Jacobian J and the unflatten function to map flat vectors back to x's
-    structure.
+    Parameters
+    ----------
+    f : callable
+        The function to differentiate. Must accept a pytree of the same structure
+        as `x`.
+    x : PyTree
+        The point at which to evaluate the Jacobian.
+    nbatches : int = 1
+        Number of column blocks. Higher values use less memory.
+    jit : bool = True
+        Whether to JIT-compile the inner function.
+    checkpoint : bool = False
+        Whether to apply `jax.checkpoint` to `f` to reduce memory at the cost
+        of extra computation.
+
+    Returns
+    -------
+    J : Array
+        The Jacobian of `f` at `x` in flattened coordinates, with shape
+        `(*f(x).shape, n)` where `n = ravel_pytree(x)[0].size`.
+    unflatten : callable
+        Function that maps a flat vector of length `n` back to the pytree
+        structure of `x`.
     """
     # Flatten params to allow pytree inputs
     x_flat, unflatten = ravel_pytree(x)
@@ -97,14 +117,34 @@ def hessian(
     checkpoint: bool = False,
 ) -> tuple[Array, callable]:
     """
-    A batched version of jax.hessian designed to save memory by computing the Hessian
-    in column blocks. Increase nbatches to reduce block size. If memory is still an
-    issue, set checkpoint=True to checkpoint f and save memory at the cost of extra
-    computation.
+    A batched version of `jax.hessian` that computes the Hessian in column blocks
+    to reduce peak memory. Increase `nbatches` to reduce block size. Set
+    `checkpoint=True` to trade extra computation for further memory savings.
+    `f(x)` must return a scalar.
 
-    f(x) must return a scalar.
+    Parameters
+    ----------
+    f : callable
+        The scalar-valued function to differentiate twice. Must accept a pytree
+        of the same structure as `x`.
+    x : PyTree
+        The point at which to evaluate the Hessian.
+    nbatches : int = 1
+        Number of column blocks. Higher values use less memory.
+    jit : bool = True
+        Whether to JIT-compile the inner function.
+    checkpoint : bool = False
+        Whether to apply `jax.checkpoint` to `f` to reduce memory at the cost
+        of extra computation.
 
-    Returns the Hessian H (n, n) in flattened coordinates and the unflatten function.
+    Returns
+    -------
+    H : Array
+        The Hessian of `f` at `x` in flattened coordinates, with shape `(n, n)`
+        where `n = ravel_pytree(x)[0].size`.
+    unflatten : callable
+        Function that maps a flat vector of length `n` back to the pytree
+        structure of `x`.
     """
     # Flatten params to allow pytree inputs
     x_flat, unflatten = ravel_pytree(x)
@@ -145,15 +185,23 @@ def hessian(
 
 def hessian_to_pytree(H: Array, x: PyTree) -> PyTree:
     """
-    Convert a flat (n, n) Hessian (w.r.t. ravel_pytree(x)) into a pytree-of-pytrees.
+    Converts a flat `(n, n)` Hessian (computed w.r.t. `ravel_pytree(x)`) into a
+    pytree-of-pytrees matching the structure of `x`. Assumes `H` was computed with
+    the same `x` structure and leaf shapes, and that flattening was performed via
+    `ravel_pytree(x)`.
 
-    This assumes:
-      - H was computed with the same x structure and leaf shapes
-      - flattening was via ravel_pytree(x) (i.e. JAX pytree leaf order)
+    Parameters
+    ----------
+    H : Array
+        The flat `(n, n)` Hessian matrix where `n = ravel_pytree(x)[0].size`.
+    x : PyTree
+        The pytree whose structure defines the block partition of `H`.
 
-    Returns:
-      H_tree: pytree where H_tree has x's structure twice, and each block has shape
-              leaf_i.shape + leaf_j.shape
+    Returns
+    -------
+    H_tree : PyTree
+        A pytree-of-pytrees with the same structure as `x` twice over, where
+        each leaf block `H_tree[i][j]` has shape `leaf_i.shape + leaf_j.shape`.
     """
     leaves, treedef = jax.tree_util.tree_flatten(x)
 
