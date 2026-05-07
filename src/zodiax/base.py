@@ -2,13 +2,13 @@ import jax.numpy as np
 import jax.tree as jtu
 import equinox as eqx
 from jax import lax, Array
-from typing import Union, Any
+from typing import Any
 
 __all__ = ["Base", "build_wrapper", "EquinoxWrapper", "WrapperHolder"]
 
-PyTree = Union[dict, list, tuple, eqx.Module]
-Params = Union[str, list[str], tuple[str]]
-Values = Union[Any, list[Any], tuple[Any]]
+PyTree = dict | list | tuple | eqx.Module
+Params = str | list[str] | tuple[str] | dict[str, Any]
+Values = Any | list[Any] | tuple[Any]
 
 
 def _unpack(dict: dict) -> dict:
