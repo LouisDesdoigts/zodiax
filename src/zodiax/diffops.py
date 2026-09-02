@@ -1,9 +1,13 @@
-import jax
+from operator import index
+from typing import Union
+
 import equinox as eqx
+import jax
 import jax.numpy as np
 from jax import Array
 from jax.flatten_util import ravel_pytree
-from typing import Union
+
+from .linalg import Hessian, Jacobian, TreeLayout
 
 PyTree = Union[dict, list, tuple, eqx.Module]
 
@@ -15,6 +19,15 @@ __all__ = [
 
 
 def _get_batch_sizes(n: int, nbatches: int) -> tuple[Array, int]:
+    if isinstance(nbatches, bool):
+        raise TypeError("nbatches must be a positive integer.")
+    try:
+        nbatches = index(nbatches)
+    except TypeError as error:
+        raise TypeError("nbatches must be a positive integer.") from error
+    if nbatches < 1:
+        raise ValueError("nbatches must be a positive integer.")
+
     # Convert "nbatches" into a fixed block size
     batch_size = (n + nbatches - 1) // nbatches
     total = nbatches * batch_size
@@ -42,17 +55,19 @@ def jacobian(
     nbatches: int = 1,
     jit: bool = True,
     checkpoint: bool = False,
-) -> tuple[Array, callable]:
+) -> Jacobian:
     """
     A batched version of `jax.jacobian` that computes the Jacobian in column blocks
     to reduce peak memory. Increase `nbatches` to reduce block size. Set
-    `checkpoint=True` to trade extra computation for further memory savings.
+    `checkpoint=True` to trade extra computation for further memory savings. `f(x)`
+    must return one floating array-like value and is evaluated once eagerly to
+    establish its fixed output shape before differentiation.
 
     Parameters
     ----------
     f : callable
-        The function to differentiate. Must accept a pytree of the same structure
-        as `x`.
+        The function to differentiate. It must accept a pytree with the same
+        structure as `x` and return one floating array-like value.
     x : PyTree
         The point at which to evaluate the Jacobian.
     nbatches : int = 1
@@ -65,28 +80,34 @@ def jacobian(
 
     Returns
     -------
-    J : Array
-        The Jacobian of `f` at `x` in flattened coordinates, with shape
-        `(*f(x).shape, n)` where `n = ravel_pytree(x)[0].size`.
-    unflatten : callable
-        Function that maps a flat vector of length `n` back to the pytree
-        structure of `x`.
+    jacobian : Jacobian
+        Realised Jacobian with shape `f(x).shape + (n,)`, where `n` is the flattened
+        parameter size. Its single layout describes the final parameter axis.
     """
-    # Flatten params to allow pytree inputs
+    # Establish fixed parameter topology and array output shape
+    layout = TreeLayout.from_tree(x)
+    try:
+        output = np.asarray(f(x))
+    except (TypeError, ValueError) as error:
+        raise TypeError("f(x) must return one floating array-like value.") from error
+    if not np.issubdtype(output.dtype, np.floating):
+        raise TypeError("f(x) must return one floating array-like value.")
+
+    # Flatten parameters while preserving the function output axes
     x_flat, unflatten = ravel_pytree(x)
     n = x_flat.size
 
-    # Flatten input, checkpoint, and jit
     def f_flat(z):
-        return f(unflatten(z))
+        return np.asarray(f(unflatten(z)))
 
+    # Apply the requested memory transformations
     f_flat = jax.checkpoint(f_flat) if checkpoint else f_flat
     f_flat = jax.jit(f_flat) if jit else f_flat
 
     # Straight jax jacobian if only one batch (no batching overhead)
     if nbatches == 1:
-        J = jax.jacobian(f_flat)(x_flat)
-        return J, unflatten
+        matrix = jax.jacobian(f_flat)(x_flat)
+        return Jacobian(matrix, layout)
 
     # Get the batch indices and total size after padding
     idx, total = _get_batch_sizes(n, nbatches)
@@ -103,10 +124,10 @@ def jacobian(
     # Calculate the jacobian blocks and reshape
     _, blocks = jax.lax.scan(step, None, idx)
     blocks = np.moveaxis(blocks, 0, -2)  # (*y_shape, nbatches, batch_size)
-    J = blocks.reshape(*y0.shape, total)[..., :n]  # (*y_shape, n)
+    matrix = blocks.reshape(*y0.shape, total)[..., :n]
 
-    # return outputs
-    return J, unflatten
+    # Package the realised result with its final-axis parameter layout
+    return Jacobian(matrix, layout)
 
 
 def hessian(
@@ -115,12 +136,13 @@ def hessian(
     nbatches: int = 1,
     jit: bool = True,
     checkpoint: bool = False,
-) -> tuple[Array, callable]:
+) -> Hessian:
     """
     A batched version of `jax.hessian` that computes the Hessian in column blocks
     to reduce peak memory. Increase `nbatches` to reduce block size. Set
     `checkpoint=True` to trade extra computation for further memory savings.
-    `f(x)` must return a scalar.
+    `f(x)` must return a scalar and is evaluated once eagerly to validate that
+    contract before differentiation.
 
     Parameters
     ----------
@@ -139,14 +161,20 @@ def hessian(
 
     Returns
     -------
-    H : Array
-        The Hessian of `f` at `x` in flattened coordinates, with shape `(n, n)`
-        where `n = ravel_pytree(x)[0].size`.
-    unflatten : callable
-        Function that maps a flat vector of length `n` back to the pytree
-        structure of `x`.
+    hessian : Hessian
+        Realised Hessian with shape `(n, n)` and the shared parameter layout of both
+        axes, where `n` is the flattened parameter size.
     """
-    # Flatten params to allow pytree inputs
+    # Establish fixed parameter topology and validate the scalar output
+    layout = TreeLayout.from_tree(x)
+    try:
+        output = np.asarray(f(x))
+    except (TypeError, ValueError) as error:
+        raise TypeError("f(x) must return one numerical scalar.") from error
+    if output.shape != () or not np.issubdtype(output.dtype, np.floating):
+        raise ValueError("f(x) must return one floating scalar.")
+
+    # Flatten parameters while retaining reconstruction inside the calculation
     x_flat, unflatten = ravel_pytree(x)
     n = x_flat.size
 
@@ -159,8 +187,8 @@ def hessian(
 
     # Straight jax hessian if only one batch (no batching overhead)
     if nbatches == 1:
-        H = jax.hessian(f_flat)(x_flat)
-        return H, unflatten
+        matrix = jax.hessian(f_flat)(x_flat)
+        return Hessian(matrix, layout)
 
     # Get the batch indices and total size after padding
     idx, total = _get_batch_sizes(n, nbatches)
@@ -177,13 +205,13 @@ def hessian(
 
     # Calculate Hessian blocks and reshape
     _, blocks = jax.lax.scan(step, None, idx)  # (nbatches, n, batch_size)
-    H = blocks.transpose(1, 0, 2).reshape(n, total)[:, :n]
+    matrix = blocks.transpose(1, 0, 2).reshape(n, total)[:, :n]
 
-    # return outputs
-    return H, unflatten
+    # Package the realised result with its shared parameter layout
+    return Hessian(matrix, layout)
 
 
-def hessian_to_pytree(H: Array, x: PyTree) -> PyTree:
+def hessian_to_pytree(H: Array | Hessian, x: PyTree) -> PyTree:
     """
     Converts a flat `(n, n)` Hessian (computed w.r.t. `ravel_pytree(x)`) into a
     pytree-of-pytrees matching the structure of `x`. Assumes `H` was computed with
@@ -192,8 +220,9 @@ def hessian_to_pytree(H: Array, x: PyTree) -> PyTree:
 
     Parameters
     ----------
-    H : Array
-        The flat `(n, n)` Hessian matrix where `n = ravel_pytree(x)[0].size`.
+    H : Array or Hessian
+        A realised Hessian or flat `(n, n)` Hessian matrix where
+        `n = ravel_pytree(x)[0].size`.
     x : PyTree
         The pytree whose structure defines the block partition of `H`.
 
@@ -203,11 +232,17 @@ def hessian_to_pytree(H: Array, x: PyTree) -> PyTree:
         A pytree-of-pytrees with the same structure as `x` twice over, where
         each leaf block `H_tree[i][j]` has shape `leaf_i.shape + leaf_j.shape`.
     """
+    if isinstance(H, Hessian):
+        layout = TreeLayout.from_tree(x)
+        if not H.layout.compatible(layout):
+            raise ValueError("Hessian layout is not compatible with x.")
+        H = H.matrix
+
     leaves, treedef = jax.tree_util.tree_flatten(x)
 
     # leaf sizes and shapes define the partition of the flat axis
     sizes = [int(np.size(leaf)) for leaf in leaves]
-    shapes = [leaf.shape for leaf in leaves]
+    shapes = [np.shape(leaf) for leaf in leaves]
 
     # build flat slices for each leaf
     starts = np.cumsum(np.array([0] + sizes[:-1], dtype=int))

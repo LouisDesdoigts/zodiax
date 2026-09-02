@@ -79,12 +79,18 @@ nav:
       - index.md
   - Using Zodiax: 
       - Building Classes: usage.md
+      - Numerics: numerics.md
+      - Numerics Design Lab: numerics_design.md
       - Optimisation: optimisation_tools.md
   - API:
       - Base: API/base.md
       - Optimisation: API/optimisation.md
       - Stats: API/stats.md
       - DiffOps: API/diffops.md
+      - Tree Linear Algebra: API/linalg.md
+      - Numerics: API/numerics.md
+      - Arrays and State: API/stateful.md
+      - Serialisation: API/serialisation.md
   - Previous Versions:
       - v0.4.1: https://louisdesdoigts.github.io/zodiax/0.4.1/
   - FAQ: faq.md

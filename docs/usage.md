@@ -59,7 +59,7 @@ Now we construct a class to store and model a set of multiple normals.
 
 
 ```python
-class NormalSet(zdx.Base):
+class NormalSet(zdx.Module):
     """Basic class for modelling a set of normal distributions"""
     normals: dict
     width: np.ndarray
@@ -71,13 +71,6 @@ class NormalSet(zdx.Base):
             normals[names[i]] = Normal(means[i], scales[i], amplitude[i])
         self.normals = normals
         self.width = np.asarray(width, dtype=float)
-
-    def __getattr__(self, key):
-        """Allows us to access the individual normals by their dictionary key"""
-        if key in self.normals.keys():
-            return self.normals[key]
-        else:
-            raise AttributeError(f"{key} not in {self.normals.keys()}")
 
     def __call__(self):
         """Evaluates the set of normal distributions"""
@@ -93,17 +86,20 @@ This `NormalSet` class now lets us store an arbitrary number of `Normal` objects
 
 This is all the class set-up we need, now we can look at how to perform different types of optimisation and inference using this model.
 
-!!! question "Whats with the `__getattr__` method?"
-    This method eases working with nested structures and canbe used to raise parameters from the lowst level of the class structure up to the top. In this example it allows us to access the individual `Normal` objects by their dictionary key. Using this method, these two lines are equivalent:
+!!! question "Why does `NormalSet` inherit from `Module`?"
+    `Module` raises uniquely named children and descendant attributes from a nested
+    model. In this example it allows access to the individual `Normal` objects by
+    dictionary key. These two lines are equivalent:
 
     ```python
     mu = sources.normals['alpha'].mean
     mu = sources.alpha.mean
     ```
 
-    These methods can be chained together with multiple nested classes to make accessing parameters across large models much simpler!
-
-    It is strongly reccomended that your classes have a `__getattr__` method implemented as it makes working with nested structures *much* easier! When doing so it is important to ensure that the method raises the correct error when the attribute is not found. This is done by raising an `AttributeError` with a message that includes the name of the attribute that was not found. 
+    Raised lookups can be chained through nested classes. If a name occurs in more
+    than one child at the same depth, `Module` reports every qualified match and asks
+    for an explicit path. Inherit from `Base` instead when a class should expose only
+    its declared attributes.
 
 Let's print this object to have a look at what it looks like:
 
@@ -258,4 +254,3 @@ print(sources)
       },
       width=f32[]
     )
-
