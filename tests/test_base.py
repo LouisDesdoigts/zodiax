@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from io import BytesIO
+
 import equinox as eqx
 import jax.numpy as np
 import jax.random as jr
@@ -11,7 +13,38 @@ from jax import config
 config.update("jax_debug_nans", True)
 
 
+class MappingModel(zdx.Base):
+    values: dict
+
+
 class TestBase:
+    @pytest.mark.parametrize(
+        "values",
+        [
+            {"bad.key": 1.0},
+            {"outer": {"bad.key": 1.0}},
+        ],
+    )
+    def test_dotted_mapping_keys_are_rejected(self, values):
+        with pytest.raises(ValueError, match="reserved as structural path"):
+            MappingModel(values)
+
+    def test_dots_in_mapping_values_and_alias_paths_remain_valid(self):
+        model = MappingModel({"label": "version.1"})
+        transform = zdx.Exp(
+            zdx.Add(b=1.0),
+            alias=(("bias", "x.b"),),
+        )
+
+        assert model.values["label"] == "version.1"
+        assert np.allclose(transform.bias, 1.0)
+
+    def test_set_rejects_a_new_dotted_mapping_key(self):
+        model = MappingModel({"valid": 1.0})
+
+        with pytest.raises(ValueError, match="reserved as structural path"):
+            model.set("values", {"bad.key": 2.0})
+
     def test_get_leaf_dict_list_and_missing_key(self):
         pytree = {"a": [{"b": 3.0}]}
         assert zdx.base._get_leaf(pytree, ["a", "0", "b"]) == 3.0
@@ -196,6 +229,102 @@ class TestBase:
             create_base().set(["param"], [10.0], param=1.0)
         with pytest.raises(TypeError):
             create_base().add({"param": 1.0}, param=2.0)
+
+
+class RaisedLeaf(zdx.Module):
+    gain: float
+
+    def __init__(self, gain):
+        self.gain = gain
+
+    @property
+    def doubled_gain(self):
+        return 2 * self.gain
+
+
+class RaisedBranch(zdx.Module):
+    leaf: RaisedLeaf
+
+    def __init__(self, leaf):
+        self.leaf = leaf
+
+
+class RaisedModel(zdx.Module):
+    branches: dict[str, RaisedBranch]
+
+    def __init__(self, branches):
+        self.branches = branches
+
+
+class LinkedModel(zdx.Module):
+    owner: object
+    reference: object
+
+    def __init__(self, owner, reference):
+        self.owner = owner
+        self.reference = reference
+
+
+def test_module_raises_mapping_keys_fields_and_properties():
+    model = RaisedModel({"left": RaisedBranch(RaisedLeaf(2.0))})
+
+    assert model.left is model.branches["left"]
+    assert model.gain == 2.0
+    assert model.doubled_gain == 4.0
+
+
+def test_module_path_operations_follow_raised_attributes():
+    model = RaisedModel({"left": RaisedBranch(RaisedLeaf(2.0))})
+
+    assert model.get("gain", to_array=False) == 2.0
+    assert model.get("left.gain", to_array=False) == 2.0
+    assert model.set("gain", 3.0).branches["left"].leaf.gain == 3.0
+    assert model.add("left.gain", 2.0).branches["left"].leaf.gain == 4.0
+
+
+def test_module_rejects_ambiguous_raised_attributes():
+    model = RaisedModel(
+        {
+            "left": RaisedBranch(RaisedLeaf(2.0)),
+            "right": RaisedBranch(RaisedLeaf(3.0)),
+        }
+    )
+
+    message = "matches 'branches.left.leaf.gain', 'branches.right.leaf.gain'"
+    with pytest.raises(AttributeError, match=message):
+        _ = model.gain
+    with pytest.raises(AttributeError, match=message):
+        model.get("gain")
+    with pytest.raises(AttributeError, match=message):
+        model.set("gain", 4.0)
+
+
+def test_module_missing_attribute_suggests_nested_names():
+    model = RaisedModel({"left": RaisedBranch(RaisedLeaf(2.0))})
+
+    with pytest.raises(AttributeError, match="Did you mean 'gain'"):
+        _ = model.gian
+
+
+def test_module_populate_convenience():
+    owner = zdx.Linked(np.asarray(2.0), key="gain")
+    model = LinkedModel(owner, owner.defer())
+
+    output = model.populate()
+
+    assert np.allclose(output.owner, 2.0)
+    assert np.allclose(output.reference, 2.0)
+
+
+def test_base_save_and_template_load_convenience(create_base):
+    original = create_base()
+    file = BytesIO()
+
+    original.save(file)
+    file.seek(0)
+    loaded = original.load(file)
+
+    assert eqx.tree_equal(loaded, original, typematch=True)
 
 
 class Foo(zdx.WrapperHolder):
