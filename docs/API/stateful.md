@@ -1,4 +1,4 @@
-# Arrays, state, and random keys
+# Arrays and state
 
 Numerical constructor boundaries can use `as_array` to convert Python or NumPy
 values to strongly typed JAX arrays while preserving inferred dtype. `None` and any
@@ -66,35 +66,33 @@ next_value = history.resolve(state=state)
 path. Several references may intentionally share one state entry, and unrelated
 state entries are permitted.
 
-## Random expressions
+## Downstream random expressions
 
-`Random` wraps any JAX-style key-first callable without requiring one Zodiax class
-per distribution:
+Zodiax does not prescribe random distributions or key-stream semantics. A
+downstream class can build directly on the expression protocol and ordinary JAX
+random functions:
 
 ```python
-noise = zdx.Random(
-    jr.normal,
-    shape=(8,),
-    stream="noise",
-)
+import equinox as eqx
+import jax.random as jr
 
-sample = noise.resolve(state=state)
-state = state.step()
-next_sample = noise.resolve(state=state)
+
+class NormalNoise(zdx.Expression):
+    shape: tuple[int, ...] = eqx.field(static=True)
+
+    def evaluate(self, *, key, **context):
+        return jr.normal(key, self.shape)
+
+
+noise = NormalNoise((8,))
+sample = noise.resolve(key=jr.key(0))
 ```
 
-The expression uses ordinary `jax.random.fold_in` operations to derive a key from
-`state.key`, `state.index`, and its static stream identity. The root key does not
-change. An explicit `key=` and `index=` can instead make a Random definition
-self-contained. Without any index, index zero gives a fixed reproducible
-realisation. Common JAX trace-time options such as `shape`, `dtype`, and `axis` are
-static automatically; custom named options can be selected with `static=`.
-
-Common JAX random functions are registered for Zodiax serialisation. Custom
-key-first callables use the normal `register_callable()` mechanism.
+More specialised classes may store a `StateRef`, derive keys using `split` or
+`fold_in`, or accept a key from call context. Those choices remain explicit and
+natively interoperable with JAX. Built-in JAX random callables are registered with
+Zodiax serialisation, and downstream callables can use `register_callable()`.
 
 ::: zodiax.numerics.arrays
 
 ::: zodiax.numerics.state
-
-::: zodiax.numerics.random

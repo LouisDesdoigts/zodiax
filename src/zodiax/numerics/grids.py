@@ -61,7 +61,7 @@ def _unit(value: Any) -> Unit | None:
     if value is None:
         return None
     if isinstance(value, str):
-        value = Unit(value)
+        value = Unit(unit=value)
     if not isinstance(value, Unit):
         raise TypeError("unit must be a unit string, Unit, or None.")
     if value.x is not None:

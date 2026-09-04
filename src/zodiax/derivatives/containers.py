@@ -1,4 +1,4 @@
-"""PyTree-aware vectors, matrices, Jacobians, Hessians, and Fisher information."""
+"""PyTree-aware derivative layouts and realised derivative containers."""
 
 from __future__ import annotations
 
@@ -13,9 +13,9 @@ import numpy as onp
 from jax import Array
 from jax import tree_util as jtu
 
-from .base import Module
-from .numerics.arrays import _as_float_array, _validate_float_array
-from .stats import gauss_hessian
+from ..base import Base, _validate_mapping_keys
+from ..numerics.arrays import _as_float_array, _validate_float_array
+from ..stats import gauss_hessian
 
 __all__ = [
     "TreeLayout",
@@ -23,6 +23,7 @@ __all__ = [
     "TreeMatrix",
     "Jacobian",
     "Hessian",
+    "GaussNewton",
     "Fisher",
 ]
 
@@ -37,6 +38,11 @@ def _path_string(key_path: tuple) -> str:
         if isinstance(key, jtu.GetAttrKey):
             parts.append(key.name)
         elif isinstance(key, jtu.DictKey) and isinstance(key.key, str):
+            if "." in key.key:
+                raise ValueError(
+                    f"Mapping key {key.key!r} contains '.'. Dots are reserved as "
+                    "structural path separators."
+                )
             parts.append(key.key)
         elif isinstance(key, jtu.SequenceKey):
             parts.append(str(key.idx))
@@ -125,7 +131,7 @@ def _validate_paths(paths: tuple[str, ...]) -> None:
                 raise ValueError("One layout path cannot be the parent of another.")
 
 
-class TreeLayout(Module):
+class TreeLayout(Base):
     """Static mapping between named PyTree leaves and one flat coordinate axis.
 
     A layout records only the order and shapes used to concatenate floating leaves.
@@ -147,7 +153,7 @@ class TreeLayout(Module):
     import jax.numpy as jnp
     import zodiax as zdx
 
-    tree = {"position": jnp.zeros(2), "flux": jnp.ones(())}
+    tree = {"weights": jnp.zeros(2), "bias": jnp.ones(())}
     layout = zdx.TreeLayout.from_tree(tree)
     flat = layout.flatten(tree)
     restored = layout.unflatten(flat, nested=True)
@@ -161,8 +167,6 @@ class TreeLayout(Module):
         self,
         paths: Sequence[str],
         shapes: Sequence[Sequence[int]],
-        *,
-        alias: Any = None,
     ):
         """Construct a layout from explicit, ordered leaf metadata.
 
@@ -184,7 +188,6 @@ class TreeLayout(Module):
 
         self.paths = paths
         self.shapes = shapes
-        self.alias = alias
 
     @property
     def sizes(self) -> tuple[int, ...]:
@@ -218,20 +221,21 @@ class TreeLayout(Module):
         """Construct a layout using the canonical JAX leaf order of a PyTree.
 
         Module attributes, string-keyed mappings, and list or tuple indices are
-        represented as dotted Zodiax paths. Literal dots in mapping keys therefore
-        carry the same nested-path meaning as elsewhere in Zodiax.
+        represented as dotted Zodiax paths. Dots in literal mapping keys are rejected
+        because dots are reserved as structural path separators.
 
         Parameters
         ----------
         tree : PyTree
-            Tree containing at least one floating array-like leaf. Every leaf must
-            have a floating dtype.
+            Parameter tree containing at least one floating array-like leaf. Every
+            leaf is included and must have a floating dtype.
 
         Returns
         -------
         layout : TreeLayout
             Static description of the tree's numerical coordinates.
         """
+        _validate_mapping_keys(tree)
         path_leaves, _ = jtu.tree_flatten_with_path(tree)
         if len(path_leaves) == 0:
             raise ValueError("tree must contain at least one numerical leaf.")
@@ -250,7 +254,7 @@ class TreeLayout(Module):
         Parameters
         ----------
         tree : PyTree
-            Nested object or flat path mapping containing the selected leaves.
+            Nested object containing the selected leaves.
         paths : str or sequence of str
             Leaf paths in the required flat-coordinate order.
 
@@ -259,6 +263,7 @@ class TreeLayout(Module):
         layout : TreeLayout
             Static description of the selected numerical coordinates.
         """
+        _validate_mapping_keys(tree)
         paths = (paths,) if isinstance(paths, str) else tuple(paths)
 
         shapes = []
@@ -407,7 +412,7 @@ class TreeLayout(Module):
                 raise ValueError("Leaf shapes cannot contain negative sizes.")
 
 
-class TreeVector(Module):
+class TreeVector(Base):
     """A flat vector associated with a serialisable :class:`TreeLayout`.
 
     Tree vectors provide flat and nested dictionary views without duplicating their
@@ -418,7 +423,7 @@ class TreeVector(Module):
     vector: Array
     layout: TreeLayout
 
-    def __init__(self, vector: Any, layout: TreeLayout, *, alias: Any = None):
+    def __init__(self, vector: Any, layout: TreeLayout):
         """Construct a tree-aware vector.
 
         Parameters
@@ -437,7 +442,6 @@ class TreeVector(Module):
 
         self.vector = vector
         self.layout = layout
-        self.alias = alias
 
     @classmethod
     def from_tree(cls, tree: Any, layout: TreeLayout | None = None) -> "TreeVector":
@@ -462,7 +466,7 @@ class TreeVector(Module):
             raise ValueError(f"vector must have shape ({self.layout.size},).")
 
 
-class TreeMatrix(Module):
+class TreeMatrix(Base):
     """A square floating matrix indexed by one :class:`TreeLayout` on both axes.
 
     A block has shape ``row_leaf_shape + column_leaf_shape``. Concrete symmetric
@@ -473,7 +477,7 @@ class TreeMatrix(Module):
     layout: TreeLayout
     _symmetric = False
 
-    def __init__(self, matrix: Any, layout: TreeLayout, *, alias: Any = None):
+    def __init__(self, matrix: Any, layout: TreeLayout):
         """Construct a square tree-aware matrix.
 
         Parameters
@@ -495,7 +499,6 @@ class TreeMatrix(Module):
 
         self.matrix = matrix
         self.layout = layout
-        self.alias = alias
 
     def rows(self, *, nested: bool = False) -> dict:
         """Split the first matrix axis into layout leaves."""
@@ -552,7 +555,7 @@ class TreeMatrix(Module):
             raise ValueError("matrix must be symmetric.")
 
 
-class Jacobian(Module):
+class Jacobian(Base):
     """Jacobian array associated with one tree-structured parameter space.
 
     The matrix has shape ``output_shape + (layout.size,)``. Its leading axes preserve
@@ -566,10 +569,10 @@ class Jacobian(Module):
     import jax.numpy as jnp
     import zodiax as zdx
 
-    parameters = {"position": jnp.array([1.0, 2.0])}
+    parameters = {"weights": jnp.array([1.0, 2.0])}
 
     def model(values):
-        return values["position"] ** 2
+        return values["weights"] ** 2
 
     jacobian = zdx.jacobian(model, parameters)
     columns = jacobian.columns()
@@ -579,7 +582,7 @@ class Jacobian(Module):
     matrix: Array
     layout: TreeLayout
 
-    def __init__(self, matrix: Any, layout: TreeLayout, *, alias: Any = None):
+    def __init__(self, matrix: Any, layout: TreeLayout):
         """Construct a Jacobian from its realised derivative array.
 
         Parameters
@@ -599,7 +602,6 @@ class Jacobian(Module):
 
         self.matrix = matrix
         self.layout = layout
-        self.alias = alias
 
     @property
     def output_shape(self) -> tuple[int, ...]:
@@ -642,6 +644,33 @@ class Hessian(TreeMatrix):
 
     def __init__(self, matrix: Any, layout: TreeLayout):
         """Construct a symmetric Hessian.
+
+        Parameters
+        ----------
+        matrix : array-like
+            Floating matrix with shape ``(layout.size, layout.size)``. The stored
+            matrix is algebraically symmetrised.
+        layout : TreeLayout
+            Parameter coordinates represented by both matrix axes.
+        """
+        super().__init__(matrix, layout)
+
+
+class GaussNewton(TreeMatrix):
+    """Gauss--Newton Hessian approximation on one parameter space.
+
+    A Gauss--Newton matrix has the form ``J.T @ P @ J``, where ``J`` is the
+    Jacobian of an unreduced residual function and ``P`` is its inverse
+    covariance. It is not generally the exact Hessian of the corresponding scalar
+    objective. Construction enforces exact symmetry by storing
+    ``(matrix + matrix.T) / 2``. Positive semidefiniteness is expected when ``P``
+    is positive semidefinite, but is not projected or validated.
+    """
+
+    _symmetric = True
+
+    def __init__(self, matrix: Any, layout: TreeLayout):
+        """Construct a symmetric Gauss--Newton matrix.
 
         Parameters
         ----------

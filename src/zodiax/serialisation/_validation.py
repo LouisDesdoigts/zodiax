@@ -6,7 +6,7 @@ from typing import Any
 
 import equinox as eqx
 
-from ..base import Module, _validate_aliases
+from ..base import Base, Module, _validate_aliases, _validate_mapping_keys
 
 _VALIDATION_HOOK = "__zodiax_validate__"
 
@@ -41,6 +41,15 @@ def _validate_rebuilt(tree: Any) -> None:
                 child = object.__getattribute__(value, field.name)
                 visit(child, f"{path}.{field.name}")
 
+            if isinstance(value, Base):
+                try:
+                    _validate_mapping_keys(value)
+                except Exception as error:
+                    raise ValueError(
+                        f"Path validation failed at {path} "
+                        f"({type(value).__name__})."
+                    ) from error
+
             # Alias validation is a Module invariant, not an optional subclass hook.
             # Running it centrally prevents a numerical __zodiax_validate__ method
             # from shadowing the inherited Module validation contract.
@@ -66,7 +75,7 @@ def _validate_rebuilt(tree: Any) -> None:
                     hook()
                 except Exception as error:
                     raise ValueError(
-                        f"Post-load validation failed at {path} "
+                        f"Object validation failed at {path} "
                         f"({type(value).__name__}, declared by "
                         f"{declaring_class.__name__})."
                     ) from error

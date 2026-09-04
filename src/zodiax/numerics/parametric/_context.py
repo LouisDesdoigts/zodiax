@@ -5,6 +5,23 @@ from __future__ import annotations
 from typing import Any
 
 
+def coordinate_axis(coordinates: Any, ndim: int, name: str = "coords") -> int:
+    """Return the inferred component axis for a sampled ``ndim``-D field.
+
+    Coordinate consumers share the :class:`Grid` convention
+    ``(..., ndim, *spatial_shape)`` with exactly ``ndim`` trailing spatial axes.
+    The component axis is consequently always ``-ndim - 1`` and never needs to be
+    retained as model metadata.
+    """
+    axis = -ndim - 1
+    if coordinates.ndim < ndim + 1 or coordinates.shape[axis] != ndim:
+        raise ValueError(
+            f"{name} must have shape (..., {ndim}, *spatial_shape) with "
+            f"{ndim} final spatial axes."
+        )
+    return axis
+
+
 def coordinate_context(
     coords: Any,
     coordinates: Any,

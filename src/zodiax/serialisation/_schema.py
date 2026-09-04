@@ -125,13 +125,26 @@ def _validate_node(node, path, depth, state, ancestors, *, retained):
                 field_path = f"{path}.fields[{index}]"
                 if not isinstance(field, dict):
                     raise ValueError(f"Module field at {field_path} must be a mapping.")
-                _require_keys(field, {"name", "static", "value"}, field_path)
+                _require_keys(
+                    field,
+                    {"name", "static", "metadata", "value"},
+                    field_path,
+                )
                 name = field["name"]
                 static = field["static"]
+                metadata = field["metadata"]
                 if type(name) is not str or not name.isidentifier():
                     raise ValueError(f"Invalid module field name at {field_path}.")
                 if type(static) is not bool:
                     raise ValueError(f"Invalid static marker at {field_path}.")
+                if not isinstance(metadata, dict) or set(metadata) != {"runtime"}:
+                    raise ValueError(f"Invalid Zodiax metadata at {field_path}.")
+                if type(metadata["runtime"]) is not bool:
+                    raise ValueError(f"Invalid runtime marker at {field_path}.")
+                if static and metadata["runtime"]:
+                    raise ValueError(
+                        f"Module field at {field_path} cannot be static and runtime."
+                    )
                 names.append(name)
                 _validate_node(
                     field["value"],

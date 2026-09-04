@@ -14,6 +14,7 @@ from ._archive import (
     _save_file,
     _save_path,
     _validate_members,
+    _validate_package_versions,
     _validate_payload_size,
 )
 from ._callables import register_callable
@@ -33,9 +34,10 @@ def save(file_or_path, pytree) -> None:
         Destination for the archive. Paths without a suffix receive ``.zdx``.
         Binary files remain open after saving.
     pytree : Equinox module, Equinox State, or supported container
-        Realised object containing Equinox modules, supported built-in containers,
-        JAX arrays, Python numerical values, literals, registered symbolic callables,
-        and static values.
+        Serialisable object containing Equinox modules, supported built-in
+        containers, JAX arrays, Python numerical values, literals, registered
+        symbolic callables, and static values. The canonical persisted model form is
+        unrealised.
 
     Raises
     ------
@@ -71,10 +73,13 @@ def save(file_or_path, pytree) -> None:
     # Validate topology-bound metadata before describing or writing any bytes. This
     # rejects stale aliases on populated or resolved execution artefacts.
     _validate_rebuilt(pytree)
-    validate_links(pytree)
 
-    # Describe the complete realised object before writing any bytes.
+    # Describe the complete serialisable object before writing any bytes.
     definition = ObjectDefinition.from_object(pytree)
+    # Link traversal assumes a supported JAX PyTree. Running it after definition
+    # construction preserves the serializer's stable diagnostics for unsupported
+    # containers while still rejecting invalid links before any bytes are written.
+    validate_links(pytree)
 
     # Stage file objects or atomically replace path destinations.
     path = _normalise_path(file_or_path)
@@ -84,7 +89,7 @@ def save(file_or_path, pytree) -> None:
         _save_path(path, pytree, definition.to_dict())
 
 
-def load(file_or_path, *, like=None, custom_types=None):
+def load(file_or_path, *, like=None, custom_types=None, strict=True):
     """Load a validated Zodiax archive, optionally using an existing template.
 
     Parameters
@@ -102,6 +107,10 @@ def load(file_or_path, *, like=None, custom_types=None):
         This can resolve local or otherwise unavailable classes without importing
         code named by the archive. The supplied class must retain the stored nominal
         identifier and field schema.
+    strict : bool, default=True
+        Require every package version recorded by the archive to match the loading
+        environment exactly. Set to ``False`` to attempt reconstruction using the
+        archive format and generated object definition alone.
 
     Returns
     -------
@@ -134,9 +143,11 @@ def load(file_or_path, *, like=None, custom_types=None):
     Notes
     -----
     Archives contain an automatically generated JSON object definition and an
-    Equinox JAX-array stream. The producing Python and core package versions are
-    recorded as diagnostic provenance; compatibility is determined by the archive
-    and payload format versions plus the generated definition.
+    Equinox JAX-array stream. The producing Python version is diagnostic provenance.
+    Core package versions, plus discoverable installed distributions referenced by
+    stored classes, are exact compatibility requirements when ``strict=True``.
+    Archive and payload format versions and the generated definition are always
+    validated.
 
     Loading never imports code named by an archive. For template-free loading, every
     stored class must already be imported or explicitly supplied through
@@ -149,6 +160,9 @@ def load(file_or_path, *, like=None, custom_types=None):
     state is invalid. Such hooks execute code from already resolved classes and should
     therefore only be enabled on trusted class providers.
     """
+    if type(strict) is not bool:
+        raise TypeError("strict must be a bool.")
+
     # Open a path while retaining ownership of caller-provided file objects.
     path = _normalise_path(file_or_path)
     source = nullcontext(file_or_path) if path is None else path.open("rb")
@@ -159,6 +173,8 @@ def load(file_or_path, *, like=None, custom_types=None):
                 # Validate the archive and template before decoding JAX arrays.
                 _validate_members(archive)
                 manifest = _read_manifest(archive)
+                if strict:
+                    _validate_package_versions(manifest)
                 _validate_payload_size(archive, manifest)
                 definition = ObjectDefinition.from_dict(manifest["definition"])
                 template = definition.build_template(

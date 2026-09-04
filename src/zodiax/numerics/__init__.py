@@ -5,7 +5,6 @@
 from . import expressions
 from . import arrays, links, transforms
 from . import grids, normalisation, parametric, state, units
-from . import random
 
 _MODULES = (
     expressions,
@@ -17,7 +16,6 @@ _MODULES = (
     parametric,
     state,
     units,
-    random,
 )
 
 for _module in _MODULES:

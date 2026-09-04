@@ -10,6 +10,7 @@ from types import MemberDescriptorType
 
 import equinox as eqx
 
+from ..base import _RUNTIME_FIELD
 from ._callables import _callable_identifier
 from ._leaves import _NOT_PAYLOAD, _payload_definition
 from ._reconstruction import _build_template
@@ -119,8 +120,25 @@ def _mapping_key_definition(value, path):
     raise TypeError(f"{path} has unsupported mapping key type {type(value).__name__}.")
 
 
+def _field_metadata(field):
+    """Return behaviour-affecting Zodiax metadata for one module field."""
+    return {"runtime": bool(field.metadata.get(_RUNTIME_FIELD, False))}
+
+
 def _describe(value, *, static, template, path):
-    """Recursively describe one realised value using public object state."""
+    """Recursively describe one serialisable value using public object state."""
+    if static:
+        # Link population follows JAX's dynamic PyTree traversal. A link hidden
+        # beneath an Equinox static field would therefore be archived but could
+        # never participate in ownership or deferred-reference resolution.
+        from ..numerics.links import Deferred, Linked
+
+        if isinstance(value, (Linked, Deferred)):
+            raise TypeError(
+                f"{path} contains a {type(value).__name__} node in static metadata. "
+                "Linked and Deferred nodes must be stored in dynamic fields."
+            )
+
     if isinstance(value, eqx.nn.State):
         if type(value) is not eqx.nn.State:
             raise TypeError(
@@ -174,6 +192,7 @@ def _describe(value, *, static, template, path):
                 {
                     "name": field.name,
                     "static": field_static,
+                    "metadata": _field_metadata(field),
                     "value": _describe(
                         field_value,
                         static=static or field_static,
@@ -318,6 +337,7 @@ def _structural_view(definition):
                 {
                     "name": field["name"],
                     "static": field["static"],
+                    "metadata": field["metadata"],
                     # Aliases are archived public-interface metadata, not part of
                     # the numerical/container topology supplied by ``like``. The
                     # saved definition remains authoritative and is still compared
@@ -413,15 +433,16 @@ def _collect_types(value, registry=None, ancestors=None):
 class ObjectDefinition:
     """Automatically generated JSON definition of a serialisable object.
 
-    The definition records module classes and fields, built-in container topology,
-    Python scalar and literal values, static values, and JAX array metadata. Concrete
-    JAX array values are deliberately absent and live in the archive payload.
+    The definition records module classes, fields and behaviour-affecting Zodiax
+    field metadata, built-in container topology, Python scalar and literal values,
+    static values, and JAX array metadata. Concrete JAX array values are deliberately
+    absent and live in the archive payload.
 
-    Definitions are generated from realised objects; downstream Equinox and Zodiax
-    classes do not need to declare a separate schema. Module instance state must be
-    held in dataclass fields containing values supported by the generic definition
-    format. Equinox ``State`` uses a dedicated versioned codec for its stable keys and
-    PyTree values.
+    Definitions are normally generated from canonical unrealised models; downstream
+    Equinox and Zodiax classes do not need to declare a separate schema. Module
+    instance state must be held in dataclass fields containing values supported by
+    the generic definition format. Equinox ``State`` uses a dedicated versioned codec
+    for its stable keys and PyTree values.
 
     Examples
     --------
@@ -454,7 +475,7 @@ class ObjectDefinition:
 
     @classmethod
     def from_object(cls, obj):
-        """Generate a definition from one realised object."""
+        """Generate a definition from one serialisable object."""
         return cls(_describe_root(obj, template=False))
 
     @classmethod

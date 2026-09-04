@@ -23,21 +23,24 @@ transform with no value resolves its stored `x`:
 
 ```python
 value = zdx.Exp()(latent)
+value = zdx.Exp().apply(latent)
 value = zdx.Exp(latent)()
 value = zdx.Exp(latent).resolve()
 ```
 
-All three forms return `exp(latent)`.
+All four forms return `exp(latent)`. Constructors consistently place `x` first;
+omit it or write `x=None` when constructing an unbound transform with later
+operands.
 
 `Exp` and `Log` accept an optional `base`; `None` selects the natural base and is
-omitted from the print. `Exp10` and `Log10` provide compact base-ten definitions:
+omitted from the print. Base ten uses the same classes:
 
 ```python
 decimal = zdx.Exp(x=latent, base=10.0)
-decimal = zdx.Exp10(x=latent)
+exponent = zdx.Log(x=decimal, base=10.0)
 ```
 
-Their unbound prints are `Exp()`, `Exp(base=f32[])`, and `Exp10()` respectively.
+Their unbound prints are `Exp()` and `Exp(base=f32[])` respectively.
 
 ```python
 definition = zdx.Exp(
@@ -64,6 +67,7 @@ Calling an unbound transform applies its full nested spine and returns an array:
 ```python
 transform = zdx.Mul(x=zdx.Exp(), s=2.0)
 value = transform(latent)
+same = transform.apply(latent)
 ```
 
 Stored composition is expressed directly through `x`; aliases expose shorter domain
@@ -88,6 +92,14 @@ Ordinary `model.resolve(**context)` treats runtime fields as opaque. Passing
 This keeps a root-level coordinate array from resolving fields that belong to local
 runtime coordinate systems.
 
+`realise()` is the high-level population-plus-resolution operation. Use it inside
+the function transformed by JAX when the model contains links:
+
+```python
+realised = model.realise(state=state, coords=coords)
+realised = zdx.realise(model, state=state, coords=coords)
+```
+
 The lifecycle terminology is:
 
 1. the canonical, serialised **unrealised model**;
@@ -106,14 +118,16 @@ surface = polynomial.resolve(coords=coords)
 
 state = zdx.State(time=times[0])
 time_ref = state.ref("time")
-history = zdx.Interpolation(times, samples, x=time_ref)
+history = zdx.Interpolation(time_ref, times, samples)
 field = zdx.Basis(M=modes, x=history)
 state = state.set(time=1.5)
 value = field.resolve(state=state)
 ```
 
 `Grid` uses `ij` indexing: component `i` varies along spatial axis `i`, and the
-coordinate output has shape `(ndim, *grid.n)` after any metadata batch axes.
+coordinate output has shape `(..., ndim, *grid.n)`. Coordinate consumers infer the
+component axis as `-ndim - 1`; matching leading grid and parameter batches are
+paired using ordinary JAX broadcasting.
 
 `Basis` infers one unique matching coefficient shape by default. A Grid `unit`
 string converts both `d` and `c` to the active global unit. Supply a `Unit` object
@@ -123,7 +137,7 @@ to choose an explicit output:
 grid = zdx.Grid(
     n=(64, 64),
     d=0.1,
-    unit=zdx.Unit("arcsec", to="mas"),
+    unit=zdx.Unit(unit="mm", to="um"),
 )
 ```
 
@@ -139,30 +153,30 @@ values = profile.resolve(coords=coords)
 ## 4. Normalisation
 
 ```python
-transmission = zdx.MeanNorm(
+mean_one = zdx.MeanNorm(
     x=zdx.Add(
         x=zdx.Basis(M=modes, x=coefficients),
         b=1.0,
     ),
-    w=support,
+    w=weights,
 )
 
-opd = zdx.RMSNorm(
+target_rms = zdx.RMSNorm(
     x=zdx.Basis(M=modes, x=coefficients),
-    s=zdx.Unit("nm", x=10.0),
-    w=support,
+    s=2.0,
+    w=weights,
 )
 ```
 
 The default `axis=None` operates over the complete array. `MeanNorm`, `RMSNorm`, and
 `SumNorm` target one when `s` is omitted.
 
-## 5. Sharing, state, and random values
+## 5. Sharing and state
 
 ```python
-distance = zdx.Linked(2.0, key="secondary-position")
-reference = distance.defer()
-realised = model.populate().resolve()
+scale = zdx.Linked(2.0, key="shared-scale")
+reference = scale.defer()
+realised = model.realise()
 
 state = zdx.State(
     index=0,
@@ -174,13 +188,11 @@ scheduled = zdx.Mul(x=state.ref("time"), s=2.0)
 current = scheduled.resolve(state=state)
 state = state.step()
 following = scheduled.resolve(state=state)
-
-noise = zdx.Random(jr.normal, shape=(4,), stream="noise")
-sample = noise.resolve(state=state)
 ```
 
-The unresolved model remains the serialisable and optimisable definition. Population
-and resolution produce execution artefacts. `State.step()` increments its available
-index and time while retaining `key` as a stable root. `Random` derives ordinary JAX
-keys from that root, the current index, and its stable stream identity, so model
-components do not split keys manually.
+The unrealised physical model remains the serialisable definition. Optimisation
+selects its scientifically meaningful parameter paths rather than treating the
+entire tree as one undifferentiated parameter collection. Population and resolution
+produce execution artefacts. `State.step()` increments its available index and time
+while leaving any `key` entry unchanged. Downstream expressions can consume or
+derive ordinary JAX keys according to application-specific stream semantics.

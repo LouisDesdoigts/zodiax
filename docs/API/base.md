@@ -26,16 +26,17 @@ optimisation layouts, and serialisation.
 ```python
 import zodiax as zdx
 
-class Telescope(zdx.Module):
-    propagator: zdx.Module
+class Model(zdx.Module):
+    output: object
 
-telescope = Telescope(
-    propagator=propagator,
-    alias=(("delta_focus", "propagator.focal_length.b"),),
+
+model = Model(
+    output=zdx.Exp(x=zdx.Mul(x=zdx.Add(x=latent, b=offset), s=scale)),
+    alias=(("offset", "output.x.x.b"),),
 )
 
-telescope.delta_focus          # concise lookup
-telescope.get("delta_focus")   # the same path through the Zodiax API
+model.offset          # concise lookup
+model.get("offset")  # the same path through the Zodiax API
 ```
 
 `alias=None` is the inherited default and is omitted by Equinox's ordinary printed
@@ -48,5 +49,11 @@ different topology and should not be archived.
 `Base.save(path)` writes a validated Zodiax archive. Calling `template.load(path)`
 loads through the same format while using `template` to verify the expected class and
 field structure.
+
+Dots are reserved as path separators. `Base` validates stored mappings after
+construction and `set()`, and rejects literal string keys containing dots. Dotted
+strings remain valid as mapping values and static metadata, including alias targets
+and `StateRef` paths. Archive reconstruction repeats the same validation before an
+object is returned.
 
 ::: zodiax.base

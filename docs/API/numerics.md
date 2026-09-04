@@ -10,6 +10,7 @@ resolves them when local context is available.
 - `Transform` adds stored input `x`, local `fwd(x)`, and optional reverse methods.
 - Calling an expression with context is equivalent to resolving it.
 - Calling a transform with an input applies its complete nested spine.
+- `transform.apply(x, **context)` is the explicit spelling of that operation.
 - Calling a transform without an input resolves its stored definition.
 - Fields declared with `zdx.field(runtime=True)` remain protected until resolution
   explicitly supplies `runtime=True`.
@@ -21,6 +22,7 @@ remain compact while populated leaves retain their real structural paths.
 ```python
 transform = zdx.Mul(x=zdx.Exp(), s=2.0)
 value = transform(latent)
+same = transform.apply(latent)
 
 definition = zdx.Exp(x=zdx.Map(x=latent, M=matrix, b=origin))
 value = definition()
@@ -51,7 +53,9 @@ Ordinary `model.resolve(**context)` leaves every runtime field opaque. A deliber
 `model.resolve(runtime=True, **context)` overrides protection throughout the
 selected tree.
 
-The canonical **unrealised model** becomes a **linked model** after `populate()`, a
+`realise(model, **context)` and `model.realise(**context)` perform population and
+resolution together; call them inside JAX-transformed functions when links are
+present. The canonical **unrealised model** becomes a **linked model** after `populate()`, a
 **context-resolved model** after available high-level context is applied, and a
 **realised model** once runtime fields have also become concrete arrays. Protected
 subtrees are resolved coherently at their owning runtime boundary rather than being
@@ -61,37 +65,40 @@ partially evaluated beforehand.
 
 | Object | Kernel | Definition |
 |---|---|---|
-| `Add(b, x=None)` | `add(x, b=None)` | `x + b` |
-| `Mul(s, x=None)` | `mul(x, s=None)` | `x * s` |
-| `Pow(p, x=None)` | `power(x, p)` | `x**p` |
+| `Add(x=None, b=None)` | `add(x, b=None)` | `x + b` |
+| `Mul(x=None, s=None)` | `mul(x, s=None)` | `x * s` |
+| `Pow(x=None, p=None)` | `power(x, p)` | `x**p` |
 | `Exp(x=None, base=None)` | — | `exp(x)` or `base**x` |
 | `Log(x=None, base=None)` | — | natural or selected-base logarithm |
-| `Exp10(x=None)` / `Log10(x=None)` | — | compact base-ten pair |
-| `MatMul(M, x=None)` | `matmul(x, M=None)` | final/leading-axis contraction |
-| `Mask(mask, x=None)` | — | sparse scatter |
+| `MatMul(x=None, M=None)` | `matmul(x, M=None)` | final/leading-axis contraction |
+| `Mask(x=None, mask=None)` | — | compact scatter |
 | `Map(x=None, s=None, M=None, b=None)` | — | `matmul(s * x, M) + b` |
 
 `Exp` and `Log` use the natural base when `base=None`; an explicit base is real,
-positive, and unequal to one. `Exp10` and `Log10` are the compact named base-ten
-forms. `Add`, `Mul`, the exponential pairs, and the logarithm pairs provide exact
-local inverses on their valid domains. `MatMul`, `Mask`, `Basis`, and `Map` provide
-representative solves where appropriate.
+positive, and unequal to one; use `base=10` for base-ten transforms. `Add`, `Mul`,
+`Exp`, and `Log` provide exact local inverses on their valid domains. `MatMul`,
+`Mask`, `Basis`, and `Map` provide representative solves where appropriate. Every
+transform constructor places `x` first; other numerical operands remain positional
+or keyword arguments.
 
 ## Bases and polynomials
 
 These reusable parameterisations live in `zodiax.numerics.parametric` and remain
 re-exported as `zdx.Basis`, `zdx.Polynomial`, and `zdx.Interpolation`.
 
-`Basis(M, x=None, axes=None)` automatically matches one unique trailing coefficient
-shape against leading dimensions of `M`. `axes` is an advanced override for an
-ambiguous layout.
+`Basis(x=None, M=None, axes=None)` automatically matches one unique trailing
+coefficient shape against leading dimensions of `M`. `axes` is an advanced override
+for an ambiguous layout.
 
 ```python
 field = zdx.Basis(M=modes, x=coefficients)
 ```
 
 `Polynomial` stores exponent array `p` directly and evaluates its terms from
-`coords`:
+`coords`. A `D`-dimensional sampled coordinate field has shape
+`(..., D, *spatial_shape)` with exactly `D` spatial axes. The component axis is
+inferred as `-D - 1`, and leading coordinate/coefficient batches are paired by JAX
+broadcasting. Bare sample arrays remain supported for one-variable polynomials:
 
 ```python
 polynomial = zdx.Polynomial(degree=2, ndim=2, x=coefficients)
@@ -117,10 +124,10 @@ active global unit, or an unbound `Unit` with an explicit output.
 grid = zdx.Grid(n=(64, 64), d=0.1, unit="mm")
 coords = grid()  # (2, 64, 64)
 
-image_grid = zdx.Grid(
+converted_grid = zdx.Grid(
     n=(64, 64),
     d=0.01,
-    unit=zdx.Unit("arcsec", to="mas"),
+    unit=zdx.Unit(unit="mm", to="um"),
 )
 ```
 
@@ -134,15 +141,15 @@ to one. Optional nonnegative `w` supplies weights or a support mask. `axis=None`
 operates over the complete array.
 
 ```python
-transmission = zdx.MeanNorm(
+mean_one = zdx.MeanNorm(
     x=zdx.Add(x=zdx.Basis(M=modes, x=coefficients), b=1.0),
-    w=support,
+    w=weights,
 )
 
-opd = zdx.RMSNorm(x=field, s=zdx.Unit("nm", x=10.0), w=support)
+target_rms = zdx.RMSNorm(x=field, s=2.0, w=weights)
 ```
 
-## Interpolation, links, state, and random values
+## Interpolation, links, and state
 
 ```python
 state = zdx.State(
@@ -152,39 +159,32 @@ state = zdx.State(
     key=jr.key(0),
 )
 time_ref = state.ref("time")
-history = zdx.Interpolation(times, samples, x=time_ref)
+history = zdx.Interpolation(time_ref, times, samples)
 value = history.resolve(state=state)
 state = state.step()
 next_value = history.resolve(state=state)
 
 owner = zdx.Linked(value, key="shared")
 reference = owner.defer()
-realised = model.populate().resolve(state=state)
-
-noise = zdx.Random(jr.normal, shape=(8,), stream="noise")
-sample = noise.resolve(state=state)
+realised = model.realise(state=state)
 ```
 
 Population establishes shared ownership; resolution evaluates expressions. A
 `State` owns values and uses the ordinary Zodiax `set` path API. `StateRef` stores
 only a static path and may occupy any expression leaf, so interpolation does not
 need a separate named-argument selector. `State.step()` advances `index` and `time`
-without mutating the root `key`. `Random` wraps any JAX-style key-first callable and
-derives an ordinary JAX key from the root key, current index, and its stable stream
-identity, so consuming model code does not split keys manually.
-
-Common JAX trace-time options, including `shape`, `dtype`, and `axis`, are static
-automatically. Use `static=` to name any additional trace-time keyword required by
-a custom key-first callable.
+without mutating any `key` entry. Random evaluation is defined by downstream
+expression classes using ordinary JAX APIs, so applications retain control over
+key splitting, folding, and stream identity.
 
 ## Units and arrays
 
 ```python
 zdx.set_units({"cartesian": "um", "angular": "mas"})
-distance = zdx.Unit("mm", x=2.0)
+distance = zdx.Unit(2.0, "mm")
 distance()  # 2000 um
 
-explicit = zdx.Unit("mm", to="m", x=2.0)
+explicit = zdx.Unit(2.0, "mm", to="m")
 explicit()  # 0.002 m
 ```
 

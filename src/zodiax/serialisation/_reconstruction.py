@@ -5,6 +5,7 @@ from dataclasses import fields
 
 import equinox as eqx
 
+from ..base import _RUNTIME_FIELD
 from ._callables import _resolve_callable
 from ._leaves import _NOT_PAYLOAD, _payload_placeholder
 from ._types import _resolve_type, _type_identifier
@@ -72,12 +73,16 @@ def _build_template(definition, custom_types, path="root"):
             raise ValueError(f"Module fields at {path} must be a list.")
         declared_fields = fields(cls)
         stored_schema = [
-            (field.get("name"), field.get("static"))
+            (field.get("name"), field.get("static"), field.get("metadata"))
             for field in stored_fields
             if isinstance(field, dict)
         ]
         declared_schema = [
-            (field.name, bool(field.metadata.get("static", False)))
+            (
+                field.name,
+                bool(field.metadata.get("static", False)),
+                {"runtime": bool(field.metadata.get(_RUNTIME_FIELD, False))},
+            )
             for field in declared_fields
         ]
         if stored_schema != declared_schema:

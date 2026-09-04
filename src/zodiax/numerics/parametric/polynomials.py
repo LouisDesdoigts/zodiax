@@ -3,18 +3,22 @@
 from __future__ import annotations
 
 from itertools import product
+from math import prod as shape_product
 from operator import index as integer_index
 from typing import Any
 
 import equinox as eqx
 import jax.numpy as np
-from jax import Array
+from jax import Array, vmap
 
 from ..arrays import _as_array, _as_inexact_array
 from ..expressions import Expression, resolve
-from ..transforms import Transform, _operand, _resolved, _validate_operand
-from ._context import coordinate_context
-from .bases import _solve, basis
+from ..transforms import (
+    Transform,
+    _initialise_transform,
+    _resolved,
+)
+from ._context import coordinate_axis, coordinate_context
 
 __all__ = ["polynomial_powers", "Polynomial"]
 
@@ -105,35 +109,99 @@ def _polynomial_powers(
     return powers[:, np.isin(powers.sum(0), degrees)]
 
 
-def _polynomial_terms(x: Any, p: Any, **context: Any) -> Array:
+def _term_layout(x: Any, p: Any, **context: Any) -> tuple[Array, int]:
     """Evaluate one or more multivariate monomial terms on coordinates.
 
-    For one variable, ``x`` has arbitrary sample shape. For several variables it
-    has a leading variable axis followed by arbitrary sample axes. The returned
-    leading axis enumerates terms.
+    Sampled coordinates use ``(..., D, *spatial_shape)`` with exactly ``D`` final
+    spatial axes. The inferred component axis is replaced by a term axis in the
+    result. A bare array remains a shorthand for arbitrary one-variable samples.
     """
     x = _as_inexact_array(resolve(x, **context), "x")
     p = _powers_array(p)
     n_variables = p.shape[0]
 
-    if n_variables == 1:
-        x = x[None, ...]
-    if x.ndim == 0 or x.shape[0] != n_variables:
-        raise ValueError("coords leading axis must match the number of variables.")
+    # Preserve the established scalar-polynomial shorthand used by spectral
+    # consumers. A Grid-style 1-D field is unambiguous from its ``(..., 1, n)``
+    # shape and follows the standard paired-batch convention below.
+    if n_variables == 1 and (x.ndim < 2 or x.shape[-2] != 1):
+        shape = p.shape + (1,) * x.ndim
+        return np.prod(x[None, None, ...] ** p.reshape(shape), axis=0), x.ndim
 
-    shape = p.shape + (1,) * (x.ndim - 1)
-    return np.prod(x[:, None] ** p.reshape(shape), axis=0)
+    coordinate_axis(x, n_variables)
+    leading_ndim = x.ndim - n_variables - 1
+    shape = (1,) * leading_ndim + p.shape + (1,) * n_variables
+    terms = np.prod(
+        np.expand_dims(x, leading_ndim + 1) ** p.reshape(shape),
+        axis=leading_ndim,
+    )
+    return terms, n_variables
+
+
+def _polynomial_terms(x: Any, p: Any, **context: Any) -> Array:
+    """Return sampled monomial terms using the shared coordinate convention."""
+    return _term_layout(x, p, **context)[0]
+
+
+def _expand(x: Any, terms: Array, spatial_ndim: int, context: dict[str, Any]) -> Array:
+    """Contract terms with coefficients using paired leading-axis broadcasting."""
+    x = _as_inexact_array(resolve(x, **context), "x")
+    term_axis = terms.ndim - spatial_ndim - 1
+    n_terms = terms.shape[term_axis]
+    if x.ndim == 0 or x.shape[-1] != n_terms:
+        raise ValueError(f"x must have a final coefficient axis of size {n_terms}.")
+
+    leading = np.broadcast_shapes(x.shape[:-1], terms.shape[:term_axis])
+    spatial_shape = terms.shape[-spatial_ndim:] if spatial_ndim else ()
+    x = np.broadcast_to(x, leading + (n_terms,))
+    x = x.reshape(leading + (n_terms,) + (1,) * spatial_ndim)
+    terms = np.broadcast_to(terms, leading + (n_terms,) + spatial_shape)
+    return np.sum(x * terms, axis=len(leading))
+
+
+def _solve_terms(y: Any, terms: Array, spatial_ndim: int) -> Array:
+    """Solve paired batches of sampled polynomial terms for coefficients."""
+    y = _as_inexact_array(y, "y")
+    term_axis = terms.ndim - spatial_ndim - 1
+    n_terms = terms.shape[term_axis]
+    spatial_shape = terms.shape[-spatial_ndim:] if spatial_ndim else ()
+    if spatial_ndim and (
+        y.ndim < spatial_ndim or y.shape[-spatial_ndim:] != spatial_shape
+    ):
+        raise ValueError(f"y must end in the coordinate shape {spatial_shape}.")
+
+    y_leading = y.shape[:-spatial_ndim] if spatial_ndim else y.shape
+    leading = np.broadcast_shapes(y_leading, terms.shape[:term_axis])
+    terms = np.broadcast_to(terms, leading + (n_terms,) + spatial_shape)
+    y = np.broadcast_to(y, leading + spatial_shape)
+
+    sample_size = shape_product(spatial_shape)
+    dtype = np.result_type(y.dtype, terms.dtype)
+    solve_dtype = np.result_type(dtype, np.float32)
+    matrices = terms.reshape((-1, n_terms, sample_size)).astype(solve_dtype)
+    values = y.reshape((-1, sample_size)).astype(solve_dtype)
+
+    def solve_one(matrix: Array, value: Array) -> Array:
+        return np.linalg.lstsq(matrix.T, value, rcond=None)[0]
+
+    coefficients = vmap(solve_one)(matrices, values)
+    return coefficients.reshape(leading + (n_terms,)).astype(dtype)
 
 
 class Polynomial(Transform):
-    """Expand coefficients over polynomial terms generated from ``coords``."""
+    """Expand coefficients over polynomial terms generated from ``coords``.
+
+    A ``D``-variable sampled coordinate field follows ``Grid`` shape
+    ``(..., D, *spatial_shape)`` with ``D`` trailing spatial axes. Leading
+    coordinate and coefficient axes use paired broadcasting. Bare sample arrays are
+    also accepted for one-variable polynomials.
+    """
 
     p: Array | None = None
 
     def __init__(
         self,
-        degree: Any = None,
         x: Any = None,
+        degree: Any = None,
         ndim: int = 1,
         p: Any = None,
         degrees: Any = None,
@@ -141,8 +209,7 @@ class Polynomial(Transform):
         alias: Any = None,
     ):
         p = _polynomial_powers(degree, ndim, p, degrees)
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
+        _initialise_transform(self, x, alias)
         self.p = p
 
         if self.x is not None and not isinstance(self.x, Expression):
@@ -163,8 +230,8 @@ class Polynomial(Transform):
         coords, context = coordinate_context(
             coords, coordinates, context, required=True
         )
-        terms = _polynomial_terms(coords, self.p, **context)
-        return basis(x, terms, axes=1, **context)
+        terms, spatial_ndim = _term_layout(coords, self.p, **context)
+        return _expand(x, terms, spatial_ndim, context)
 
     def solve(
         self,
@@ -178,12 +245,11 @@ class Polynomial(Transform):
         coords, context = coordinate_context(
             coords, coordinates, context, required=True
         )
-        terms = _polynomial_terms(coords, self.p, **context)
-        return _solve(_resolved(y, context), terms, axes=1)
+        terms, spatial_ndim = _term_layout(coords, self.p, **context)
+        return _solve_terms(_resolved(y, context), terms, spatial_ndim)
 
     def __zodiax_validate__(self) -> None:
         """Validate stored polynomial powers and optional coefficients."""
-        _validate_operand(self.x, "x", optional=True)
         _validate_powers_array(self.p)
         if self.x is not None and not isinstance(self.x, Expression):
             if self.x.ndim == 0 or self.x.shape[-1] != self.p.shape[1]:

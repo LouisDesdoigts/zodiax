@@ -14,7 +14,7 @@ from jax import Array
 
 from ..arrays import _as_inexact_array
 from ..expressions import Expression, resolve
-from ..transforms import Transform, _operand, _validate_operand
+from ..transforms import Transform, _initialise_transform, _validate_operand
 
 __all__ = ["interpolate", "Interpolation"]
 
@@ -162,19 +162,23 @@ class Interpolation(Transform):
 
     def __init__(
         self,
-        knots: Any,
-        values: Any,
         x: Any = None,
+        knots: Any = None,
+        values: Any = None,
         *,
         method: str = "linear",
         extrap: Any = 0.0,
         period: Any = None,
         alias: Any = None,
     ):
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.knots = _operand(knots, "knots")
-        self.values = _operand(values, "values")
+        _initialise_transform(
+            self,
+            x,
+            alias,
+            required=("knots", "values"),
+            knots=knots,
+            values=values,
+        )
         self.method = _method(method)
         self.extrap = _extrap(extrap)
         self.period = _period(period)
@@ -254,7 +258,6 @@ class Interpolation(Transform):
 
     def __zodiax_validate__(self) -> None:
         """Validate constructor-free archive reconstruction."""
-        _validate_operand(self.x, "x", optional=True)
         _validate_operand(self.knots, "knots")
         _validate_operand(self.values, "values")
         if self.x is not None and not isinstance(self.x, Expression):

@@ -34,13 +34,13 @@ conveniences for composite scientific models:
 - `populate()` establishes shared `Linked` ownership;
 - `resolve(**context)` evaluates ordinary `Expression` definitions while protecting
   runtime-declared fields;
+- `realise(**context)` performs population and resolution together;
 - `resolve(runtime=True, **context)` explicitly evaluates runtime fields;
 - a uniquely named descendant can be raised to a shorter attribute lookup;
 - an explicit local alias can map a public name to one real structural path.
 
 ```python
-populated = model.populate()
-realised = populated.resolve(time=t)
+realised = model.realise(time=t)
 ```
 
 A downstream owner can declare a context-sensitive field without changing its
@@ -52,21 +52,21 @@ class Stage(zdx.Module):
 ```
 
 ```python
-class Instrument(zdx.Module):
-    propagator: object
+class Model(zdx.Module):
+    output: object
 
 
-instrument = Instrument(
-    propagator=propagator,
+model = Model(
+    output=zdx.Exp(x=zdx.Mul(x=zdx.Add(x=latent, b=offset), s=scale)),
     alias={
-        "focus_offset": "propagator.focal_length.b",
-        "focus_latent": "propagator.focal_length.x",
+        "offset": "output.x.x.b",
+        "latent": "output.x.x.x",
     },
 )
 
-instrument.focus_offset
-instrument.get("focus_offset")
-updated = instrument.set("focus_offset", new_offset)
+model.offset
+model.get("offset")
+updated = model.set("offset", new_offset)
 ```
 
 Alias input may be a mapping, one `(name, path)` pair, a sequence of pairs, or
@@ -79,7 +79,7 @@ raised shorthand.
 
 Aliases are definition-time metadata. `populate`, `resolve`, or another subtree
 replacement can remove the structure they target; lookup then reports a stale alias.
-Use aliases on the unresolved model for configuration, optimisation, layouts, and
+Use aliases on the unrealised model for configuration, optimisation, layouts, and
 serialisation. `validate_aliases(tree)` checks a complete current topology.
 Aliases are constructor inputs and static JAX tree metadata, so choose them outside
 transformed loops.
@@ -136,7 +136,7 @@ subsequently constructed `Unit` transforms:
 ```python
 zdx.set_units({"cartesian": "um", "angular": "mas"})
 
-distance = zdx.Unit("mm", x=2.0)
+distance = zdx.Unit(2.0, "mm")
 distance.resolve()  # 2000.0 um
 ```
 
@@ -163,14 +163,16 @@ state = state.step()
 zdx.validate_state(scheduled, state)
 ```
 
-State remains an explicit input and output of an ordered model step. Its root key is
-stable; `Random` expressions derive ordinary JAX keys from that root, the current
-index, and their static stream identities.
+State remains an explicit input and output of an ordered model step. Any stored key
+is left unchanged by `step()`; downstream expressions define how ordinary JAX keys
+are derived and consumed.
 
 ## Tree definitions
 
-The sibling `zodiax.linalg` module provides `TreeLayout` and the associated realised
-vector, matrix, Jacobian, Hessian, and Fisher classes. `TreeLayout` records selected
-floating-coordinate paths and shapes. `ObjectDefinition` separately records the
-complete supported object topology for validated `.zdx` archives and is generated
-automatically by `save` and `load`.
+The sibling `zodiax.derivatives` package provides `TreeLayout` and the associated
+realised vector, matrix, Jacobian, exact Hessian, Gauss--Newton, and Fisher classes.
+`TreeLayout` records selected floating-coordinate paths and shapes. Derivative
+operations include every leaf of the supplied parameter PyTree and reject
+non-floating leaves rather than silently filtering them. `ObjectDefinition`
+separately records the complete supported object topology for validated `.zdx`
+archives and is generated automatically by `save` and `load`.

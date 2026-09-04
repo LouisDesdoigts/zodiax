@@ -10,7 +10,13 @@ import jax.numpy as np
 from jax import Array
 
 from .arrays import _as_inexact_array
-from .transforms import Transform, _operand, _pdoc, _resolved, _validate_operand
+from .transforms import (
+    Transform,
+    _initialise_transform,
+    _pdoc,
+    _resolved,
+    _validate_operand,
+)
 
 __all__ = ["Norm", "MeanNorm", "RMSNorm", "SumNorm"]
 
@@ -124,18 +130,15 @@ class Norm(Transform):
 
     def __init__(
         self,
-        mode: str,
         x: Any = None,
+        mode: str | None = None,
         s: Any = None,
         w: Any = None,
         axis: Any = None,
         *,
         alias: Any = None,
     ):
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.s = _operand(s, "s", optional=True)
-        self.w = _operand(w, "w", optional=True)
+        _initialise_transform(self, x, alias, s=s, w=w)
         self.mode = _mode(mode)
         self.axis = _axis(axis)
 
@@ -169,7 +172,6 @@ class Norm(Transform):
         return _pdoc(self, type(self).__name__, fields, **kwargs)
 
     def __zodiax_validate__(self) -> None:
-        _validate_operand(self.x, "x", optional=True)
         _validate_operand(self.s, "s", optional=True)
         _validate_operand(self.w, "w", optional=True)
         if self.mode != _mode(self.mode):
@@ -190,7 +192,7 @@ class MeanNorm(Norm):
         *,
         alias: Any = None,
     ):
-        super().__init__("mean", x=x, s=s, w=w, axis=axis, alias=alias)
+        super().__init__(x, "mean", s, w, axis, alias=alias)
 
 
 class RMSNorm(Norm):
@@ -205,7 +207,7 @@ class RMSNorm(Norm):
         *,
         alias: Any = None,
     ):
-        super().__init__("rms", x=x, s=s, w=w, axis=axis, alias=alias)
+        super().__init__(x, "rms", s, w, axis, alias=alias)
 
 
 class SumNorm(Norm):
@@ -220,4 +222,4 @@ class SumNorm(Norm):
         *,
         alias: Any = None,
     ):
-        super().__init__("sum", x=x, s=s, w=w, axis=axis, alias=alias)
+        super().__init__(x, "sum", s, w, axis, alias=alias)

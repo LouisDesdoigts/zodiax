@@ -80,14 +80,14 @@ nav:
   - Using Zodiax: 
       - Building Classes: usage.md
       - Numerics: numerics.md
+      - Derivatives: derivatives.md
       - Numerics Design Lab: numerics_design.md
       - Optimisation: optimisation_tools.md
   - API:
       - Base: API/base.md
       - Optimisation: API/optimisation.md
       - Stats: API/stats.md
-      - DiffOps: API/diffops.md
-      - Tree Linear Algebra: API/linalg.md
+      - Derivatives: API/derivatives.md
       - Numerics: API/numerics.md
       - Arrays and State: API/stateful.md
       - Serialisation: API/serialisation.md

@@ -24,7 +24,7 @@ from jax import Array
 
 from .arrays import _as_inexact_array
 from .expressions import resolve
-from .transforms import Transform, _operand, _validate_operand
+from .transforms import Transform, _initialise_transform
 
 __all__ = [
     "unit_info",
@@ -301,11 +301,11 @@ class Unit(Transform):
 
     Parameters
     ----------
-    unit : str
-        Unit of the stored or explicitly supplied input coordinate.
     x : array-like, Expression, or None
         Stored input coordinate. Leave as ``None`` to construct an unbound symbolic
         transform.
+    unit : str
+        Unit of the stored or explicitly supplied input coordinate.
     to : str or None
         Output unit. When omitted, the active global unit for ``unit``'s physical
         category is captured at construction.
@@ -324,8 +324,8 @@ class Unit(Transform):
 
     def __init__(
         self,
-        unit: str,
         x: Any = None,
+        unit: str | None = None,
         *,
         to: str | None = None,
         alias: Any = None,
@@ -335,8 +335,7 @@ class Unit(Transform):
         if source.category != target.category or source.power != target.power:
             raise ValueError(f"Cannot convert from {unit!r} to {to!r}.")
 
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
+        _initialise_transform(self, x, alias)
         self.unit = source.unit
         self.to = target.unit
         self._scale = float(source.factor / target.factor)
@@ -377,7 +376,6 @@ class Unit(Transform):
 
     def __zodiax_validate__(self) -> None:
         """Validate constructor-free archive reconstruction."""
-        _validate_operand(self.x, "x", optional=True)
         source = unit_info(self.unit)
         target = unit_info(self.to)
         if source.unit != self.unit or target.unit != self.to:

@@ -28,13 +28,28 @@ object definition, and complete payload consumption. It never imports code named
 an archive: stored classes must already be imported, supplied by a trusted `like`
 object, or explicitly registered through `custom_types`.
 
+By default, `load(..., strict=True)` also requires exact matches for every recorded
+package version. `strict=False` permits an explicit best-effort reconstruction when
+the archive format and generated object definition remain compatible. Python's
+version is retained as diagnostic provenance but is not part of this package-version
+check.
+
+Plain `dict` objects follow JAX PyTree semantics and are reconstructed in canonical
+key order. Use `collections.OrderedDict` when insertion order is part of the stored
+object's meaning.
+
 Equinox may omit a numerical field whose value matches its `None` default from the
 printed representation. This is presentation only: the declared field and its
 `None` value remain part of the generated object definition and round-trip normally.
+Behaviour-affecting Zodiax field metadata, including runtime-resolution protection,
+is stored in the definition and checked against the installed class during loading.
 
 Saving and loading also validate complete link topology. Duplicate `Linked` owners,
 dangling `Deferred` keys, and dependency cycles are rejected; archive the containing
-unresolved model rather than a detached deferred fragment.
+unrealised model rather than a detached deferred fragment.
+`Linked` and `Deferred` nodes are rejected beneath static Equinox fields: static
+subtrees are excluded from JAX traversal and therefore cannot participate in link
+population.
 
 ## Callables and state
 
@@ -54,7 +69,7 @@ captured mutable state. The default callables used by `equinox.nn.MLP` are regis
 by Zodiax.
 
 Zodiax `State` is an ordinary serialisable Module, so a model, running state, and
-next random key can be checkpointed together:
+next JAX key can be checkpointed together:
 
 ```python
 zdx.save("checkpoint", {"model": model, "state": state, "key": next_key})
@@ -63,8 +78,8 @@ zdx.validate_state(checkpoint["model"], checkpoint["state"])
 ```
 
 `StateRef` paths are static strings and `validate_state` checks them against the
-loaded State. Random keys remain ordinary explicit model inputs or JAX-array leaves,
-and typed JAX keys round-trip. Persist the newest State and the next unused master
+loaded State. JAX keys remain ordinary explicit model inputs or array leaves, and
+typed JAX keys round-trip. Persist the newest State and the next unused application
 key between completed steps.
 
 ## Reconstruction and validation
@@ -79,13 +94,19 @@ headers, and complete payload consumption before returning an object. Loading a
 genuinely large payload still requires memory proportional to its stored array data,
 so applications accepting external archives may impose their own file-size limit.
 
+Exact package versions do not make actively changing local classes durable. Local
+classes may be resolved with `like` or `custom_types`, and installed distributions
+referenced by stored classes are recorded when discoverable, but stable long-lived
+archives require stable package releases and class field schemas. Avoid treating
+checkpoints of actively developed local objects as permanent artifacts.
+
 `TreeLayout` and `ObjectDefinition` provide complementary views of a model tree.
 `ObjectDefinition` is the complete serialisation schema; `TreeLayout` independently
-describes the ordered floating-coordinate projection used by derivatives and linear
-algebra. Layouts and their vectors/matrices are ordinary Equinox modules, so the
-generated object definition serialises them directly—there is no parallel
+describes the ordered path-and-shape projection of an explicit parameter tree.
+Layouts and their derivative vectors or matrices are ordinary Equinox modules, so
+the generated object definition serialises them directly—there is no parallel
 `value_spec` or `latest_spec` state to synchronise. Their traversal implementations
-remain separate because one describes every serialisable field and the other selects
-only differentiable coordinates.
+remain separate because one describes every serialisable field and the other
+describes the parameters supplied to a derivative calculation.
 
 ::: zodiax.serialisation

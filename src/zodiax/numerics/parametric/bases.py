@@ -12,7 +12,12 @@ from jax import Array
 
 from ..arrays import _as_inexact_array
 from ..expressions import Expression, resolve
-from ..transforms import Transform, _operand, _resolved, _validate_operand
+from ..transforms import (
+    Transform,
+    _initialise_transform,
+    _resolved,
+    _validate_operand,
+)
 
 __all__ = [
     "basis",
@@ -164,15 +169,13 @@ class Basis(Transform):
 
     def __init__(
         self,
-        M: Any = None,
         x: Any = None,
+        M: Any = None,
         axes: int | None = None,
         *,
         alias: Any = None,
     ):
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.M = _operand(M, "M", optional=True)
+        _initialise_transform(self, x, alias, M=M)
         self.axes = None if axes is None else _axis_count(axes)
 
         if self.M is not None and not isinstance(self.M, Expression):
@@ -194,7 +197,6 @@ class Basis(Transform):
 
     def __zodiax_validate__(self) -> None:
         """Validate constructor-free archive reconstruction."""
-        _validate_operand(self.x, "x", optional=True)
         _validate_operand(self.M, "M", optional=True)
         if self.axes is not None:
             axes = _axis_count(self.axes)

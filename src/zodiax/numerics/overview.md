@@ -1,8 +1,9 @@
-# Zodiax numerics: package summary and basic API
+# Zodiax numerics overview
 
 Zodiax numerics represents numerical definitions as ordinary Equinox PyTrees.
-Array leaves remain optimisable, while the surrounding objects describe how those
-arrays are transformed, shared, generated, converted, or read from running state.
+Scientifically meaningful array leaves can be selected by path for optimisation,
+while the surrounding objects describe how those arrays are transformed, shared,
+generated, converted, or read from running state.
 
 Optional numerical inputs default to `None` and disappear from ordinary Equinox
 prints. The resulting objects remain inspectable, serialisable, and addressable with
@@ -47,6 +48,7 @@ A transform with no stored `x` is a reusable operation:
 transform = zdx.Exp()
 print(transform)
 value = transform(latent)
+same = transform.apply(latent)
 ```
 
 ```text
@@ -57,12 +59,14 @@ These forms are equivalent:
 
 ```python
 zdx.Exp()(latent)
+zdx.Exp().apply(latent)
 zdx.Exp(x=latent)()
 zdx.Exp(x=latent).resolve()
 ```
 
 `evaluate()` and `fwd()` are subclass extension methods. Application code normally
-uses calls and `resolve()`.
+uses `resolve()` for stored definitions and `apply(x)` when it wants an explicit
+transform operation. Every transform constructor places `x` first.
 
 ### Composition is ordinary nesting
 
@@ -250,14 +254,22 @@ context-resolved model
  realised model
 ```
 
-The unrealised model is the durable object normally edited, optimised, and
-serialised. The other forms are ephemeral evaluation views. In a sequential model,
-individual stages may create local realised copies internally without constructing
-one globally realised model.
+The unrealised model is the durable object normally edited and serialised; its
+physical parameter leaves are selected by path when optimisation is required. The
+other forms are ephemeral evaluation views. In a sequential model, individual
+stages may create local realised copies internally without constructing one globally
+realised model.
 
-Population and resolution remain separate. `populate()` needs the complete link
-ownership scope, whereas runtime resolution often belongs to a much smaller local
-scope.
+`realise()` provides the common high-level population-plus-resolution operation and
+should run inside a JAX-transformed function when links are present:
+
+```python
+realised = model.realise(state=state)
+same = zdx.realise(model, state=state)
+```
+
+The separate `populate()` and `resolve()` operations remain available when link
+ownership and runtime resolution intentionally have different scopes.
 
 ## 5. Package structure
 
@@ -266,12 +278,13 @@ The public classes are re-exported from `zodiax`, so normal use is `zdx.Map`,
 
 ```text
 zodiax/numerics/
+├── overview.md
 ├── expressions.py
 │   └── Expression
 ├── transforms.py
 │   ├── Transform
 │   ├── Add, Mul, Pow
-│   ├── Exp, Log, Exp10, Log10
+│   ├── Exp, Log
 │   └── MatMul, Mask, Map
 ├── normalisation.py
 │   ├── Norm
@@ -282,8 +295,6 @@ zodiax/numerics/
 │   └── Linked, Deferred
 ├── state.py
 │   └── State, StateRef
-├── random.py
-│   └── Random
 ├── grids.py
 │   └── Grid
 └── parametric/
@@ -304,7 +315,6 @@ classDiagram
     class Linked
     class Deferred
     class StateRef
-    class Random
     class Grid
     class Basis
     class Polynomial
@@ -317,12 +327,11 @@ classDiagram
     Expression <|-- Linked
     Expression <|-- Deferred
     Expression <|-- StateRef
-    Expression <|-- Random
     Expression <|-- Grid
     Transform <|-- Basis
     Transform <|-- Interpolation
-    Basis <|-- Polynomial
-    Expression <|-- Gaussian
+    Transform <|-- Polynomial
+    Transform <|-- Gaussian
 ```
 
 ## 6. Core transformations
@@ -354,11 +363,11 @@ inverse.
 `Unit` is a reversible scale transform:
 
 ```python
-conversion = zdx.Unit('mm', to='m', x=distance)
+conversion = zdx.Unit(distance, 'mm', to='m')
 distance_m = conversion.resolve()
 
-distance_m = zdx.Unit('mm', to='m')(distance_mm)
-distance_mm = zdx.Unit('mm', to='m').inv(distance_m)
+distance_m = zdx.Unit(unit='mm', to='m').apply(distance_mm)
+distance_mm = zdx.Unit(unit='mm', to='m').inv(distance_m)
 ```
 
 When `to` is omitted, the object captures the active global output unit for its
@@ -367,7 +376,7 @@ category at construction:
 ```python
 zdx.set_units({'cartesian': 'um', 'angular': 'mas'})
 
-distance = zdx.Unit('mm', x=2.0)
+distance = zdx.Unit(2.0, 'mm')
 distance_um = distance.resolve()
 ```
 
@@ -397,14 +406,15 @@ override.
 
 ```python
 mask = np.array([True, False, True, False])
-definition = zdx.Mask(mask, x=np.array([2.0, 5.0]))
+definition = zdx.Mask(np.array([2.0, 5.0]), mask)
 
 full = definition.resolve()       # [2, 0, 5, 0]
 compact = definition.solve(full)  # [2, 5]
 ```
 
-The selected indices and output shape are static, while the compact values remain
-ordinary optimisable leaves.
+The output shape is static. Selected indices are stored compactly as one integer JAX
+array rather than one static Python tree entry per selected sample; compact values
+remain ordinary physical leaves.
 
 ## 7. Shared definitions
 
@@ -421,8 +431,7 @@ model = Model(
     )
 )
 
-linked = model.populate()
-realised = linked.resolve()
+realised = model.realise()
 ```
 
 ```text
@@ -434,7 +443,7 @@ The unrealised model contains the dynamic value only at its `Linked` owner. The
 linked execution copy routes every use back to that owner, so gradients accumulate
 onto the same original leaf.
 
-## 8. Running state and random values
+## 8. Running state
 
 ### State and references
 
@@ -514,62 +523,27 @@ next_state.key   = state.key
 The key is a stable root rather than a changing key chain. An explicit
 `state.step(dt=...)` overrides the stored `dt` for one transition.
 
-### Generic JAX-random expressions
+### Downstream random expressions
 
-`Random` wraps any JAX-style callable whose first positional argument is a PRNG
-key. It avoids a separate Zodiax class for every distribution:
-
-```python
-noise = zdx.Random(
-    jr.normal,
-    shape=(4,),
-    stream='sensor-noise',
-)
-
-print(noise)
-sample = noise.resolve(state=state)
-```
-
-```text
-Random(fn='normal', shape=(4,), stream='sensor-noise')
-```
-
-Internally, `Random` uses ordinary `jr.fold_in` calls:
-
-```text
-state.key + state.index + random.stream -> ordinary JAX key -> fn(...)
-```
-
-Different `Random` objects receive independent generated stream identities by
-default. Supplying a semantic `stream` preserves the same stream across separately
-constructed definitions. The stream is static and serialised; no custom PRNG or key
-type is introduced.
-
-Common JAX trace-time options such as `shape`, `dtype`, and `axis` are stored as
-static metadata automatically. A custom key-first callable can identify another
-named trace-time option with `static='option'`; its numerical arguments remain
-ordinary array leaves.
-
-`key` and `index` can also be stored explicitly for a self-contained random
-definition:
+Random evaluation is an extension point rather than a built-in numerical class.
+Applications can define their own key semantics directly on the expression protocol:
 
 ```python
-noise = zdx.Random(
-    jr.uniform,
-    key=jr.key(3),
-    index=0,
-    shape=(4,),
-)
+class NormalNoise(zdx.Expression):
+    shape: tuple[int, ...] = eqx.field(static=True)
 
-sample = noise.resolve()
+    def evaluate(self, *, key, **context):
+        return jr.normal(key, self.shape)
+
+
+noise = NormalNoise((4,))
+sample = noise.resolve(key=jr.key(3))
 ```
 
-When State provides a key but no index, index zero is used and repeated resolution
-produces the same fixed realisation. `State.step()` therefore requires an index or
-time to advance; it never mutates the root key.
-
-Common JAX random callables are serialisable directly. Custom key-first callables
-can use the normal `register_callable()` mechanism.
+A downstream expression may instead store a `StateRef`, split or fold a supplied
+key, or implement named streams. These are application choices expressed with
+ordinary JAX keys. Built-in JAX random callables are serialisable, and custom
+callables can use `register_callable()`.
 
 ## 9. Coordinate grids
 
@@ -587,7 +561,10 @@ coords.shape == (2, 64, 96)
 ```
 
 Grid uses `ij` indexing: coordinate component `i` varies along sampled array axis
-`i`. The same convention works for one, two, or more dimensions.
+`i`. A `D`-dimensional grid has shape `(..., D, *spatial_shape)`, so consumers infer
+the component axis as `-D - 1` without storing another leaf. Matching leading grid
+and parameter batches use paired JAX broadcasting. The same convention works for
+one, two, or more dimensions.
 
 The optional `unit` applies one conversion to both `d` and `c`. A string uses the
 active global output for its category, while a `Unit` object selects an explicit
@@ -599,7 +576,7 @@ grid = zdx.Grid(n=(64, 64), d=0.1, unit='mm')
 grid = zdx.Grid(
     n=(64, 64),
     d=0.01,
-    unit=zdx.Unit('arcsec', to='mas'),
+    unit=zdx.Unit(unit='mm', to='um'),
 )
 ```
 
@@ -663,9 +640,9 @@ sampled history state-dependent without giving interpolation its own state API:
 state = zdx.State(time=0.0, dt=0.1)
 
 coefficients = zdx.Interpolation(
+    state.ref('time'),
     knots=times,
     values=samples,
-    x=state.ref('time'),
 )
 
 field = zdx.Basis(M=modes, x=coefficients)

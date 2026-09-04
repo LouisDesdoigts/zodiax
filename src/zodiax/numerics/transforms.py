@@ -46,8 +46,6 @@ __all__ = [
     "Pow",
     "Exp",
     "Log",
-    "Exp10",
-    "Log10",
     "MatMul",
     "Mask",
     "Map",
@@ -70,6 +68,22 @@ def _operand(value: Any, name: str, *, optional: bool = False) -> Any:
     if isinstance(value, Expression):
         return value
     return _as_inexact_array(value, name)
+
+
+def _initialise_transform(
+    owner: Any,
+    x: Any,
+    alias: Any,
+    *,
+    required: Sequence[str] = (),
+    **operands: Any,
+) -> None:
+    """Initialise the common transform input, alias, and numerical operands."""
+    owner.alias = alias
+    owner.x = _operand(x, "x", optional=True)
+    required = frozenset(required)
+    for name, value in operands.items():
+        setattr(owner, name, _operand(value, name, optional=name not in required))
 
 
 def _validate_operand(value: Any, name: str, *, optional: bool = False) -> None:
@@ -215,11 +229,15 @@ class Transform(Expression):
     :meth:`inv`; projections or rank-deficient transforms implement :meth:`solve`.
     """
 
-    x: Any = eqx.field(default=None, kw_only=True)
+    x: Any = None
 
     @abstractmethod
     def fwd(self, x: Any, **context: Any) -> Array:
         """Map an explicitly supplied input ``x`` to an output ``y``."""
+
+    def __zodiax_validate__(self) -> None:
+        """Validate the common optional stored input after archive loading."""
+        _validate_operand(self.x, "x", optional=True)
 
     def evaluate(self, **context: Any) -> Array:
         """Evaluate this transform from its stored upstream input."""
@@ -232,6 +250,10 @@ class Transform(Expression):
         """Resolve stored input, or apply the transform to explicit input ``x``."""
         if x is _NO_INPUT:
             return _as_inexact_array(resolve(self, **context), "y")
+        return self.apply(x, **context)
+
+    def apply(self, x: Any, **context: Any) -> Array:
+        """Apply the complete transform spine to an explicit deepest input."""
         return _as_inexact_array(self.decode(x, **context), "y")
 
     def inv(self, y: Any, **context: Any) -> Array:
@@ -286,10 +308,8 @@ class Add(Transform):
 
     b: Any = None
 
-    def __init__(self, b: Any = None, x: Any = None, *, alias: Any = None):
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.b = _operand(b, "b", optional=True)
+    def __init__(self, x: Any = None, b: Any = None, *, alias: Any = None):
+        _initialise_transform(self, x, alias, b=b)
 
     def fwd(self, x: Any, **context: Any) -> Array:
         return add(x, self.b, **context)
@@ -303,7 +323,6 @@ class Add(Transform):
         return _preserve_shape(y, x, "b")
 
     def __zodiax_validate__(self) -> None:
-        _validate_operand(self.x, "x", optional=True)
         _validate_operand(self.b, "b", optional=True)
 
 
@@ -312,10 +331,8 @@ class Mul(Transform):
 
     s: Any = None
 
-    def __init__(self, s: Any = None, x: Any = None, *, alias: Any = None):
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.s = _operand(s, "s", optional=True)
+    def __init__(self, x: Any = None, s: Any = None, *, alias: Any = None):
+        _initialise_transform(self, x, alias, s=s)
 
     def fwd(self, x: Any, **context: Any) -> Array:
         return mul(x, self.s, **context)
@@ -329,7 +346,6 @@ class Mul(Transform):
         return _preserve_shape(y, x, "s")
 
     def __zodiax_validate__(self) -> None:
-        _validate_operand(self.x, "x", optional=True)
         _validate_operand(self.s, "s", optional=True)
 
 
@@ -342,16 +358,13 @@ class Pow(Transform):
 
     p: Any = None
 
-    def __init__(self, p: Any, x: Any = None, *, alias: Any = None):
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.p = _operand(p, "p")
+    def __init__(self, x: Any = None, p: Any = None, *, alias: Any = None):
+        _initialise_transform(self, x, alias, required=("p",), p=p)
 
     def fwd(self, x: Any, **context: Any) -> Array:
         return power(x, self.p, **context)
 
     def __zodiax_validate__(self) -> None:
-        _validate_operand(self.x, "x", optional=True)
         _validate_operand(self.p, "p")
 
 
@@ -373,9 +386,7 @@ class Exp(Transform):
         *,
         alias: Any = None,
     ):
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.base = _operand(base, "base", optional=True)
+        _initialise_transform(self, x, alias, base=base)
 
     def fwd(self, x: Any, **context: Any) -> Array:
         x = _as_inexact_array(_resolved(x, context), "x")
@@ -392,7 +403,6 @@ class Exp(Transform):
         return _preserve_shape(y, np.log(y) / np.log(base), "base")
 
     def __zodiax_validate__(self) -> None:
-        _validate_operand(self.x, "x", optional=True)
         _validate_operand(self.base, "base", optional=True)
 
 
@@ -413,9 +423,7 @@ class Log(Transform):
         *,
         alias: Any = None,
     ):
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.base = _operand(base, "base", optional=True)
+        _initialise_transform(self, x, alias, base=base)
 
     def fwd(self, x: Any, **context: Any) -> Array:
         x = _as_inexact_array(_resolved(x, context), "x")
@@ -432,44 +440,7 @@ class Log(Transform):
         return _preserve_shape(y, np.power(base, y), "base")
 
     def __zodiax_validate__(self) -> None:
-        _validate_operand(self.x, "x", optional=True)
         _validate_operand(self.base, "base", optional=True)
-
-
-class Exp10(Transform):
-    """Exponentiate in base ten: ``y = 10**x``."""
-
-    def __init__(self, x: Any = None, *, alias: Any = None):
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-
-    def fwd(self, x: Any, **context: Any) -> Array:
-        x = _as_inexact_array(_resolved(x, context), "x")
-        return np.power(10.0, x)
-
-    def inv(self, y: Any, **context: Any) -> Array:
-        return np.log10(_as_inexact_array(_resolved(y, context), "y"))
-
-    def __zodiax_validate__(self) -> None:
-        _validate_operand(self.x, "x", optional=True)
-
-
-class Log10(Transform):
-    """Apply the principal base-ten logarithm: ``y = log10(x)``."""
-
-    def __init__(self, x: Any = None, *, alias: Any = None):
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-
-    def fwd(self, x: Any, **context: Any) -> Array:
-        return np.log10(_as_inexact_array(_resolved(x, context), "x"))
-
-    def inv(self, y: Any, **context: Any) -> Array:
-        y = _as_inexact_array(_resolved(y, context), "y")
-        return np.power(10.0, y)
-
-    def __zodiax_validate__(self) -> None:
-        _validate_operand(self.x, "x", optional=True)
 
 
 class MatMul(Transform):
@@ -477,10 +448,8 @@ class MatMul(Transform):
 
     M: Any = None
 
-    def __init__(self, M: Any, x: Any = None, *, alias: Any = None):
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.M = _operand(M, "M")
+    def __init__(self, x: Any = None, M: Any = None, *, alias: Any = None):
+        _initialise_transform(self, x, alias, required=("M",), M=M)
         if not isinstance(self.M, Expression):
             self._validate_M(self.M)
 
@@ -505,37 +474,40 @@ class MatMul(Transform):
         return _solve_matmul(y, M)
 
     def __zodiax_validate__(self) -> None:
-        _validate_operand(self.x, "x", optional=True)
         _validate_operand(self.M, "M")
         if not isinstance(self.M, Expression):
             self._validate_M(self.M)
 
 
 class Mask(Transform):
-    """Scatter compact ``x`` values into selected output entries."""
+    """Scatter compact ``x`` values into selected output entries.
 
-    indices: tuple[int, ...] = eqx.field(static=True)
+    The output ``shape`` is static, while selected flat indices occupy one integer
+    JAX-array leaf. Large masks therefore do not become large Python PyTree
+    definitions or static compilation keys.
+    """
+
+    indices: Array
     shape: tuple[int, ...] = eqx.field(static=True)
 
-    def __init__(self, mask: Any, x: Any = None, *, alias: Any = None):
+    def __init__(self, x: Any = None, mask: Any = None, *, alias: Any = None):
         mask = onp.asarray(mask)
         if mask.dtype != onp.bool_:
             raise TypeError("mask must have a boolean dtype.")
         if mask.ndim == 0:
             raise ValueError("mask must have at least one axis.")
-        indices = tuple(int(index) for index in onp.flatnonzero(mask))
-        if not indices:
+        indices = onp.flatnonzero(mask)
+        if indices.size == 0:
             raise ValueError("mask must select at least one entry.")
 
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.indices = indices
+        _initialise_transform(self, x, alias)
+        self.indices = np.asarray(indices, dtype=np.int32)
         self.shape = tuple(int(size) for size in mask.shape)
 
     @property
     def size(self) -> int:
         """Number of selected values."""
-        return len(self.indices)
+        return self.indices.size
 
     def fwd(self, x: Any, **context: Any) -> Array:
         x = _as_inexact_array(_resolved(x, context), "x")
@@ -556,9 +528,10 @@ class Mask(Transform):
         return flat[..., np.asarray(self.indices)]
 
     def _index_summary(self) -> tuple[int, ...] | str:
+        indices = tuple(int(index) for index in onp.asarray(self.indices))
         if self.size <= 8:
-            return self.indices
-        payload = repr((self.shape, self.indices)).encode()
+            return indices
+        payload = repr((self.shape, indices)).encode()
         digest = blake2s(payload, digest_size=4).hexdigest()
         return f"{self.size}@{digest}"
 
@@ -573,18 +546,21 @@ class Mask(Transform):
         )
 
     def __zodiax_validate__(self) -> None:
-        _validate_operand(self.x, "x", optional=True)
         if type(self.shape) is not tuple or not self.shape:
             raise ValueError("shape must be a non-empty tuple.")
         if any(type(size) is not int or size <= 0 for size in self.shape):
             raise ValueError("shape dimensions must be positive integers.")
-        if type(self.indices) is not tuple or not self.indices:
-            raise ValueError("indices must be a non-empty tuple.")
-        if any(type(index) is not int for index in self.indices):
-            raise TypeError("indices must contain integers.")
-        if any(left >= right for left, right in zip(self.indices, self.indices[1:])):
+        if not isinstance(self.indices, Array):
+            raise TypeError("indices must be a JAX array.")
+        if bool(self.indices.weak_type) or not np.issubdtype(
+            self.indices.dtype, np.integer
+        ):
+            raise TypeError("indices must be a strongly typed integer JAX array.")
+        if self.indices.ndim != 1 or self.indices.size == 0:
+            raise ValueError("indices must be a non-empty one-dimensional array.")
+        if bool(np.any(self.indices[:-1] >= self.indices[1:])):
             raise ValueError("indices must be strictly increasing and unique.")
-        if self.indices[0] < 0 or self.indices[-1] >= prod(self.shape):
+        if bool(self.indices[0] < 0) or bool(self.indices[-1] >= prod(self.shape)):
             raise ValueError("indices must lie within shape.")
 
 
@@ -614,11 +590,7 @@ class Map(Transform):
         *,
         alias: Any = None,
     ):
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.s = _operand(s, "s", optional=True)
-        self.M = _operand(M, "M", optional=True)
-        self.b = _operand(b, "b", optional=True)
+        _initialise_transform(self, x, alias, s=s, M=M, b=b)
         if self.M is not None and not isinstance(self.M, Expression):
             MatMul._validate_M(self.M)
 
@@ -646,7 +618,6 @@ class Map(Transform):
         return y
 
     def __zodiax_validate__(self) -> None:
-        _validate_operand(self.x, "x", optional=True)
         _validate_operand(self.s, "s", optional=True)
         _validate_operand(self.M, "M", optional=True)
         _validate_operand(self.b, "b", optional=True)

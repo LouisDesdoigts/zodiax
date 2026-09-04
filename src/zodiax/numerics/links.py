@@ -20,7 +20,7 @@ from jax import Array
 from .arrays import as_array
 from .expressions import Expression, resolve
 
-__all__ = ["Deferred", "Linked", "populate", "validate_links"]
+__all__ = ["Deferred", "Linked", "populate", "realise", "validate_links"]
 
 
 def _short_key(key: str) -> str:
@@ -64,7 +64,7 @@ class Linked(Expression):
     ----------
     value
         The canonical array, PyTree, or Expression value. Its dynamic leaves occur
-        only here in the unresolved model. Python numerical scalars and NumPy/JAX
+        only here in the unrealised model. Python numerical scalars and NumPy/JAX
         arrays are normalised to strongly typed JAX arrays; ambiguous list, tuple,
         and mapping PyTrees are retained as containers.
     key
@@ -176,7 +176,7 @@ def populate(tree: Any) -> Any:
     second pass replaces both an owner and all its deferred links with the owner's
     recursively populated value.
 
-    The unresolved input remains unchanged and contains each linked numerical
+    The unrealised input remains unchanged and contains each linked numerical
     subtree exactly once. Calling this function inside a differentiated
     computation therefore makes all populated uses contribute gradients to the
     canonical owner.
@@ -188,6 +188,21 @@ def populate(tree: Any) -> Any:
     for key in owners:
         populator.resolve_key(key)
     return populator.tree(tree)
+
+
+def realise(
+    tree: Any,
+    *,
+    runtime: bool = False,
+    **context: Any,
+) -> Any:
+    """Populate links and recursively resolve expressions in one operation.
+
+    Call this inside a JAX-transformed function when a model contains linked
+    values, so every populated use remains connected to its canonical owner.
+    ``runtime`` and named context have the same meaning as in :func:`resolve`.
+    """
+    return resolve(populate(tree), runtime=runtime, **context)
 
 
 def _is_link_node(value: Any) -> bool:

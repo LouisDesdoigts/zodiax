@@ -11,6 +11,7 @@ from jax import Array, lax
 __all__ = [
     "Alias",
     "field",
+    "Base",
     "Module",
     "update",
     "validate_aliases",
@@ -324,6 +325,45 @@ def _children(value: Any, path: str, ancestors: frozenset[int]):
             yield child, f"{path}.{name}", ancestors
 
 
+def _validate_mapping_keys(tree: Any) -> None:
+    """Reject mapping keys that collide with dotted structural path syntax."""
+    visited: set[int] = set()
+
+    def visit(value: Any, path: str) -> None:
+        if not isinstance(value, (Mapping, tuple, list)) and not _is_dataclass_node(
+            value
+        ):
+            return
+        identity = id(value)
+        if identity in visited:
+            return
+        visited.add(identity)
+
+        if isinstance(value, Mapping):
+            for key, child in value.items():
+                if isinstance(key, str) and "." in key:
+                    raise ValueError(
+                        f"Mapping key {key!r} at {path} contains '.'. Dots are "
+                        "reserved as structural path separators."
+                    )
+                visit(child, f"{path}[{key!r}]")
+            return
+
+        if isinstance(value, (tuple, list)):
+            for index, child in enumerate(value):
+                visit(child, f"{path}[{index}]")
+            return
+
+        for name in _public_fields(value):
+            try:
+                child = object.__getattribute__(value, name)
+            except AttributeError:
+                continue
+            visit(child, f"{path}.{name}")
+
+    visit(tree, "root")
+
+
 def _raised_candidates(owner: Any, key: str) -> tuple[list[tuple[str, Any]], set[str]]:
     """Find the nearest named descendants and names used for missing-name hints."""
     fields = _public_fields(owner)
@@ -427,7 +467,7 @@ def _validate_aliases(owner: Any) -> None:
 
 
 def validate_aliases(tree: Any) -> None:
-    """Validate every local alias against the current unresolved tree topology.
+    """Validate every local alias against the current unrealised tree topology.
 
     Ordinary construction validates each module once. This explicit traversal is
     useful after whole-subtree replacement, link population, or expression
@@ -657,12 +697,16 @@ def _normalise_mutation_inputs(
     return parameters, values
 
 
-class _Base(eqx.Module):
+class Base(eqx.Module):
     """
     Extend the Equinox.Module class to give a user-friendly 'param based' API
     for working with pytrees by adding a series of methods used to interface
     with the leaves of the pytree using parameters.
     """
+
+    def __check_init__(self) -> None:
+        """Validate that stored mappings have unambiguous structural keys."""
+        _validate_mapping_keys(self)
 
     def save(self, file_or_path: Any) -> None:
         """Save this object to a validated Zodiax archive."""
@@ -670,11 +714,11 @@ class _Base(eqx.Module):
 
         save(file_or_path, self)
 
-    def load(self, file_or_path: Any) -> Any:
+    def load(self, file_or_path: Any, *, strict: bool = True) -> Any:
         """Load an archive using this object as its structural template."""
         from .serialisation import load
 
-        return load(file_or_path, like=self)
+        return load(file_or_path, like=self, strict=strict)
 
     def get(
         self: PyTree,
@@ -767,9 +811,11 @@ class _Base(eqx.Module):
         def leaves_fn(pytree):
             return _get_leaves(pytree, new_parameters)
 
-        return eqx.tree_at(
+        updated = eqx.tree_at(
             leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None
         )
+        _validate_mapping_keys(updated)
+        return updated
 
     def add(
         self: PyTree,
@@ -1062,7 +1108,7 @@ class _Base(eqx.Module):
         )
 
 
-class Module(_Base):
+class Module(Base):
     """A Zodiax module with local aliases and raised descendant attributes.
 
     ``Module`` provides immutable path operations, numerical-expression population
@@ -1105,12 +1151,23 @@ class Module(_Base):
 
         return resolve(self, runtime=runtime, **context)
 
+    def realise(self, *, runtime: bool = False, **context: Any) -> Any:
+        """Populate links and resolve eligible expressions in one operation.
+
+        Like :meth:`populate`, this should be called inside the function transformed
+        by JAX when shared linked values must contribute to one canonical owner.
+        """
+        from .numerics.links import realise
+
+        return realise(self, runtime=runtime, **context)
+
     def __check_init__(self) -> None:
         """Validate aliases after every ordinary Equinox construction."""
+        super().__check_init__()
         _validate_aliases(self)
 
     def validate_aliases(self) -> None:
-        """Validate every alias in this module's current unresolved topology."""
+        """Validate every alias in this module's current unrealised topology."""
         validate_aliases(self)
 
     def __getattr__(self, key: str) -> Any:

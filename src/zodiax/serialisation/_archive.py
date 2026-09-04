@@ -1,6 +1,7 @@
 """JSON and ZIP archive I/O for Zodiax PyTrees."""
 
 import importlib.metadata
+from functools import lru_cache
 import json
 import os
 import platform
@@ -30,6 +31,8 @@ _PACKAGE_NAMES = {
     "numpy": "numpy",
     "zodiax": "zodiax",
 }
+_MAX_PACKAGE_NAME = 512
+_MAX_PACKAGE_VERSION = 1_024
 
 
 class _CountingWriter:
@@ -75,12 +78,19 @@ class _PayloadReader:
         return data
 
 
+@lru_cache(maxsize=None)
 def _package_version(distribution):
     """Return an installed distribution version when it is available."""
     try:
         return importlib.metadata.version(distribution)
     except importlib.metadata.PackageNotFoundError:
         return None
+
+
+@lru_cache(maxsize=1)
+def _package_distributions():
+    """Return the process-local import-package to distribution index."""
+    return importlib.metadata.packages_distributions()
 
 
 def _reject_json_constant(value):
@@ -98,11 +108,35 @@ def _reject_duplicate_keys(pairs):
     return value
 
 
-def _provenance():
-    """Return focused diagnostic versions for the producing environment."""
+def _definition_module_names(definition):
+    """Return modules referenced by class-bearing object-definition nodes."""
+    modules = set()
+    pending = [definition]
+    while pending:
+        node = pending.pop()
+        if isinstance(node, dict):
+            if node.get("kind") in ("module", "type"):
+                identifier = node.get("type")
+                if isinstance(identifier, str) and ":" in identifier:
+                    modules.add(identifier.partition(":")[0])
+            pending.extend(node.values())
+        elif isinstance(node, list):
+            pending.extend(node)
+    return modules
+
+
+def _provenance(definition):
+    """Return runtime and referenced-distribution versions for an archive."""
+    distributions = dict(_PACKAGE_NAMES)
+    package_index = _package_distributions()
+    for module_name in _definition_module_names(definition):
+        top_level = module_name.partition(".")[0]
+        for distribution in package_index.get(top_level, ()):
+            distributions.setdefault(distribution, distribution)
+
     packages = {
         name: _package_version(distribution)
-        for name, distribution in _PACKAGE_NAMES.items()
+        for name, distribution in sorted(distributions.items())
     }
     return {
         "python": platform.python_version(),
@@ -124,7 +158,7 @@ def _build_manifest(definition, payload_size):
             "version": _PAYLOAD_VERSION,
             "size": payload_size,
         },
-        "created_with": _provenance(),
+        "created_with": _provenance(definition),
     }
 
 
@@ -227,8 +261,27 @@ def _validate_manifest(manifest):
     if type(format_version) is not int or format_version != _FORMAT_VERSION:
         raise ValueError(f"Unsupported Zodiax archive version {format_version!r}.")
 
-    if not isinstance(manifest["created_with"], dict):
+    provenance = manifest["created_with"]
+    if not isinstance(provenance, dict):
         raise ValueError("The Zodiax manifest has invalid provenance.")
+    if set(provenance) != {"python", "packages"}:
+        raise ValueError("The Zodiax manifest has invalid provenance fields.")
+    if type(provenance["python"]) is not str or not provenance["python"]:
+        raise ValueError("The Zodiax manifest has an invalid Python version.")
+    packages = provenance["packages"]
+    if not isinstance(packages, dict) or not set(_PACKAGE_NAMES).issubset(packages):
+        raise ValueError("The Zodiax manifest has invalid package provenance.")
+    for name, version in packages.items():
+        if type(name) is not str or not 0 < len(name) <= _MAX_PACKAGE_NAME:
+            raise ValueError("The Zodiax manifest has an invalid package name.")
+        if version is not None and (
+            type(version) is not str
+            or not version
+            or len(version) > _MAX_PACKAGE_VERSION
+        ):
+            raise ValueError(
+                f"The Zodiax manifest has an invalid version for package {name!r}."
+            )
 
     payload = manifest["payload"]
     if not isinstance(payload, dict):
@@ -244,6 +297,23 @@ def _validate_manifest(manifest):
         raise ValueError(f"Unsupported Zodiax payload version {payload_version!r}.")
     if type(payload.get("size")) is not int or payload["size"] < 0:
         raise ValueError("The Zodiax payload size must be a non-negative integer.")
+
+
+def _validate_package_versions(manifest):
+    """Require every recorded distribution to match the loading environment."""
+    mismatches = []
+    packages = manifest["created_with"]["packages"]
+    for name, saved in sorted(packages.items()):
+        distribution = _PACKAGE_NAMES.get(name, name)
+        installed = _package_version(distribution)
+        if installed != saved:
+            mismatches.append(f"{name}: saved {saved!r}, installed {installed!r}")
+    if mismatches:
+        details = "; ".join(mismatches)
+        raise ValueError(
+            "Zodiax archive package version mismatch: "
+            f"{details}. Pass strict=False to attempt structural reconstruction."
+        )
 
 
 def _read_manifest(archive):

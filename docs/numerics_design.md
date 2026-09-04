@@ -2,8 +2,9 @@
 
 ## Principles
 
-1. The unresolved Equinox PyTree is the single definition used by optimisation,
-   aliases, layouts, and serialisation.
+1. The unrealised Equinox PyTree retains the physical model definition. Path
+   selectors choose scientifically meaningful subsets for optimisation and layouts;
+   serialisation records the complete definition.
 2. Calling an expression resolves it; a transform call may instead supply an
    explicit deepest input.
 3. Persistent composition is ordinary construction through `x`.
@@ -17,7 +18,7 @@
 8. Runtime scope belongs to the field owner. Ordinary resolution preserves declared
    runtime fields until an explicit `runtime=True` evaluation boundary.
 9. Model definitions remain stable while external State carries time, iteration,
-   and the root of deterministic JAX random streams.
+   and other application-defined running values.
 
 ## Object model
 
@@ -27,10 +28,9 @@ Module
 └── Expression
     ├── Linked, Deferred
     ├── StateRef
-    ├── Random
     ├── Grid
     └── Transform
-        ├── Add, Mul, Pow, Exp, Log, Exp10, Log10
+        ├── Add, Mul, Pow, Exp, Log
         ├── MatMul, Mask, Map
         ├── parametric/
         │   ├── Basis, Polynomial, Interpolation
@@ -41,8 +41,8 @@ Module
 
 `evaluate(**context)` defines one expression's evaluation and `fwd(x)` describes one
 transform node. `expression(**context)` and `resolve(expression, **context)` are
-equivalent. `transform(x)` applies the complete nested spine to an explicit deepest
-input, while `transform()` resolves its stored input.
+equivalent. `transform(x)` or the explicit `transform.apply(x)` applies the complete
+nested spine to a deepest input, while `transform()` resolves its stored input.
 
 Fields declared with `zdx.field(runtime=True)` are opaque to ordinary recursive
 resolution. `resolve(runtime=True, **context)` is the explicit override used by the
@@ -50,14 +50,17 @@ owning runtime boundary. Protection belongs to the downstream field rather than 
 expression class, so the same expression can be runtime-dependent in one model and
 globally resolvable in another.
 
-The canonical unrealised model is serialised and optimised. Population produces a
-linked model, ordinary context evaluation produces a context-resolved model, and
-runtime evaluation produces a realised model whose numerical definitions have been
-replaced by concrete arrays.
+The canonical unrealised model is serialised, while path-selected leaves participate
+in optimisation. Population produces a linked model, ordinary context evaluation
+produces a context-resolved model, and runtime evaluation produces a realised model
+whose numerical definitions have been replaced by concrete arrays. `realise()` is
+the combined population-and-resolution operation.
 
-`TreeLayout`, `TreeVector`, `TreeMatrix`, `Jacobian`, `Hessian`, and `Fisher` live in
-the sibling `zodiax.linalg` module. They describe realised PyTree coordinate spaces
-and derivative arrays rather than deferred numerical expressions.
+`TreeLayout`, `TreeVector`, `TreeMatrix`, `Jacobian`, `Hessian`, `GaussNewton`, and
+`Fisher` live in the sibling `zodiax.derivatives` package. A layout records floating
+parameter paths and shapes so derivative arrays and serialised containers share one
+ordering. Derivative operations treat every leaf of their parameter PyTree as a
+parameter and reject non-floating leaves rather than selecting parameters by dtype.
 
 ## Basis and polynomial rules
 
@@ -67,8 +70,10 @@ Matrix-free bases override the basis operation rather than materialising a dense
 tensor.
 
 `Polynomial` stores exponent array `p` and generates its own terms from contextual
-`coords`. Term generation is an implementation detail, not a separate public
-expression object.
+`coords`. Like every sampled coordinate consumer, it infers the component axis at
+`-ndim - 1` from the physical dimensionality and pairs broadcast leading batches.
+Term generation is an implementation detail, not a separate public expression
+object.
 
 ## Grid boundary
 
@@ -98,16 +103,11 @@ a static path into the call-local State and can occupy any expression leaf; for
 example an `Interpolation` can store a state-backed time query directly in `x`.
 Updates use the normal `State.set(...)` path API rather than overriding it on a
 reference. State topology and leaf array signatures remain fixed for JAX loop carry.
-`State.step()` increments `index` and advances `time` by stored or explicit `dt`; a
-`key` entry remains a stable root.
-
-`Random` stores one JAX-style key-first callable, its arguments, and a static stream
-identity. It derives an ordinary JAX key by folding the State index and stream into
-the stable root. This makes random resolution independent of traversal order without
-introducing a custom PRNG type or one Zodiax class per distribution. JAX trace-time
-call options are retained as static metadata, while numerical call arguments remain
-array leaves. `Linked` owns a model value once and `Deferred` provides static-key
-uses populated from the containing model tree.
+`State.step()` increments `index` and advances `time` by stored or explicit `dt`; any
+`key` entry is left unchanged. Random evaluation is deliberately downstream API:
+custom expressions use ordinary JAX keys and choose their own split, fold, and
+stream semantics. `Linked` owns a model value once and `Deferred` provides
+static-key uses populated from the containing model tree.
 
 ## Paths and archives
 
@@ -115,6 +115,10 @@ Numerical operands use `x`, `b`, `s`, `M`, and `p`. Domain names are aliases ont
 those real paths. `TreeLayout` and archive definitions therefore inspect the same
 topology that evaluation executes; no separate parameter graph or filled semantic
 copy exists.
+
+Dots are reserved as structural path separators. Zodiax modules reject literal
+string mapping keys containing dots at construction and after path updates. Dotted
+strings remain valid as values, including alias targets and `StateRef` paths.
 
 The `None` defaults affect presentation, not path identity. Once populated, every
 operand is still an ordinary dataclass field and therefore participates normally in

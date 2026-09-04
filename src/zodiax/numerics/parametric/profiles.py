@@ -11,8 +11,13 @@ from jax import Array
 
 from ..arrays import _as_inexact_array
 from ..expressions import Expression, resolve
-from ..transforms import Transform, _operand, _resolved, _validate_operand
-from ._context import coordinate_context
+from ..transforms import (
+    Transform,
+    _initialise_transform,
+    _resolved,
+    _validate_operand,
+)
+from ._context import coordinate_axis, coordinate_context
 
 __all__ = ["gaussian", "Gaussian"]
 
@@ -57,12 +62,7 @@ def gaussian(
     if np.iscomplexobj(coords):
         raise TypeError("coords must be real.")
     cov, ndim = _covariance(resolve(cov, **context))
-    component_axis = -ndim - 1
-    if coords.ndim < ndim + 1 or coords.shape[component_axis] != ndim:
-        raise ValueError(
-            "coords must contain the covariance dimensionality immediately "
-            "before the final spatial axes."
-        )
+    component_axis = coordinate_axis(coords, ndim)
 
     cov = eqx.error_if(
         cov,
@@ -115,16 +115,13 @@ class Gaussian(Transform):
 
     def __init__(
         self,
+        x: Any = None,
         cov: Any = None,
         mean: Any = None,
-        x: Any = None,
         *,
         alias: Any = None,
     ):
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.cov = _operand(cov, "cov", optional=True)
-        self.mean = _operand(mean, "mean", optional=True)
+        _initialise_transform(self, x, alias, cov=cov, mean=mean)
 
         if self.cov is not None and not isinstance(self.cov, Expression):
             _, ndim = _covariance(self.cov)
@@ -157,7 +154,6 @@ class Gaussian(Transform):
 
     def __zodiax_validate__(self) -> None:
         """Validate constructor-free archive reconstruction."""
-        _validate_operand(self.x, "x", optional=True)
         _validate_operand(self.cov, "cov", optional=True)
         _validate_operand(self.mean, "mean", optional=True)
         if self.cov is not None and not isinstance(self.cov, Expression):
