@@ -17,7 +17,6 @@ import math
 from typing import Any, NamedTuple
 
 import equinox as eqx
-import jax.numpy as np
 from jax import Array
 
 from .transforms import Transform, _operand
@@ -222,12 +221,10 @@ def conversion_factor(unit_in: str, unit_out: str) -> float:
 def convert(value: Any, unit_in: str, unit_out: str) -> Any:
     """Convert a scalar or array between compatible units without global state.
 
-    Float16 and bfloat16 inputs are promoted to float32 before scaling. Results
-    remain Python scalars, NumPy values, or JAX arrays according to the input.
+    Results remain Python scalars, NumPy values, or JAX arrays according to the
+    input, following that type's ordinary multiplication and dtype promotion.
     """
     factor = conversion_factor(unit_in, unit_out)
-    if eqx.is_array(value) and value.dtype in (np.float16, np.bfloat16):
-        value = value.astype(np.float32)
     return value * factor
 
 
@@ -294,9 +291,9 @@ class Unit(Transform):
     -----
     The selected target is stored in ``output_unit``. Use ``to(unit)`` to create
     a transform with a different output unit. Changing the global system later
-    never changes an existing transform's meaning. Conversion arithmetic uses at
-    least float32 precision; scales outside the resulting dtype's range follow
-    ordinary JAX overflow and underflow behaviour.
+    never changes an existing transform's meaning. Conversion follows ordinary
+    JAX type promotion; scales outside the resulting dtype's range follow ordinary
+    overflow and underflow behaviour.
     """
 
     unit: str = eqx.field(static=True)
@@ -348,11 +345,8 @@ class Unit(Transform):
 
     def fwd(self, x: Array, **context: Any) -> Array:
         """Convert a prepared input array into ``output_unit`` units."""
-        # Even ordinary unit factors can exceed the range of float16.
-        dtype = np.result_type(x.dtype, np.float32)
-        return x.astype(dtype) * self.factor
+        return x * self.factor
 
     def inv(self, y: Array, **context: Any) -> Array:
         """Convert a prepared output array back into the stored coordinate unit."""
-        dtype = np.result_type(y.dtype, np.float32)
-        return y.astype(dtype) / self.factor
+        return y / self.factor

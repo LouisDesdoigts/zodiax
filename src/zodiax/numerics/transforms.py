@@ -29,7 +29,7 @@ import jax.numpy as np
 import numpy as onp
 from jax import Array
 
-from .arrays import _as_inexact_array
+from .arrays import as_array
 from .expressions import Expression, _missing_context, _Unresolved, resolve
 
 __all__ = [
@@ -48,13 +48,9 @@ __all__ = [
 
 def _operand(value: Any, name: str, *, optional: bool = False) -> Any:
     """Normalise an array-or-expression operand without realising expressions."""
-    if value is None:
-        if optional:
-            return None
+    if value is None and not optional:
         raise ValueError(f"{name} must not be None.")
-    if isinstance(value, Expression):
-        return value
-    return _as_inexact_array(value, name)
+    return as_array(value)
 
 
 def _preserve_shape(x: Array, y: Array, name: str) -> Array:
@@ -77,11 +73,11 @@ def matmul(x: Any, M: Any = None, **context: Any) -> Array:
     is the identity.
     """
     x = resolve(x, **context)
-    x = _as_inexact_array(x, "x")
+    x = as_array(x)
     M = resolve(M, **context)
     if M is None:
         return x
-    M = _as_inexact_array(M, "M")
+    M = as_array(M)
     if M.ndim == 0:
         raise ValueError("M must have at least one axis; use Mul for scalar scaling.")
     if 0 in M.shape:
@@ -93,8 +89,8 @@ def matmul(x: Any, M: Any = None, **context: Any) -> Array:
 
 def _solve_matmul(y: Any, M: Any) -> Array:
     """Return a minimum-norm input for :func:`matmul`."""
-    y = _as_inexact_array(y, "y")
-    M = _as_inexact_array(M, "M")
+    y = as_array(y)
+    M = as_array(M)
     if M.ndim == 0:
         raise ValueError("M must have at least one axis.")
     if 0 in M.shape:
@@ -107,12 +103,12 @@ def _solve_matmul(y: Any, M: Any) -> Array:
 
     batch_shape = y.shape if ndim == 0 else y.shape[:-ndim]
     width = prod(output_shape)
-    dtype = np.result_type(y.dtype, M.dtype)
-    solve_dtype = np.result_type(dtype, np.float32)
-    matrix = M.reshape((M.shape[0], width)).astype(solve_dtype)
-    flat = y.reshape((-1, width)).astype(solve_dtype)
+    matrix = M.reshape((M.shape[0], width))
+    flat = y.reshape((-1, width))
+    # Let JAX promote the solve inputs. A fractional solution must remain floating
+    # even when the matrix and target were supplied as integer arrays.
     x = np.linalg.lstsq(matrix.T, flat.T, rcond=None)[0].T
-    return x.reshape(batch_shape + (M.shape[0],)).astype(dtype)
+    return x.reshape(batch_shape + (M.shape[0],))
 
 
 class Transform(Expression):
@@ -128,10 +124,12 @@ class Transform(Expression):
     is needed. Exact transforms implement :meth:`inv`; projections or rank-deficient
     transforms implement :meth:`solve`.
 
-    ``evaluate``, ``apply``, and ``encode`` prepare floating or complex array
-    inputs. The numerical methods ``fwd``, ``inv``, and ``solve`` accept and return
-    arrays; they resolve their stored operands where needed. Expressions used as
-    numerical operands must supply numerical scalars or arrays.
+    Construction, ``evaluate``, ``apply``, and ``encode`` convert numerical inputs
+    to arrays while preserving their inferred dtype. Supply floating or complex
+    values for trainable parameters; integer inputs remain integers. The numerical
+    methods ``fwd``, ``inv``, and ``solve`` follow ordinary JAX type promotion and
+    resolve their stored operands where needed. Expressions used as numerical
+    operands must supply numerical scalars or arrays.
     """
 
     x: Any = None
@@ -160,7 +158,7 @@ class Transform(Expression):
             )
 
         x = resolve(self.x, **context)
-        x = _as_inexact_array(x, "x")
+        x = as_array(x)
         return self.fwd(x, **context)
 
     def __call__(self, x: Any = None, **context: Any) -> Array | Transform:
@@ -175,7 +173,7 @@ class Transform(Expression):
             x = self.x.apply(x, **context)
         else:
             x = resolve(x, **context)
-            x = _as_inexact_array(x, "x")
+            x = as_array(x)
         return self.fwd(x, **context)
 
     def inv(self, y: Array, **context: Any) -> Array:
@@ -189,7 +187,7 @@ class Transform(Expression):
     def encode(self, y: Any, **context: Any) -> Array:
         """Map an output back through a fully reverse-capable transform spine."""
         value = resolve(y, **context)
-        value = _as_inexact_array(value, "y")
+        value = as_array(value)
 
         # Undo each transform from the outermost operation to the deepest input.
         transform = self

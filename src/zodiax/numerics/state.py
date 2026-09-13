@@ -10,7 +10,7 @@ import jax.tree_util as jtu
 from jax import Array
 
 from ..base import Module
-from .arrays import _as_array
+from .arrays import as_array
 from .expressions import Expression
 
 __all__ = ["State", "StateRef", "validate_state"]
@@ -48,7 +48,10 @@ class State(Module):
 
         stored_values = {}
         for name, value in combined.items():
-            stored_values[name] = _as_array(value, name)
+            array = as_array(value)
+            if not isinstance(array, Array):
+                raise TypeError(f"State entry {name!r} must be numerical.")
+            stored_values[name] = array
 
         self.alias = alias
         self.values = stored_values
@@ -92,7 +95,7 @@ class State(Module):
         if time is not None:
             if dt is None:
                 dt = self.value("dt")
-            dt = _as_array(dt, "dt")
+            dt = as_array(dt)
             next_time = time + dt
             if next_time.shape != time.shape:
                 raise ValueError("State dt must broadcast without changing time.shape.")

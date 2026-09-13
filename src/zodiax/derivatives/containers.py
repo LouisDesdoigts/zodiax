@@ -1,4 +1,8 @@
-"""PyTree-aware derivative layouts and realised derivative containers."""
+"""PyTree-aware derivative layouts and realised derivative containers.
+
+Real numerical inputs, including integers, are converted to JAX's configured
+default floating dtype at the array boundaries in this module.
+"""
 
 from __future__ import annotations
 
@@ -14,7 +18,7 @@ from jax import Array
 from jax import tree_util as jtu
 
 from ..base import Base, _validate_mapping_keys
-from ..numerics.arrays import _as_float_array, _validate_float_array
+from ..numerics.arrays import as_array, _validate_float_array
 from ..stats import gauss_hessian
 
 __all__ = [
@@ -74,11 +78,11 @@ def _resolve_path(tree: Any, path: str) -> Any:
 
 
 def _shape(value: Any, path: str) -> tuple[int, ...]:
-    """Return the concrete shape of one floating leaf."""
+    """Return the concrete shape of one real numerical leaf."""
     try:
-        array = _as_float_array(value)
+        array = as_array(value, dtype=float)
     except TypeError as error:
-        raise TypeError(f"Leaf {path!r} must be floating and array-like.") from error
+        raise TypeError(f"Leaf {path!r} must be real and array-like.") from error
     return tuple(int(size) for size in array.shape)
 
 
@@ -134,7 +138,7 @@ def _validate_paths(paths: tuple[str, ...]) -> None:
 class TreeLayout(Base):
     """Static mapping between named PyTree leaves and one flat coordinate axis.
 
-    A layout records only the order and shapes used to concatenate floating leaves.
+    A layout records only the order and shapes used to concatenate numerical leaves.
     Values and dtypes live on the corresponding vector or matrix, making the layout
     compact and serialisable. Plain dictionaries follow JAX's canonical key order
     when constructed with :meth:`from_tree`; :meth:`from_paths` preserves the
@@ -227,8 +231,8 @@ class TreeLayout(Base):
         Parameters
         ----------
         tree : PyTree
-            Parameter tree containing at least one floating array-like leaf. Every
-            leaf is included and must have a floating dtype.
+            Parameter tree containing at least one real numerical array-like leaf.
+            Every leaf is included; integer and floating inputs are accepted.
 
         Returns
         -------
@@ -305,13 +309,14 @@ class TreeLayout(Base):
         ----------
         tree : PyTree or mapping[str, array-like]
             Nested tree or flat path mapping matching every stored path and shape.
-            Every selected leaf must have a floating dtype.
+            Selected real numerical leaves are converted to the configured default
+            floating dtype, including integer inputs.
 
         Returns
         -------
         vector : Array
-            Concatenated coordinates with shape ``(size,)``. Leaf dtypes follow normal
-            JAX promotion rules.
+            Concatenated coordinates with shape ``(size,)`` in the configured
+            default floating dtype.
         """
         leaves = []
         for path, shape in zip(self.paths, self.shapes):
@@ -321,7 +326,7 @@ class TreeLayout(Base):
                 raise ValueError(
                     f"Tree does not contain layout path {path!r}."
                 ) from error
-            array = _as_float_array(value)
+            array = as_array(value, dtype=float)
             if array.shape != shape:
                 raise ValueError(
                     f"Leaf {path!r} has shape {array.shape}, expected {shape}."
@@ -335,7 +340,8 @@ class TreeLayout(Base):
         Parameters
         ----------
         vector : array-like
-            Flat numerical coordinates with shape ``(size,)``.
+            Flat real numerical coordinates with shape ``(size,)``, converted to
+            the configured default floating dtype.
         nested : bool
             Return nested dictionaries when ``True``; otherwise return a flat
             path-keyed dictionary.
@@ -343,9 +349,10 @@ class TreeLayout(Base):
         Returns
         -------
         tree : dict
-            Flat or nested dictionary of shaped leaves in the vector's dtype.
+            Flat or nested dictionary of shaped leaves in the configured default
+            floating dtype.
         """
-        vector = _as_float_array(vector)
+        vector = as_array(vector, dtype=float)
         if vector.ndim != 1 or vector.size != self.size:
             raise ValueError(f"vector must have shape ({self.size},).")
 
@@ -364,7 +371,8 @@ class TreeLayout(Base):
         Parameters
         ----------
         array : array-like
-            Numerical array whose selected axis has length ``size``.
+            Real numerical array whose selected axis has length ``size``, converted
+            to the configured default floating dtype.
         axis : int
             Axis to partition. Other axes retain their original ordering.
         nested : bool
@@ -377,7 +385,7 @@ class TreeLayout(Base):
             Array leaves in which the selected axis is replaced by each stored leaf
             shape.
         """
-        array = _as_float_array(array)
+        array = as_array(array, dtype=float)
         if not isinstance(axis, int):
             raise TypeError("axis must be an integer.")
         axis = axis + array.ndim if axis < 0 else axis
@@ -429,14 +437,15 @@ class TreeVector(Base):
         Parameters
         ----------
         vector : array-like
-            Flat numerical vector with shape ``(layout.size,)``.
+            Flat real numerical vector with shape ``(layout.size,)``, converted to
+            the configured default floating dtype.
         layout : TreeLayout
             Coordinate layout used to interpret the vector.
         """
         if not isinstance(layout, TreeLayout):
             raise TypeError("layout must be a TreeLayout.")
 
-        vector = _as_float_array(vector)
+        vector = as_array(vector, dtype=float)
         if vector.ndim != 1 or vector.size != layout.size:
             raise ValueError(f"vector must have shape ({layout.size},).")
 
@@ -483,15 +492,16 @@ class TreeMatrix(Base):
         Parameters
         ----------
         matrix : array-like
-            Floating matrix with shape ``(layout.size, layout.size)``. Symmetric
-            subclasses replace it by ``(matrix + matrix.T) / 2``.
+            Real numerical matrix with shape ``(layout.size, layout.size)``,
+            converted to the configured default floating dtype. Symmetric subclasses
+            replace it by ``(matrix + matrix.T) / 2``.
         layout : TreeLayout
             Coordinate layout represented by both matrix axes.
         """
         if not isinstance(layout, TreeLayout):
             raise TypeError("layout must be a TreeLayout.")
 
-        matrix = _as_float_array(matrix)
+        matrix = as_array(matrix, dtype=float)
         shape = (layout.size, layout.size)
         if matrix.ndim != 2 or matrix.shape != shape:
             raise ValueError(f"matrix must have shape {shape}.")
@@ -588,15 +598,16 @@ class Jacobian(Base):
         Parameters
         ----------
         matrix : array-like
-            Floating derivative array with shape
-            ``output_shape + (layout.size,)``.
+            Real numerical derivative array with shape
+            ``output_shape + (layout.size,)``, converted to the configured default
+            floating dtype.
         layout : TreeLayout
             Parameter coordinates represented by the final matrix axis.
         """
         if not isinstance(layout, TreeLayout):
             raise TypeError("layout must be a TreeLayout.")
 
-        matrix = _as_float_array(matrix)
+        matrix = as_array(matrix, dtype=float)
         if matrix.ndim < 1 or matrix.shape[-1] != layout.size:
             raise ValueError(f"matrix must have a final axis of size {layout.size}.")
 
@@ -747,14 +758,14 @@ class Fisher(TreeMatrix):
         elif not isinstance(layout, TreeLayout):
             raise TypeError("layout must be a TreeLayout when jacobian is array-like.")
 
-        jacobian = _as_float_array(jacobian)
+        jacobian = as_array(jacobian, dtype=float)
         if jacobian.ndim < 1 or jacobian.shape[-1] != layout.size:
             raise ValueError(f"jacobian must have a final axis of size {layout.size}.")
         output_size = prod(jacobian.shape[:-1])
         jacobian = jacobian.reshape((output_size, layout.size))
 
         if covariance is not None:
-            covariance = _as_float_array(covariance)
+            covariance = as_array(covariance, dtype=float)
             shape = (jacobian.shape[0], jacobian.shape[0])
             if covariance.shape != shape:
                 raise ValueError(f"covariance must have shape {shape}.")
