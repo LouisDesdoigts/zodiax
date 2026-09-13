@@ -9,7 +9,7 @@ import equinox as eqx
 import jax.tree_util as jtu
 from jax import Array
 
-from ..base import Module
+from ..module import Module
 from .arrays import as_array
 from .expressions import Expression
 

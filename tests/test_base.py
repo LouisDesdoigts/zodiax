@@ -17,6 +17,10 @@ class MappingModel(zdx.Base):
     values: dict
 
 
+class MappingModule(zdx.Module):
+    values: dict
+
+
 class TestBase:
     @pytest.mark.parametrize(
         "values",
@@ -25,25 +29,26 @@ class TestBase:
             {"outer": {"bad.key": 1.0}},
         ],
     )
-    def test_dotted_mapping_keys_are_rejected(self, values):
+    def test_module_dotted_mapping_keys_are_rejected(self, values):
         with pytest.raises(ValueError, match="reserved as structural path"):
-            MappingModel(values)
+            MappingModule(values)
+
+    def test_base_preserves_mapping_metadata_accepted_on_main(self):
+        model = MappingModel({"version.number": 1.0})
+        updated = model.set("values", {"version.number": 2.0})
+
+        assert model.values == {"version.number": 1.0}
+        assert updated.values == {"version.number": 2.0}
 
     def test_dots_in_mapping_values_and_alias_paths_remain_valid(self):
         model = MappingModel({"label": "version.1"})
         transform = zdx.Exp(
-            zdx.Add(b=1.0),
+            zdx.Map(b=1.0),
             alias=(("bias", "x.b"),),
         )
 
         assert model.values["label"] == "version.1"
         assert np.allclose(transform.bias, 1.0)
-
-    def test_set_rejects_a_new_dotted_mapping_key(self):
-        model = MappingModel({"valid": 1.0})
-
-        with pytest.raises(ValueError, match="reserved as structural path"):
-            model.set("values", {"bad.key": 2.0})
 
     def test_get_leaf_dict_list_and_missing_key(self):
         pytree = {"a": [{"b": 3.0}]}

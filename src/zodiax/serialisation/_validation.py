@@ -6,7 +6,8 @@ from typing import Any
 
 import equinox as eqx
 
-from ..base import Base, Module, _validate_aliases, _validate_mapping_keys
+from ..base import Base, _validate_mapping_keys
+from ..module import Module, _validate_aliases
 
 _VALIDATION_HOOK = "__zodiax_validate__"
 

@@ -11,7 +11,7 @@ from typing import Any
 import jax.tree_util as jtu
 from jax.core import get_opaque_trace_state
 
-from ..base import Module
+from ..module import Module
 
 __all__ = ["Expression", "resolve"]
 
