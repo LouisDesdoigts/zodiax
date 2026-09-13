@@ -20,18 +20,20 @@ class State(Module):
     """An immutable mapping of named numerical values.
 
     Each entry becomes a JAX array at construction, including numerical lists and
-    tuples. A Python integer supplied as ``index`` stays an integer. Store
-    expressions in the model and use StateRef to read these current values.
+    tuples and an integer ``index``. Store expressions in the model and use
+    StateRef to read these current values.
 
     Update entries with the inherited Module.set API. It does not convert
-    replacement values; supply arrays, or a Python integer for ``index``.
+    replacement values; supply arrays.
 
-    A Python index is static under equinox.filter_jit, so changing it can cause
-    recompilation. Supply an integer array for a dynamic index. When carrying
-    State through a JAX loop, preserve its structure and array shapes and dtypes.
+    A scalar integer array supports x[index] and x.at[index].set(value) under JIT.
+    For a slice starting at a dynamic index, use jax.lax.dynamic_slice_in_dim
+    with a fixed slice size; ordinary Python slice bounds must remain static.
+    When carrying State through a JAX loop, preserve its structure and array
+    shapes and dtypes.
     """
 
-    values: dict[str, Array | int]
+    values: dict[str, Array]
 
     def __init__(
         self,
@@ -46,15 +48,12 @@ class State(Module):
 
         stored_values = {}
         for name, value in combined.items():
-            if name == "index" and type(value) is int:
-                stored_values[name] = value
-            else:
-                stored_values[name] = _as_array(value, name)
+            stored_values[name] = _as_array(value, name)
 
         self.alias = alias
         self.values = stored_values
 
-    def value(self, path: str) -> Array | int:
+    def value(self, path: str) -> Array:
         """Read a value using ordinary Module paths and aliases.
 
         Use a qualified path such as "values.time" when a name is ambiguous or
@@ -120,7 +119,7 @@ class StateRef(Expression):
         self.alias = None
         self.path = path
 
-    def evaluate(self, *, state: State, **context: Any) -> Array | int:
+    def evaluate(self, *, state: State, **context: Any) -> Array:
         """Read the current numerical value from the supplied state."""
         return state.value(self.path)
 
