@@ -13,18 +13,14 @@ internal catalogue rather than a mutable user registry.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from functools import lru_cache
 import math
-from threading import RLock
 from typing import Any, NamedTuple
 
 import equinox as eqx
 import jax.numpy as np
 from jax import Array
 
-from .arrays import _as_inexact_array
-from .expressions import resolve
-from .transforms import Transform, _initialise_transform
+from .transforms import Transform, _operand
 
 __all__ = [
     "unit_info",
@@ -112,8 +108,11 @@ _DEFAULT_UNITS = {
     "photon": "photon",
 }
 
-_LOCK = RLock()
 _ACTIVE_UNITS = dict(_DEFAULT_UNITS)
+"""Default units for new transforms. set_units replaces this dictionary after
+validation; get_units returns a copy. Existing Unit objects keep their captured
+unit names, so later changes here do not alter their calculations.
+"""
 
 
 def _normalise_category(category: Any) -> str:
@@ -129,25 +128,13 @@ def _normalise_category(category: Any) -> str:
         ) from error
 
 
-def _normalise_unit_text(unit: Any) -> str:
-    """Return one bounded, non-empty unit spelling."""
-    if not isinstance(unit, str):
-        raise TypeError("unit must be a string.")
-    unit = unit.strip()
-    if not unit:
-        raise ValueError("unit must not be empty.")
-    if len(unit) > 128:
-        raise ValueError("unit must contain at most 128 characters.")
-    return unit
-
-
 def _simple_unit_info(unit: str) -> _UnitInfo:
     """Resolve a non-compound unit spelling."""
     unit = _UNIT_ALIASES.get(unit.lower(), unit)
     direct = _UNIT_CATALOGUE.get(unit)
     if direct is not None:
         category, factor = direct
-        return _UnitInfo(unit, category, 1, float(factor))
+        return _UnitInfo(unit, category, 1, factor)
 
     if len(unit) > 1:
         prefix = unit[0]
@@ -159,7 +146,7 @@ def _simple_unit_info(unit: str) -> _UnitInfo:
                 prefix + base,
                 category,
                 1,
-                float(_PREFIXES[prefix] * factor),
+                _PREFIXES[prefix] * factor,
             )
     raise ValueError(f"Unknown unit {unit!r}.")
 
@@ -174,9 +161,47 @@ def _format_power(unit: str, power: int) -> str:
 
 
 def unit_info(unit: str) -> _UnitInfo:
-    """Return the canonical spelling, category, power, and reference factor."""
-    unit = _normalise_unit_text(unit)
-    return _cached_unit_info(unit)
+    """Return the canonical spelling, category, power, and reference factor.
+
+    Factors refer to metres, radians, or photons, independently of ``set_units``.
+    Cartesian units also support reciprocals and integer powers, such as ``1/mm``
+    and ``um^2``. Prefixes are case-sensitive: ``mm`` and ``Mm`` differ.
+    """
+    if not isinstance(unit, str):
+        raise TypeError("unit must be a string.")
+    unit = unit.strip()
+    if not unit:
+        raise ValueError("unit must not be empty.")
+
+    # Separate the reciprocal and exponent from the base unit spelling.
+    reciprocal = unit.startswith("1/")
+    body = unit[2:] if reciprocal else unit
+    if not reciprocal and "^" not in body:
+        return _simple_unit_info(body)
+
+    if "^" in body:
+        body, exponent_text = body.split("^", 1)
+        try:
+            power = int(exponent_text)
+        except ValueError as error:
+            raise ValueError(f"Unknown unit {unit!r}.") from error
+    else:
+        power = 1
+    if reciprocal:
+        power = -power
+    if power == 0 or abs(power) > 8:
+        raise ValueError("Unit powers must be nonzero integers between -8 and 8.")
+
+    # Apply the power to both the canonical name and its reference factor.
+    base = _simple_unit_info(body)
+    if base.category != "cartesian":
+        raise ValueError("Only Cartesian units currently support derived powers.")
+    return _UnitInfo(
+        _format_power(base.unit, power),
+        base.category,
+        power,
+        base.factor**power,
+    )
 
 
 def canonical_unit(unit: str) -> str:
@@ -191,64 +216,19 @@ def conversion_factor(unit_in: str, unit_out: str) -> float:
 
     if source.category != target.category or source.power != target.power:
         raise ValueError(f"Cannot convert from {unit_in!r} to {unit_out!r}.")
-    return float(source.factor / target.factor)
+    return source.factor / target.factor
 
 
 def convert(value: Any, unit_in: str, unit_out: str) -> Any:
-    """Convert a value between compatible units without global unit state."""
-    return value * conversion_factor(unit_in, unit_out)
+    """Convert a scalar or array between compatible units without global state.
 
-
-@lru_cache(maxsize=None)
-def _cached_unit_info(unit: str) -> _UnitInfo:
-    """Resolve one already validated spelling with an unbounded immutable cache."""
-
-    try:
-        return _simple_unit_info(unit)
-    except ValueError:
-        pass
-
-    reciprocal = unit.startswith("1/")
-    body = unit[2:] if reciprocal else unit
-    if "^" in body:
-        if body.count("^") != 1:
-            raise ValueError(f"Unknown unit {unit!r}.")
-        body, exponent_text = body.split("^", 1)
-        try:
-            power = int(exponent_text)
-        except ValueError as error:
-            raise ValueError(f"Unknown unit {unit!r}.") from error
-    else:
-        power = 1
-    if reciprocal:
-        power = -power
-    if power == 0 or abs(power) > 8:
-        raise ValueError("Unit powers must be nonzero integers between -8 and 8.")
-
-    base = _simple_unit_info(body)
-    if base.category != "cartesian":
-        raise ValueError("Only Cartesian units currently support derived powers.")
-    return _UnitInfo(
-        _format_power(base.unit, power),
-        base.category,
-        power,
-        float(base.factor**power),
-    )
-
-
-def _target_info(source: _UnitInfo) -> _UnitInfo:
-    """Return the active realised unit matching one source definition."""
-    with _LOCK:
-        target_unit = _ACTIVE_UNITS[source.category]
-    target = unit_info(target_unit)
-    if source.power == 1:
-        return target
-    return _UnitInfo(
-        _format_power(target.unit, source.power),
-        source.category,
-        source.power,
-        float(target.factor**source.power),
-    )
+    Float16 and bfloat16 inputs are promoted to float32 before scaling. Results
+    remain Python scalars, NumPy values, or JAX arrays according to the input.
+    """
+    factor = conversion_factor(unit_in, unit_out)
+    if eqx.is_array(value) and value.dtype in (np.float16, np.bfloat16):
+        value = value.astype(np.float32)
+    return value * factor
 
 
 def get_units() -> dict[str, str]:
@@ -258,12 +238,11 @@ def get_units() -> dict[str, str]:
     :class:`Unit` transforms whose ``to`` argument is omitted. Mutating the returned
     dictionary has no effect on the active system.
     """
-    with _LOCK:
-        return dict(_ACTIVE_UNITS)
+    return dict(_ACTIVE_UNITS)
 
 
 def set_units(units: Mapping[str, str]) -> dict[str, str]:
-    """Atomically replace the global unit system and return its normalised value.
+    """Replace the global unit system and return an independent normalised copy.
 
     ``units`` may override any of ``"cartesian"``, ``"angular"``, or
     ``"photon"``. Omitted categories retain their built-in defaults. Category
@@ -291,9 +270,8 @@ def set_units(units: Mapping[str, str]) -> dict[str, str]:
             raise ValueError(f"Unit {raw_unit!r} is not a simple {category!r} unit.")
         normalised[category] = info.unit
 
-    with _LOCK:
-        _ACTIVE_UNITS = normalised
-        return dict(_ACTIVE_UNITS)
+    _ACTIVE_UNITS = normalised
+    return dict(normalised)
 
 
 class Unit(Transform):
@@ -314,13 +292,15 @@ class Unit(Transform):
 
     Notes
     -----
-    The selected target is stored in ``to``. Changing the global system later never
-    changes an existing transform's meaning.
+    The selected target is stored in ``output_unit``. Use ``to(unit)`` to create
+    a transform with a different output unit. Changing the global system later
+    never changes an existing transform's meaning. Conversion arithmetic uses at
+    least float32 precision; scales outside the resulting dtype's range follow
+    ordinary JAX overflow and underflow behaviour.
     """
 
     unit: str = eqx.field(static=True)
-    to: str = eqx.field(static=True)
-    _scale: float = eqx.field(static=True, repr=False)
+    output_unit: str = eqx.field(static=True)
 
     def __init__(
         self,
@@ -330,15 +310,28 @@ class Unit(Transform):
         to: str | None = None,
         alias: Any = None,
     ):
+        """Initialise a fixed unit conversion and its optional stored input."""
         source = unit_info(unit)
-        target = _target_info(source) if to is None else unit_info(to)
+        if to is None:
+            target_unit = get_units()[source.category]
+            to = _format_power(target_unit, source.power)
+        target = unit_info(to)
         if source.category != target.category or source.power != target.power:
             raise ValueError(f"Cannot convert from {unit!r} to {to!r}.")
 
-        _initialise_transform(self, x, alias)
+        self.alias = alias
+        self.x = _operand(x, "x", optional=True)
         self.unit = source.unit
-        self.to = target.unit
-        self._scale = float(source.factor / target.factor)
+        self.output_unit = target.unit
+
+    def to(self, unit: str) -> Unit:
+        """Return a new Unit with the requested output unit.
+
+        Keep the stored input, its unit, and aliases. The constructor checks that
+        the requested unit has compatible dimensions; no input is evaluated.
+        For example, ``Unit(1.0, "m").to("mm").resolve()`` returns ``1000.0``.
+        """
+        return Unit(self.x, self.unit, to=unit, alias=self.alias)
 
     @property
     def category(self) -> str:
@@ -347,43 +340,19 @@ class Unit(Transform):
 
     @property
     def factor(self) -> float:
-        """Frozen multiplicative factor from ``unit`` to ``to``."""
-        return self._scale
+        """Multiplicative factor derived from the two stored unit names.
 
-    def _convert(self, value: Any, name: str, *, inverse: bool) -> Array:
-        """Apply the frozen scale without silently losing it in a narrow dtype."""
-        value = _as_inexact_array(value, name)
-        dtype = np.result_type(value.dtype, np.float32)
-        value = np.asarray(value, dtype=dtype)
-        scale = np.asarray(self._scale, dtype=dtype)
-        factor = np.reciprocal(scale) if inverse else scale
-        source, target = (self.to, self.unit) if inverse else (self.unit, self.to)
-        factor = eqx.error_if(
-            factor,
-            np.logical_or(~np.isfinite(factor), factor == 0),
-            f"Unit conversion {source!r} -> {target!r} is not representable "
-            f"in dtype {dtype}.",
-        )
-        return value * factor
+        Both names are static, so JIT calculates this Python float during tracing.
+        """
+        return conversion_factor(self.unit, self.output_unit)
 
-    def fwd(self, x: Any, **context: Any) -> Array:
-        """Convert an explicitly supplied input coordinate into ``to`` units."""
-        return self._convert(resolve(x, **context), "x", inverse=False)
+    def fwd(self, x: Array, **context: Any) -> Array:
+        """Convert a prepared input array into ``output_unit`` units."""
+        # Even ordinary unit factors can exceed the range of float16.
+        dtype = np.result_type(x.dtype, np.float32)
+        return x.astype(dtype) * self.factor
 
-    def inv(self, y: Any, **context: Any) -> Array:
-        """Convert a realised value back into the stored coordinate unit."""
-        return self._convert(resolve(y, **context), "y", inverse=True)
-
-    def __zodiax_validate__(self) -> None:
-        """Validate constructor-free archive reconstruction."""
-        source = unit_info(self.unit)
-        target = unit_info(self.to)
-        if source.unit != self.unit or target.unit != self.to:
-            raise ValueError("unit and to must use canonical spellings.")
-        if source.category != target.category or source.power != target.power:
-            raise ValueError("unit and to must have compatible physical dimensions.")
-        expected = float(source.factor / target.factor)
-        if type(self._scale) is not float or not math.isfinite(self._scale):
-            raise TypeError("_scale must be a finite Python float.")
-        if self._scale == 0 or self._scale != expected:
-            raise ValueError("_scale does not match the stored unit conversion.")
+    def inv(self, y: Array, **context: Any) -> Array:
+        """Convert a prepared output array back into the stored coordinate unit."""
+        dtype = np.result_type(y.dtype, np.float32)
+        return y.astype(dtype) / self.factor
