@@ -1,19 +1,16 @@
-"""Composable numerical definitions, links, state, units, and coordinates."""
+"""Composable numerical definitions, transforms, links, state, and units."""
 
 # Import in dependency order. Eager imports also make archived built-in types
 # available to the constructor-free type resolver.
 from . import expressions
 from . import arrays, links, transforms
-from . import grids, normalisation, parametric, state, units
+from . import state, units
 
 _MODULES = (
     expressions,
     arrays,
     links,
     transforms,
-    grids,
-    normalisation,
-    parametric,
     state,
     units,
 )
