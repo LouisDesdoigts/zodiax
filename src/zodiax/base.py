@@ -10,7 +10,6 @@ from jax import Array, lax
 
 __all__ = [
     "Alias",
-    "field",
     "Base",
     "Module",
     "update",
@@ -26,39 +25,6 @@ Values = Any | list[Any] | tuple[Any]
 Alias = tuple[tuple[str, str], ...]
 
 _NO_ALIAS = object()
-_RUNTIME_FIELD = "zodiax_runtime"
-
-
-def field(*, runtime: bool = False, metadata: Any = None, **kwargs: Any) -> Any:
-    """Declare an Equinox field with optional runtime-resolution protection.
-
-    A field declared with ``runtime=True`` is treated as an opaque subtree by
-    :meth:`Module.resolve` unless that call explicitly supplies ``runtime=True``.
-    This lets an owning module retain coordinate- or input-dependent numerical
-    definitions until it has the authoritative local context required to evaluate
-    them.
-
-    All remaining arguments are forwarded to :func:`equinox.field`.
-    """
-    if type(runtime) is not bool:
-        raise TypeError("runtime must be a bool.")
-    if runtime and bool(kwargs.get("static", False)):
-        raise ValueError("A runtime field cannot also be static.")
-
-    metadata = {} if metadata is None else dict(metadata)
-    if _RUNTIME_FIELD in metadata:
-        raise ValueError(f"metadata must not define {_RUNTIME_FIELD!r}.")
-    if runtime:
-        metadata[_RUNTIME_FIELD] = True
-    return eqx.field(metadata=metadata, **kwargs)
-
-
-def _is_runtime_field(owner: Any, name: str) -> bool:
-    """Return whether ``name`` is runtime-protected on ``owner``."""
-    definition = getattr(type(owner), "__dataclass_fields__", {}).get(name)
-    if definition is None:
-        return False
-    return bool(definition.metadata.get(_RUNTIME_FIELD, False))
 
 
 def _normalise_alias(value: Any) -> Alias | None:
@@ -368,6 +334,11 @@ def _raised_candidates(owner: Any, key: str) -> tuple[list[tuple[str, Any]], set
     """Find the nearest named descendants and names used for missing-name hints."""
     fields = _public_fields(owner)
     available = set(fields) | _public_properties(owner)
+    try:
+        aliases = object.__getattribute__(owner, "alias")
+    except AttributeError:
+        aliases = None
+    available.update(name for name, _ in aliases or ())
     frontier = []
     for name in fields:
         try:
@@ -389,6 +360,14 @@ def _raised_candidates(owner: Any, key: str) -> tuple[list[tuple[str, Any]], set
             elif not isinstance(value, (tuple, list)) and _is_dataclass_node(value):
                 available.update(_public_fields(value))
                 available.update(_public_properties(value))
+                target = _NO_ALIAS
+                if isinstance(value, Module):
+                    target = _local_alias(value, key)
+                    try:
+                        aliases = object.__getattribute__(value, "alias")
+                    except AttributeError:
+                        aliases = None
+                    available.update(name for name, _ in aliases or ())
                 if _declares_attribute(value, key):
                     try:
                         result = object.__getattribute__(value, key)
@@ -396,6 +375,9 @@ def _raised_candidates(owner: Any, key: str) -> tuple[list[tuple[str, Any]], set
                         pass
                     else:
                         matches.append((f"{path}.{key}", result))
+                elif target is not _NO_ALIAS:
+                    result = _resolve_local_alias(value, key, target)
+                    matches.append((f"{path}.{key}", result))
 
             following.extend(_children(value, path, ancestors))
 
@@ -704,10 +686,6 @@ class Base(eqx.Module):
     with the leaves of the pytree using parameters.
     """
 
-    def __check_init__(self) -> None:
-        """Validate that stored mappings have unambiguous structural keys."""
-        _validate_mapping_keys(self)
-
     def save(self, file_or_path: Any) -> None:
         """Save this object to a validated Zodiax archive."""
         from .serialisation import save
@@ -811,11 +789,9 @@ class Base(eqx.Module):
         def leaves_fn(pytree):
             return _get_leaves(pytree, new_parameters)
 
-        updated = eqx.tree_at(
+        return eqx.tree_at(
             leaves_fn, self, new_values, is_leaf=lambda leaf: leaf is None
         )
-        _validate_mapping_keys(updated)
-        return updated
 
     def add(
         self: PyTree,
@@ -1113,8 +1089,8 @@ class Module(Base):
 
     ``Module`` provides immutable path operations, numerical-expression population
     and resolution, explicit aliases, and shorthand access to attributes held by its
-    dataclass descendants. Aliases
-    are local, static mappings from a concise name to a canonical structural path.
+    dataclass descendants. Aliases are local, static mappings from a concise name
+    to a canonical structural path.
     The nearest matching descendant is otherwise used. Multiple matches at the same
     depth are rejected with their qualified paths so lookup never depends on child
     ordering.
@@ -1132,38 +1108,33 @@ class Module(Base):
     def populate(self) -> Any:
         """Return an ephemeral copy with linked numerical values populated.
 
-        Population is intended to happen inside the function transformed by JAX.
-        It establishes shared owners without evaluating contextual expressions.
+        This advanced primitive establishes shared owners without evaluating
+        contextual expressions. Normal model evaluation should use :meth:`resolve`,
+        which performs population automatically.
         """
         from .numerics.links import populate
 
         return populate(self)
 
-    def resolve(self, *, runtime: bool = False, **context: Any) -> Any:
-        """Return a copy with eligible numerical expressions evaluated in context.
+    def resolve(self, *, populate: bool = True, **context: Any) -> Any:
+        """Return an operable copy with ready numerical expressions evaluated.
 
-        Resolution is separate from :meth:`populate`: link population establishes
-        shared owners, while resolution evaluates contextual definitions. Fields
-        declared with :func:`field` using ``runtime=True`` remain unrealised unless
-        this call also supplies ``runtime=True``.
+        Ordinary Modules retain their class, with ready expression fields replaced
+        by their values. An Expression represents a value itself, so resolving an
+        Expression returns its numerical result when it is ready.
+
+        Linked values are populated first by default. Definitions whose required
+        context is available then become arrays; expressions requiring later local
+        context remain partially resolved. Set ``populate=False`` to suppress link
+        population for that resolution call.
         """
         from .numerics.expressions import resolve
 
-        return resolve(self, runtime=runtime, **context)
-
-    def realise(self, *, runtime: bool = False, **context: Any) -> Any:
-        """Populate links and resolve eligible expressions in one operation.
-
-        Like :meth:`populate`, this should be called inside the function transformed
-        by JAX when shared linked values must contribute to one canonical owner.
-        """
-        from .numerics.links import realise
-
-        return realise(self, runtime=runtime, **context)
+        return resolve(self, populate=populate, **context)
 
     def __check_init__(self) -> None:
-        """Validate aliases after every ordinary Equinox construction."""
-        super().__check_init__()
+        """Validate structural keys and aliases at ordinary construction."""
+        _validate_mapping_keys(self)
         _validate_aliases(self)
 
     def validate_aliases(self) -> None:
@@ -1210,7 +1181,7 @@ def update(
         for path, value in candidates.items():
             try:
                 obj.get(path, to_array=False)
-            except (AttributeError, KeyError):
+            except (AttributeError, IndexError, KeyError):
                 continue
             values[path] = value
             unmatched.discard(path)
