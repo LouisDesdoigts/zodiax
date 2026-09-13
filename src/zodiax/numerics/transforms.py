@@ -21,25 +21,19 @@ optional.
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections.abc import Sequence
-from hashlib import blake2s
 from math import prod
 from typing import Any
 
 import equinox as eqx
 import jax.numpy as np
 import numpy as onp
-import wadler_lindig as wl
 from jax import Array
 
-from .arrays import _as_inexact_array, _validate_inexact_array
-from .expressions import Expression, resolve
+from .arrays import _as_inexact_array
+from .expressions import Expression, _missing_context, _Unresolved, resolve
 
 __all__ = [
     "Transform",
-    "add",
-    "mul",
-    "power",
     "matmul",
     "Add",
     "Mul",
@@ -50,13 +44,6 @@ __all__ = [
     "Mask",
     "Map",
 ]
-
-_NO_INPUT = object()
-
-
-def _resolved(value: Any, context: dict[str, Any]) -> Any:
-    """Resolve a possibly deferred operand in the current evaluation context."""
-    return resolve(value, **context)
 
 
 def _operand(value: Any, name: str, *, optional: bool = False) -> Any:
@@ -70,31 +57,6 @@ def _operand(value: Any, name: str, *, optional: bool = False) -> Any:
     return _as_inexact_array(value, name)
 
 
-def _initialise_transform(
-    owner: Any,
-    x: Any,
-    alias: Any,
-    *,
-    required: Sequence[str] = (),
-    **operands: Any,
-) -> None:
-    """Initialise the common transform input, alias, and numerical operands."""
-    owner.alias = alias
-    owner.x = _operand(x, "x", optional=True)
-    required = frozenset(required)
-    for name, value in operands.items():
-        setattr(owner, name, _operand(value, name, optional=name not in required))
-
-
-def _validate_operand(value: Any, name: str, *, optional: bool = False) -> None:
-    """Validate constructor-free array-or-expression storage."""
-    if value is None and optional:
-        return
-    if isinstance(value, Expression):
-        return
-    _validate_inexact_array(value, name)
-
-
 def _preserve_shape(x: Array, y: Array, name: str) -> Array:
     """Require a broadcast operation to retain its input shape."""
     if y.shape != x.shape:
@@ -103,54 +65,6 @@ def _preserve_shape(x: Array, y: Array, name: str) -> Array:
             f"{x.shape} -> {y.shape}."
         )
     return y
-
-
-def _nonzero(value: Any, name: str) -> Array:
-    """Dynamically enforce a nonzero inverse operand."""
-    value = _as_inexact_array(value, name)
-    return eqx.error_if(value, np.any(value == 0), f"{name} must be nonzero.")
-
-
-def _base(value: Any, context: dict[str, Any]) -> Array | None:
-    """Resolve one real logarithmic base, where ``None`` denotes Euler's number."""
-    value = _resolved(value, context)
-    if value is None:
-        return None
-    value = _as_inexact_array(value, "base")
-    if np.iscomplexobj(value):
-        raise TypeError("base must be real.")
-    return eqx.error_if(
-        value,
-        np.any(value <= 0) | np.any(value == 1),
-        "base must be positive and not equal to one.",
-    )
-
-
-def add(x: Any, b: Any = None, **context: Any) -> Array:
-    """Return ``x + b`` while preserving ``x.shape``; ``b=None`` is identity."""
-    x = _as_inexact_array(_resolved(x, context), "x")
-    b = _resolved(b, context)
-    if b is None:
-        return x
-    y = x + _as_inexact_array(b, "b")
-    return _preserve_shape(x, y, "b")
-
-
-def mul(x: Any, s: Any = None, **context: Any) -> Array:
-    """Return ``x * s`` while preserving ``x.shape``; ``s=None`` is identity."""
-    x = _as_inexact_array(_resolved(x, context), "x")
-    s = _resolved(s, context)
-    if s is None:
-        return x
-    y = x * _as_inexact_array(s, "s")
-    return _preserve_shape(x, y, "s")
-
-
-def power(x: Any, p: Any, **context: Any) -> Array:
-    """Return ``x**p`` using ordinary JAX broadcasting."""
-    x = _as_inexact_array(_resolved(x, context), "x")
-    p = _as_inexact_array(_resolved(p, context), "p")
-    return np.power(x, p)
 
 
 def matmul(x: Any, M: Any = None, **context: Any) -> Array:
@@ -162,8 +76,9 @@ def matmul(x: Any, M: Any = None, **context: Any) -> Array:
     higher-rank ``M`` represents a sampled basis with native output axes. ``None``
     is the identity.
     """
-    x = _as_inexact_array(_resolved(x, context), "x")
-    M = _resolved(M, context)
+    x = resolve(x, **context)
+    x = _as_inexact_array(x, "x")
+    M = resolve(M, **context)
     if M is None:
         return x
     M = _as_inexact_array(M, "M")
@@ -200,99 +115,106 @@ def _solve_matmul(y: Any, M: Any) -> Array:
     return x.reshape(batch_shape + (M.shape[0],)).astype(dtype)
 
 
-def _pdoc(
-    owner: Any,
-    name: str,
-    fields: Sequence[tuple[str, Any]],
-    **kwargs: Any,
-) -> Any:
-    """Build an Equinox-compatible compact document including a real alias."""
-    alias = getattr(owner, "alias", None)
-    if alias is not None:
-        fields = (("alias", alias), *fields)
-    return wl.bracketed(
-        begin=wl.TextDoc(f"{name}("),
-        docs=wl.named_objs(fields, **kwargs),
-        sep=wl.comma,
-        end=wl.TextDoc(")"),
-        indent=kwargs["indent"],
-    )
-
-
 class Transform(Expression):
     """A stored-input numerical transform.
 
     ``x`` is always the stored upstream input and ``fwd(x)`` always returns the
     output ``y``. A transform with ``x=None`` is unbound, while any Expression may
-    provide its stored input. Specialised coordinate transforms may override
-    :meth:`evaluate` to consume named coordinates. Exact transforms implement
-    :meth:`inv`; projections or rank-deficient transforms implement :meth:`solve`.
+    provide its stored input. Subclasses put the local numerical formula in ``fwd``;
+    the inherited ``evaluate`` supplies the stored input, while ``apply`` applies
+    the complete nested transform chain to an explicit deepest input.
+    Declare required named context, such as coordinates, in the ``fwd`` signature.
+    The inherited ``evaluate`` checks those requirements, so no forwarding override
+    is needed. Exact transforms implement :meth:`inv`; projections or rank-deficient
+    transforms implement :meth:`solve`.
+
+    ``evaluate``, ``apply``, and ``encode`` prepare floating or complex array
+    inputs. The numerical methods ``fwd``, ``inv``, and ``solve`` accept and return
+    arrays; they resolve their stored operands where needed. Expressions used as
+    numerical operands must supply numerical scalars or arrays.
     """
 
     x: Any = None
 
     @abstractmethod
-    def fwd(self, x: Any, **context: Any) -> Array:
-        """Map an explicitly supplied input ``x`` to an output ``y``."""
+    def fwd(self, x: Array, **context: Any) -> Array:
+        """Apply this transform to explicit ``x``, without following stored ``x``.
 
-    def __zodiax_validate__(self) -> None:
-        """Validate the common optional stored input after archive loading."""
-        _validate_operand(self.x, "x", optional=True)
+        Declare required named context in the signature, for example
+        ``fwd(self, x, *, coordinates, **context)``. During resolution, missing
+        context retains the transform with its available children prepared.
+        """
 
     def evaluate(self, **context: Any) -> Array:
-        """Evaluate this transform from its stored upstream input."""
+        """Resolve stored input and pass it to the subclass's ``fwd`` calculation."""
         if self.x is None:
-            raise ValueError(f"{type(self).__name__} has no stored x input.")
-        y = self.fwd(_resolved(self.x, context), **context)
-        return _as_inexact_array(y, "y")
+            raise _Unresolved(f"{type(self).__name__} has no stored x input.")
 
-    def __call__(self, x: Any = _NO_INPUT, **context: Any) -> Array:
+        # fwd receives x positionally; its remaining required inputs come from
+        # context. Defer through the usual resolver signal if any are unavailable,
+        # allowing child preparation to retain whatever can already resolve.
+        missing = _missing_context(self.fwd, context, self.x)
+        if missing:
+            raise _Unresolved(
+                f"{type(self).__name__}.fwd requires context: {', '.join(missing)}."
+            )
+
+        x = resolve(self.x, **context)
+        x = _as_inexact_array(x, "x")
+        return self.fwd(x, **context)
+
+    def __call__(self, x: Any = None, **context: Any) -> Array | Transform:
         """Resolve stored input, or apply the transform to explicit input ``x``."""
-        if x is _NO_INPUT:
-            return _as_inexact_array(resolve(self, **context), "y")
+        if x is None:
+            return self.resolve(**context)
         return self.apply(x, **context)
 
     def apply(self, x: Any, **context: Any) -> Array:
-        """Apply the complete transform spine to an explicit deepest input."""
-        return _as_inexact_array(self.decode(x, **context), "y")
+        """Apply the complete transform chain to an explicit deepest input."""
+        if isinstance(self.x, Transform):
+            x = self.x.apply(x, **context)
+        else:
+            x = resolve(x, **context)
+            x = _as_inexact_array(x, "x")
+        return self.fwd(x, **context)
 
-    def inv(self, y: Any, **context: Any) -> Array:
+    def inv(self, y: Array, **context: Any) -> Array:
         """Return the exact local inverse when one is defined."""
-        del y, context
         raise NotImplementedError(f"{type(self).__name__} does not define inv().")
 
-    def solve(self, y: Any, **context: Any) -> Array:
+    def solve(self, y: Array, **context: Any) -> Array:
         """Return a representative local input for an output ``y``."""
         return self.inv(y, **context)
 
-    def decode(self, x: Any, **context: Any) -> Array:
-        """Map a deepest input forward through the complete transform spine."""
-        if isinstance(self.x, Transform):
-            x = self.x.decode(x, **context)
-        y = self.fwd(_resolved(x, context), **context)
-        return _as_inexact_array(y, "y")
-
     def encode(self, y: Any, **context: Any) -> Array:
         """Map an output back through a fully reverse-capable transform spine."""
-        x = self.solve(_resolved(y, context), **context)
-        x = _resolved(x, context)
-        if isinstance(self.x, Transform):
-            return self.x.encode(x, **context)
-        return _as_inexact_array(x, "x")
+        value = resolve(y, **context)
+        value = _as_inexact_array(value, "y")
+
+        # Undo each transform from the outermost operation to the deepest input.
+        transform = self
+        while isinstance(transform, Transform):
+            value = transform.solve(value, **context)
+            transform = transform.x
+        return value
 
     def initialise(self, y: Any, **context: Any) -> Transform:
         """Bind a deepest input when every traversed transform supports reverse."""
-        if isinstance(self.x, Transform):
-            inner = self.x.initialise(self.solve(y, **context), **context)
-            return eqx.tree_at(lambda transform: transform.x, self, inner)
-        if isinstance(self.x, Expression):
+
+        # Locate the stored input without evaluating or replacing the transforms.
+        def deepest_input(transform):
+            while isinstance(transform.x, Transform):
+                transform = transform.x
+            return transform.x
+
+        if isinstance(deepest_input(self), Expression):
             raise ValueError(
                 f"Cannot initialise {type(self).__name__} through an Expression "
                 "input; update its canonical definition or Linked owner instead."
             )
-        x = _operand(self.encode(y, **context), "x", optional=True)
+        x = self.encode(y, **context)
         return eqx.tree_at(
-            lambda transform: transform.x,
+            deepest_input,
             self,
             x,
             is_leaf=lambda leaf: leaf is None,
@@ -300,53 +222,59 @@ class Transform(Expression):
 
     def project(self, y: Any, **context: Any) -> Array:
         """Project ``y`` through the available reverse and forward operations."""
-        return self.decode(self.encode(y, **context), **context)
+        return self.apply(self.encode(y, **context), **context)
 
 
 class Add(Transform):
-    """Add a bias: ``y = x + b``."""
+    """Add a bias: ``y = x + b``, preserving the input shape; ``b=None`` is identity."""
 
     b: Any = None
 
     def __init__(self, x: Any = None, b: Any = None, *, alias: Any = None):
-        _initialise_transform(self, x, alias, b=b)
+        """Store optional input and bias arrays or expressions, with aliases."""
+        self.alias = alias
+        self.x = _operand(x, "x", optional=True)
+        self.b = _operand(b, "b", optional=True)
 
-    def fwd(self, x: Any, **context: Any) -> Array:
-        return add(x, self.b, **context)
+    def fwd(self, x: Array, **context: Any) -> Array:
+        b = resolve(self.b, **context)
+        if b is None:
+            return x
+        y = x + b
+        return _preserve_shape(x, y, "b")
 
-    def inv(self, y: Any, **context: Any) -> Array:
-        y = _as_inexact_array(_resolved(y, context), "y")
-        b = _resolved(self.b, context)
+    def inv(self, y: Array, **context: Any) -> Array:
+        b = resolve(self.b, **context)
         if b is None:
             return y
-        x = y - _as_inexact_array(b, "b")
+        x = y - b
         return _preserve_shape(y, x, "b")
-
-    def __zodiax_validate__(self) -> None:
-        _validate_operand(self.b, "b", optional=True)
 
 
 class Mul(Transform):
-    """Multiply by a scale: ``y = x * s``."""
+    """Scale an input: ``y = x * s``, preserving its shape; ``s=None`` is identity."""
 
     s: Any = None
 
     def __init__(self, x: Any = None, s: Any = None, *, alias: Any = None):
-        _initialise_transform(self, x, alias, s=s)
+        """Store optional input and scale arrays or expressions, with aliases."""
+        self.alias = alias
+        self.x = _operand(x, "x", optional=True)
+        self.s = _operand(s, "s", optional=True)
 
-    def fwd(self, x: Any, **context: Any) -> Array:
-        return mul(x, self.s, **context)
+    def fwd(self, x: Array, **context: Any) -> Array:
+        s = resolve(self.s, **context)
+        if s is None:
+            return x
+        y = x * s
+        return _preserve_shape(x, y, "s")
 
-    def inv(self, y: Any, **context: Any) -> Array:
-        y = _as_inexact_array(_resolved(y, context), "y")
-        s = _resolved(self.s, context)
+    def inv(self, y: Array, **context: Any) -> Array:
+        s = resolve(self.s, **context)
         if s is None:
             return y
-        x = y / _nonzero(s, "s")
+        x = y / s
         return _preserve_shape(y, x, "s")
-
-    def __zodiax_validate__(self) -> None:
-        _validate_operand(self.s, "s", optional=True)
 
 
 class Pow(Transform):
@@ -359,13 +287,14 @@ class Pow(Transform):
     p: Any = None
 
     def __init__(self, x: Any = None, p: Any = None, *, alias: Any = None):
-        _initialise_transform(self, x, alias, required=("p",), p=p)
+        """Store optional input, required power, and parameter aliases."""
+        self.alias = alias
+        self.x = _operand(x, "x", optional=True)
+        self.p = _operand(p, "p")
 
-    def fwd(self, x: Any, **context: Any) -> Array:
-        return power(x, self.p, **context)
-
-    def __zodiax_validate__(self) -> None:
-        _validate_operand(self.p, "p")
+    def fwd(self, x: Array, **context: Any) -> Array:
+        p = resolve(self.p, **context)
+        return np.power(x, p)
 
 
 class Exp(Transform):
@@ -386,24 +315,24 @@ class Exp(Transform):
         *,
         alias: Any = None,
     ):
-        _initialise_transform(self, x, alias, base=base)
+        """Store optional input and base arrays or expressions, with aliases."""
+        self.alias = alias
+        self.x = _operand(x, "x", optional=True)
+        self.base = _operand(base, "base", optional=True)
 
-    def fwd(self, x: Any, **context: Any) -> Array:
-        x = _as_inexact_array(_resolved(x, context), "x")
-        base = _base(self.base, context)
+    def fwd(self, x: Array, **context: Any) -> Array:
+        base = resolve(self.base, **context)
         if base is None:
             return np.exp(x)
-        return _preserve_shape(x, np.power(base, x), "base")
+        y = np.power(base, x)
+        return _preserve_shape(x, y, "base")
 
-    def inv(self, y: Any, **context: Any) -> Array:
-        y = _as_inexact_array(_resolved(y, context), "y")
-        base = _base(self.base, context)
+    def inv(self, y: Array, **context: Any) -> Array:
+        base = resolve(self.base, **context)
         if base is None:
             return np.log(y)
-        return _preserve_shape(y, np.log(y) / np.log(base), "base")
-
-    def __zodiax_validate__(self) -> None:
-        _validate_operand(self.base, "base", optional=True)
+        x = np.log(y) / np.log(base)
+        return _preserve_shape(y, x, "base")
 
 
 class Log(Transform):
@@ -423,24 +352,24 @@ class Log(Transform):
         *,
         alias: Any = None,
     ):
-        _initialise_transform(self, x, alias, base=base)
+        """Store optional input and base arrays or expressions, with aliases."""
+        self.alias = alias
+        self.x = _operand(x, "x", optional=True)
+        self.base = _operand(base, "base", optional=True)
 
-    def fwd(self, x: Any, **context: Any) -> Array:
-        x = _as_inexact_array(_resolved(x, context), "x")
-        base = _base(self.base, context)
+    def fwd(self, x: Array, **context: Any) -> Array:
+        base = resolve(self.base, **context)
         if base is None:
             return np.log(x)
-        return _preserve_shape(x, np.log(x) / np.log(base), "base")
+        y = np.log(x) / np.log(base)
+        return _preserve_shape(x, y, "base")
 
-    def inv(self, y: Any, **context: Any) -> Array:
-        y = _as_inexact_array(_resolved(y, context), "y")
-        base = _base(self.base, context)
+    def inv(self, y: Array, **context: Any) -> Array:
+        base = resolve(self.base, **context)
         if base is None:
             return np.exp(y)
-        return _preserve_shape(y, np.power(base, y), "base")
-
-    def __zodiax_validate__(self) -> None:
-        _validate_operand(self.base, "base", optional=True)
+        x = np.power(base, y)
+        return _preserve_shape(y, x, "base")
 
 
 class MatMul(Transform):
@@ -449,7 +378,10 @@ class MatMul(Transform):
     M: Any = None
 
     def __init__(self, x: Any = None, M: Any = None, *, alias: Any = None):
-        _initialise_transform(self, x, alias, required=("M",), M=M)
+        """Store optional input, required matrix or basis, and aliases."""
+        self.alias = alias
+        self.x = _operand(x, "x", optional=True)
+        self.M = _operand(M, "M")
         if not isinstance(self.M, Expression):
             self._validate_M(self.M)
 
@@ -460,108 +392,72 @@ class MatMul(Transform):
         if 0 in M.shape:
             raise ValueError("M must have nonzero dimensions.")
 
-    def fwd(self, x: Any, **context: Any) -> Array:
-        M = _resolved(self.M, context)
-        if M is None:
-            raise ValueError("MatMul M must not resolve to None.")
-        return matmul(x, M, **context)
+    def fwd(self, x: Array, **context: Any) -> Array:
+        return matmul(x, self.M, **context)
 
-    def solve(self, y: Any, **context: Any) -> Array:
-        y = _resolved(y, context)
-        M = _resolved(self.M, context)
-        if M is None:
-            raise ValueError("MatMul M must not resolve to None.")
+    def solve(self, y: Array, **context: Any) -> Array:
+        M = resolve(self.M, **context)
         return _solve_matmul(y, M)
-
-    def __zodiax_validate__(self) -> None:
-        _validate_operand(self.M, "M")
-        if not isinstance(self.M, Expression):
-            self._validate_M(self.M)
 
 
 class Mask(Transform):
-    """Scatter compact ``x`` values into selected output entries.
+    """Populate selected output entries with compact ``x`` values.
 
-    The output ``shape`` is static, while selected flat indices occupy one integer
-    JAX-array leaf. Large masks therefore do not become large Python PyTree
-    definitions or static compilation keys.
+    The final axis of ``x`` contains one value per true mask entry, in flattened
+    order. The output replaces that axis with ``mask.shape``, preserving any
+    leading batch axes and filling unselected entries with zero.
+
+    Store one boolean mask and a fixed selected count, ``size``, so JIT knows the
+    compact array length. Changing mask values must preserve this count.
+
+    Performance note: when the mask is passed through JIT as an array input,
+    selected indices are calculated during execution. This adds work proportional
+    to the number of mask elements in both ``fwd`` and ``solve``.
     """
 
-    indices: Array
-    shape: tuple[int, ...] = eqx.field(static=True)
+    mask: Array
+    size: int = eqx.field(static=True)
 
     def __init__(self, x: Any = None, mask: Any = None, *, alias: Any = None):
+        """Store optional input, a boolean mask, its selected count, and aliases."""
         mask = onp.asarray(mask)
         if mask.dtype != onp.bool_:
             raise TypeError("mask must have a boolean dtype.")
         if mask.ndim == 0:
             raise ValueError("mask must have at least one axis.")
-        indices = onp.flatnonzero(mask)
-        if indices.size == 0:
+        size = int(onp.count_nonzero(mask))
+        if size == 0:
             raise ValueError("mask must select at least one entry.")
 
-        _initialise_transform(self, x, alias)
-        self.indices = np.asarray(indices, dtype=np.int32)
-        self.shape = tuple(int(size) for size in mask.shape)
+        self.alias = alias
+        self.x = _operand(x, "x", optional=True)
+        self.mask = np.asarray(mask)
+        self.size = size
 
     @property
-    def size(self) -> int:
-        """Number of selected values."""
-        return self.indices.size
+    def shape(self) -> tuple[int, ...]:
+        """Output shape for one compact input vector."""
+        return self.mask.shape
 
-    def fwd(self, x: Any, **context: Any) -> Array:
-        x = _as_inexact_array(_resolved(x, context), "x")
+    def fwd(self, x: Array, **context: Any) -> Array:
         if x.ndim == 0 or x.shape[-1] != self.size:
             raise ValueError(f"x must have a final axis of size {self.size}.")
-        flat = np.zeros(x.shape[:-1] + (prod(self.shape),), dtype=x.dtype)
-        flat = flat.at[..., np.asarray(self.indices)].set(x)
+
+        indices = np.flatnonzero(self.mask, size=self.size)
+        flat = np.zeros(x.shape[:-1] + (self.mask.size,), dtype=x.dtype)
+        flat = flat.at[..., indices].set(x)
         return flat.reshape(x.shape[:-1] + self.shape)
 
-    def solve(self, y: Any, **context: Any) -> Array:
+    def solve(self, y: Array, **context: Any) -> Array:
         """Gather representative compact values from a full output."""
-        y = _as_inexact_array(_resolved(y, context), "y")
         ndim = len(self.shape)
         if y.ndim < ndim or y.shape[-ndim:] != self.shape:
             raise ValueError(f"y must end in shape {self.shape}.")
+
         batch = y.shape[:-ndim]
-        flat = y.reshape(batch + (prod(self.shape),))
-        return flat[..., np.asarray(self.indices)]
-
-    def _index_summary(self) -> tuple[int, ...] | str:
-        indices = tuple(int(index) for index in onp.asarray(self.indices))
-        if self.size <= 8:
-            return indices
-        payload = repr((self.shape, indices)).encode()
-        digest = blake2s(payload, digest_size=4).hexdigest()
-        return f"{self.size}@{digest}"
-
-    def __pdoc__(self, **kwargs: Any) -> Any:
-        fields = [] if self.x is None else [("x", self.x)]
-        fields.extend([("idx", self._index_summary()), ("shape", self.shape)])
-        return _pdoc(
-            self,
-            "Mask",
-            fields,
-            **kwargs,
-        )
-
-    def __zodiax_validate__(self) -> None:
-        if type(self.shape) is not tuple or not self.shape:
-            raise ValueError("shape must be a non-empty tuple.")
-        if any(type(size) is not int or size <= 0 for size in self.shape):
-            raise ValueError("shape dimensions must be positive integers.")
-        if not isinstance(self.indices, Array):
-            raise TypeError("indices must be a JAX array.")
-        if bool(self.indices.weak_type) or not np.issubdtype(
-            self.indices.dtype, np.integer
-        ):
-            raise TypeError("indices must be a strongly typed integer JAX array.")
-        if self.indices.ndim != 1 or self.indices.size == 0:
-            raise ValueError("indices must be a non-empty one-dimensional array.")
-        if bool(np.any(self.indices[:-1] >= self.indices[1:])):
-            raise ValueError("indices must be strictly increasing and unique.")
-        if bool(self.indices[0] < 0) or bool(self.indices[-1] >= prod(self.shape)):
-            raise ValueError("indices must lie within shape.")
+        flat = y.reshape(batch + (self.mask.size,))
+        indices = np.flatnonzero(self.mask, size=self.size)
+        return flat[..., indices]
 
 
 class Map(Transform):
@@ -590,36 +486,43 @@ class Map(Transform):
         *,
         alias: Any = None,
     ):
-        _initialise_transform(self, x, alias, s=s, M=M, b=b)
+        """Store input, scale, matrix or basis, bias, and aliases; all are optional."""
+        self.alias = alias
+        self.x = _operand(x, "x", optional=True)
+        self.s = _operand(s, "s", optional=True)
+        self.M = _operand(M, "M", optional=True)
+        self.b = _operand(b, "b", optional=True)
         if self.M is not None and not isinstance(self.M, Expression):
             MatMul._validate_M(self.M)
 
-    def fwd(self, x: Any, **context: Any) -> Array:
-        y = mul(x, self.s, **context)
-        y = matmul(y, self.M, **context)
-        return add(y, self.b, **context)
+    def fwd(self, x: Array, **context: Any) -> Array:
+        # Apply the input scale, then contract with the matrix or sampled basis.
+        s = resolve(self.s, **context)
+        if s is not None:
+            scaled = x * s
+            x = _preserve_shape(x, scaled, "s")
+        y = matmul(x, self.M, **context)
 
-    def solve(self, y: Any, **context: Any) -> Array:
-        y = _as_inexact_array(_resolved(y, context), "y")
-
-        b = _resolved(self.b, context)
+        # Add the output bias without introducing new axes.
+        b = resolve(self.b, **context)
         if b is not None:
-            shifted = y - _as_inexact_array(b, "b")
+            shifted = y + b
+            y = _preserve_shape(y, shifted, "b")
+        return y
+
+    def solve(self, y: Array, **context: Any) -> Array:
+        # Undo the bias, matrix or basis, and input scale in reverse order.
+        b = resolve(self.b, **context)
+        if b is not None:
+            shifted = y - b
             y = _preserve_shape(y, shifted, "b")
 
-        M = _resolved(self.M, context)
+        M = resolve(self.M, **context)
         if M is not None:
             y = _solve_matmul(y, M)
 
-        s = _resolved(self.s, context)
+        s = resolve(self.s, **context)
         if s is not None:
-            unscaled = y / _nonzero(s, "s")
+            unscaled = y / s
             y = _preserve_shape(y, unscaled, "s")
         return y
-
-    def __zodiax_validate__(self) -> None:
-        _validate_operand(self.s, "s", optional=True)
-        _validate_operand(self.M, "M", optional=True)
-        _validate_operand(self.b, "b", optional=True)
-        if self.M is not None and not isinstance(self.M, Expression):
-            MatMul._validate_M(self.M)
