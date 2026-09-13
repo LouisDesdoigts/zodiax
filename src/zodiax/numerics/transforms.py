@@ -105,9 +105,9 @@ def _solve_matmul(y: Any, M: Any) -> Array:
     width = prod(output_shape)
     matrix = M.reshape((M.shape[0], width))
     flat = y.reshape((-1, width))
-    # Let JAX promote the solve inputs. A fractional solution must remain floating
-    # even when the matrix and target were supplied as integer arrays.
-    x = np.linalg.lstsq(matrix.T, flat.T, rcond=None)[0].T
+    # The pseudoinverse gives the minimum-norm solution, including zero for a zero
+    # matrix. JAX handles rank selection and ordinary numerical type promotion.
+    x = flat @ np.linalg.pinv(matrix)
     return x.reshape(batch_shape + (M.shape[0],))
 
 
