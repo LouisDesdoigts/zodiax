@@ -1,8 +1,8 @@
-"""Single-owner numerical links for Zodiax PyTrees.
+"""Shared numerical values stored once and referenced by key.
 
-``Linked`` values own numerical leaves exactly once, while key-only ``Deferred``
-values refer to those owners. Population replaces both forms in an ephemeral tree,
-so every use remains connected to the owner's single input tracer.
+Linked holds the value; Deferred holds only its owner's key. Population replaces
+both with that value in a temporary tree, leaving the original model unchanged.
+Normal model.resolve calls perform this step before evaluating expressions.
 """
 
 from __future__ import annotations
@@ -14,68 +14,122 @@ from uuid import uuid4
 import equinox as eqx
 import jax.tree_util as jtu
 import numpy as onp
-import wadler_lindig as wl
 from jax import Array
 
 from .arrays import as_array
 from .expressions import Expression, resolve
 
-__all__ = ["Deferred", "Linked", "populate", "realise", "validate_links"]
+__all__ = ["Deferred", "Linked", "populate", "validate_links"]
 
 
-def _short_key(key: str) -> str:
-    """Shorten generated UUID-like keys without hiding semantic identities."""
-    if len(key) == 32 and all(character in "0123456789abcdef" for character in key):
-        return f"{key[:8]}…{key[-4:]}"
-    return key
+def populate(tree: Any) -> Any:
+    """Return a copy with each Linked and Deferred replaced by its owner's value.
+
+    First collect all owners, including those nested inside other linked values.
+    Then replace links recursively. This allows references to appear before their
+    owners in the tree. Duplicate owners, missing owners, and cycles raise ValueError.
+
+    Population connects shared values without evaluating expressions. Call it
+    inside the differentiated function so every use contributes to the gradient
+    of the value stored once in the original model. Model.resolve does this
+    automatically before evaluating available expressions.
+    """
+    # Pass 1: build a registry of owners and record the keys used by references.
+    # These collections belong to this call; nothing is stored on the model.
+    owners: dict[str, Linked] = {}
+    deferred: set[str] = set()
+
+    # Normally JAX traverses Linked.value and skips Deferred's static-only fields.
+    # Treating both classes as leaves lets us inspect the link objects themselves.
+    is_link = lambda value: isinstance(value, (Linked, Deferred))
+
+    def collect(subtree: Any) -> None:
+        """Register links in this subtree, including links inside owned values."""
+        for node in jtu.tree_leaves(subtree, is_leaf=is_link):
+            if isinstance(node, Linked):
+                # Even repeating the same owner object duplicates its tree leaves.
+                if node.key in owners:
+                    raise ValueError(f"Link {node.key!r} has multiple Linked owners.")
+                owners[node.key] = node
+                collect(node.value)
+            elif isinstance(node, Deferred):
+                deferred.add(node.key)
+
+    # Finish collecting before checking references: an owner may appear later in
+    # the tree. The set difference finds keys with no owner anywhere in this tree.
+    collect(tree)
+    missing = deferred.difference(owners)
+    if missing:
+        keys = ", ".join(repr(key) for key in sorted(missing))
+        raise ValueError(f"Dangling deferred link(s): {keys}.")
+
+    # Pass 2: replace each owner and reference with the owner's populated value.
+    # Cache completed values by key so shared subtrees are only expanded once.
+    populated: dict[str, Any] = {}
+
+    # Track owners whose values are still being populated. Nested calls share
+    # this list; reaching an unfinished owner again indicates a dependency cycle.
+    active: list[str] = []
+
+    def replace(node: Any) -> Any:
+        """Replace one link, recursively populating its owned value if needed."""
+        if not is_link(node):
+            return node
+
+        key = node.key
+        if key in populated:
+            return populated[key]
+
+        if key in active:
+            # Keep the circular part of the path, for example a -> b -> a.
+            start = active.index(key)
+            cycle = active[start:] + [key]
+            chain = " -> ".join(cycle)
+            raise ValueError(f"Linked dependency cycle detected: {chain}.")
+
+        # Populate dependencies before caching this value. Mark the owner active
+        # during that work, then restore the caller's path even if a child fails.
+        active.append(key)
+        try:
+            value = jtu.tree_map(replace, owners[key].value, is_leaf=is_link)
+        finally:
+            active.pop()
+
+        populated[key] = value
+        return value
+
+    # Rebuild the outer tree without changing the original. Each link is one
+    # replacement slot, so its value can be an array or an entire populated PyTree.
+    return jtu.tree_map(replace, tree, is_leaf=is_link)
 
 
-def _validate_key(key: Any) -> None:
-    """Validate one stable link identity without generating a replacement."""
-    if not isinstance(key, str):
-        raise TypeError("key must be a string.")
-    if not key:
-        raise ValueError("key must not be empty.")
+def validate_links(tree: Any) -> None:
+    """Check for duplicate owners, missing owners, and dependency cycles.
 
-
-def _link_pdoc(
-    owner: Any,
-    name: str,
-    fields: list[tuple[str, Any]],
-    **kwargs: Any,
-) -> Any:
-    """Build a compact Equinox-compatible document for a link node."""
-    alias = getattr(owner, "alias", None)
-    if alias is not None:
-        fields = [("alias", alias), *fields]
-    return wl.bracketed(
-        begin=wl.TextDoc(f"{name}("),
-        docs=wl.named_objs(fields, **kwargs),
-        sep=wl.comma,
-        end=wl.TextDoc(")"),
-        indent=kwargs["indent"],
-    )
+    Use the same traversal as population and discard the temporary result.
+    Numerical expressions are not evaluated.
+    """
+    populate(tree)
 
 
 class Linked(Expression):
-    """Own a value that can be referenced elsewhere without duplicating leaves.
+    """Store a shared array, Expression, or PyTree once in a model.
 
-    Parameters
-    ----------
-    value
-        The canonical array, PyTree, or Expression value. Its dynamic leaves occur
-        only here in the unrealised model. Python numerical scalars and NumPy/JAX
-        arrays are normalised to strongly typed JAX arrays; ambiguous list, tuple,
-        and mapping PyTrees are retained as containers.
-    key
-        Optional stable, serialisable identity for the link. If omitted, a UUID
-        is generated once at construction and retained by serialisation and tree
-        transformations. Supplying a semantic key makes independently rebuilt
-        model topologies identical.
+    Place this owner in one tree position and use defer() for every other use.
+    Repeating the same Linked object in two positions still duplicates its leaves.
+
+    Numerical scalars and NumPy/JAX arrays become strongly typed JAX arrays at
+    construction. Containers retain their structure and contents; supply arrays
+    for numerical leaves that should participate in JAX transformations.
+
+    The static string key identifies the owner and its references. A UUID is
+    generated when omitted. Supply a descriptive key to give independently
+    constructed models the same link identity. Keys survive tree transformations
+    and serialisation.
     """
 
     value: Any
-    key: str = eqx.field(static=True, repr=False)
+    key: str = eqx.field(static=True)
 
     def __init__(
         self,
@@ -86,9 +140,10 @@ class Linked(Expression):
     ):
         if key is None:
             key = uuid4().hex
-        elif not isinstance(key, str):
-            raise TypeError("key must be a string or None.")
-        _validate_key(key)
+        if not isinstance(key, str):
+            raise TypeError("key must be a string.")
+        if not key:
+            raise ValueError("key must not be empty.")
 
         if isinstance(value, (Number, Array, onp.ndarray, onp.generic)):
             value = as_array(value)
@@ -98,179 +153,38 @@ class Linked(Expression):
         self.key = key
 
     def defer(self) -> Deferred:
-        """Return a zero-dynamic-leaf deferred link to this linked value."""
+        """Return a reference containing only this owner's static key."""
         return Deferred(self.key)
 
     def evaluate(self, **context: Any) -> Any:
-        """Evaluate the canonical value directly.
+        """Resolve the owned value when evaluating this wrapper directly.
 
-        Deferred links still require :func:`populate`; evaluating an unpopulated
-        link raises a diagnostic error.
+        Normal model resolution replaces the wrapper during population first.
         """
         return resolve(self.value, **context)
 
-    def __pdoc__(self, **kwargs: Any) -> Any:
-        return _link_pdoc(
-            self,
-            "Linked",
-            [("key", _short_key(self.key)), ("value", self.value)],
-            **kwargs,
-        )
-
-    def __zodiax_validate__(self) -> None:
-        """Validate constructor-free archive reconstruction."""
-        _validate_key(self.key)
-
 
 class Deferred(Expression):
-    """A static link replaced by :func:`populate` before evaluation."""
+    """A reference populated from the Linked owner with the same key.
 
-    key: str = eqx.field(static=True, repr=False)
+    Resolve a tree containing both the owner and its references. A detached
+    reference cannot find its owner from the key alone.
+    """
+
+    key: str = eqx.field(static=True)
 
     def __init__(self, key: str):
-        _validate_key(key)
+        if not isinstance(key, str):
+            raise TypeError("key must be a string.")
+        if not key:
+            raise ValueError("key must not be empty.")
+
+        self.alias = None
         self.key = key
 
     def evaluate(self, **context: Any) -> Any:
-        del context
+        """Report a reference that reached evaluation without being populated."""
         raise ValueError(
-            f"Link {self.key!r} has not been populated. Call populate() on the "
-            "containing model inside the evaluated function."
+            f"Link {self.key!r} has not been populated. Call resolve() on a tree "
+            "containing both this reference and its Linked owner."
         )
-
-    def __pdoc__(self, **kwargs: Any) -> Any:
-        return _link_pdoc(
-            self,
-            "Deferred",
-            [("key", _short_key(self.key))],
-            **kwargs,
-        )
-
-    def __zodiax_validate__(self) -> None:
-        """Validate constructor-free archive reconstruction."""
-        _validate_key(self.key)
-
-
-def validate_links(tree: Any) -> None:
-    """Validate linked ownership, deferred links, and dependency cycles.
-
-    Raises
-    ------
-    ValueError
-        If multiple owners use one key, a deferred link is dangling, or linked
-        owners form a dependency cycle.
-    """
-    owners, deferred = _collect_links(tree)
-    _check_dangling(owners, deferred)
-
-    populator = _Populator(owners)
-    for key in owners:
-        populator.resolve_key(key)
-
-
-def populate(tree: Any) -> Any:
-    """Return an ephemeral tree with linked owners and deferred links populated.
-
-    This is a two-pass operation. The first pass discovers every owner and
-    validates the complete topology, so forward deferred links are supported. The
-    second pass replaces both an owner and all its deferred links with the owner's
-    recursively populated value.
-
-    The unrealised input remains unchanged and contains each linked numerical
-    subtree exactly once. Calling this function inside a differentiated
-    computation therefore makes all populated uses contribute gradients to the
-    canonical owner.
-    """
-    owners, deferred = _collect_links(tree)
-    _check_dangling(owners, deferred)
-
-    populator = _Populator(owners)
-    for key in owners:
-        populator.resolve_key(key)
-    return populator.tree(tree)
-
-
-def realise(
-    tree: Any,
-    *,
-    runtime: bool = False,
-    **context: Any,
-) -> Any:
-    """Populate links and recursively resolve expressions in one operation.
-
-    Call this inside a JAX-transformed function when a model contains linked
-    values, so every populated use remains connected to its canonical owner.
-    ``runtime`` and named context have the same meaning as in :func:`resolve`.
-    """
-    return resolve(populate(tree), runtime=runtime, **context)
-
-
-def _is_link_node(value: Any) -> bool:
-    return isinstance(value, (Linked, Deferred))
-
-
-def _collect_links(tree: Any) -> tuple[dict[str, Linked], set[str]]:
-    owners: dict[str, Linked] = {}
-    deferred: set[str] = set()
-
-    def scan(subtree: Any) -> None:
-        # Treat link nodes as leaves for this pass. Linked values are scanned in
-        # a separate recursive call so the owner itself and nested dependencies
-        # are both visible.
-        nodes = jtu.tree_leaves(subtree, is_leaf=_is_link_node)
-        for node in nodes:
-            if isinstance(node, Linked):
-                if node.key in owners:
-                    raise ValueError(f"Link {node.key!r} has multiple Linked owners.")
-                owners[node.key] = node
-                scan(node.value)
-            elif isinstance(node, Deferred):
-                deferred.add(node.key)
-
-    scan(tree)
-    return owners, deferred
-
-
-def _check_dangling(owners: dict[str, Linked], deferred: set[str]) -> None:
-    dangling = deferred.difference(owners)
-    if dangling:
-        keys = ", ".join(repr(key) for key in sorted(dangling))
-        raise ValueError(f"Dangling deferred link(s): {keys}.")
-
-
-class _Populator:
-    """Resolve a validated link registry while detecting dependency cycles."""
-
-    def __init__(self, owners: dict[str, Linked]):
-        self.owners = owners
-        self.values: dict[str, Any] = {}
-        self.active: tuple[str, ...] = ()
-
-    def tree(self, tree: Any) -> Any:
-        return jtu.tree_map(self._replace, tree, is_leaf=_is_link_node)
-
-    def _replace(self, node: Any) -> Any:
-        if isinstance(node, (Linked, Deferred)):
-            return self.resolve_key(node.key)
-        return node
-
-    def resolve_key(self, key: str) -> Any:
-        if key in self.values:
-            return self.values[key]
-
-        if key in self.active:
-            start = self.active.index(key)
-            cycle = self.active[start:] + (key,)
-            chain = " -> ".join(cycle)
-            raise ValueError(f"Linked dependency cycle detected: {chain}.")
-
-        owner = self.owners[key]
-        previous = self.active
-        self.active = previous + (key,)
-        try:
-            value = self.tree(owner.value)
-        finally:
-            self.active = previous
-
-        self.values[key] = value
-        return value
