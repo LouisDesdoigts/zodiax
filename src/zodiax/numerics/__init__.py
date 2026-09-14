@@ -3,7 +3,7 @@
 # Import in dependency order. Eager imports also make archived built-in types
 # available to the constructor-free type resolver.
 from . import expressions
-from . import arrays, links, transforms
+from . import arrays, links, transforms, operations
 from . import state, units
 
 _MODULES = (
@@ -11,6 +11,7 @@ _MODULES = (
     arrays,
     links,
     transforms,
+    operations,
     state,
     units,
 )

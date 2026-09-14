@@ -32,11 +32,3 @@ def as_array(value: Any, *, dtype: type | None = None) -> Array | Expression | N
     # operands. Supplying the inferred dtype explicitly removes that weak_type
     # flag without choosing a different precision for the stored array.
     return np.asarray(array, dtype=array.dtype)
-
-
-def _validate_float_array(value: Any, name: str) -> None:
-    """Validate constructor-free storage of a floating array."""
-    if not isinstance(value, Array):
-        raise TypeError(f"{name} must be a JAX array.")
-    if bool(value.weak_type) or not np.issubdtype(value.dtype, np.floating):
-        raise TypeError(f"{name} must be a strongly typed floating JAX array.")

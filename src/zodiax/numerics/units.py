@@ -3,7 +3,7 @@
 Zodiax deliberately keeps realised values as ordinary JAX arrays. The active unit
 system therefore defines the numerical convention used by those arrays, while a
 :class:`Unit` transform converts a stored coordinate from its declared unit into the
-active convention captured when the transform is constructed.
+current convention, or into an explicitly selected output unit.
 
 The public unit system is a small mapping such as
 ``{"cartesian": "um", "angular": "mas"}``. Conversion definitions are an
@@ -19,7 +19,8 @@ from typing import Any, NamedTuple
 import equinox as eqx
 from jax import Array
 
-from .transforms import Transform, _operand
+from .arrays import as_array
+from .operations import Operation
 
 __all__ = [
     "unit_info",
@@ -108,9 +109,9 @@ _DEFAULT_UNITS = {
 }
 
 _ACTIVE_UNITS = dict(_DEFAULT_UNITS)
-"""Default units for new transforms. set_units replaces this dictionary after
-validation; get_units returns a copy. Existing Unit objects keep their captured
-unit names, so later changes here do not alter their calculations.
+"""Current units for transforms without an explicit output unit. set_units replaces
+this dictionary after validation; get_units returns a copy. JIT reads these Python
+settings during tracing, so cached compiled calculations retain that convention.
 """
 
 
@@ -231,9 +232,9 @@ def convert(value: Any, unit_in: str, unit_out: str) -> Any:
 def get_units() -> dict[str, str]:
     """Return an independent snapshot of the active global unit system.
 
-    The mapping defines the numerical units used by subsequently constructed
-    :class:`Unit` transforms whose ``to`` argument is omitted. Mutating the returned
-    dictionary has no effect on the active system.
+    The mapping defines the numerical units used by :class:`Unit` transforms whose
+    ``unit_out`` is None. Mutating the returned dictionary has no effect on the
+    active system.
     """
     return dict(_ACTIVE_UNITS)
 
@@ -246,8 +247,9 @@ def set_units(units: Mapping[str, str]) -> dict[str, str]:
     aliases ``"length"`` and ``"angle"`` are accepted. Every chosen unit must be
     a simple unit of the corresponding category.
 
-    Existing :class:`Unit` objects retain their stored output unit; this setting only
-    affects subsequently constructed objects whose ``to`` argument is omitted.
+    :class:`Unit` objects with ``unit_out=None`` use these settings when evaluated.
+    Explicit output units remain fixed. JIT reads the settings during tracing;
+    cached compiled calls keep that convention until retraced.
     """
     global _ACTIVE_UNITS
 
@@ -271,7 +273,7 @@ def set_units(units: Mapping[str, str]) -> dict[str, str]:
     return dict(normalised)
 
 
-class Unit(Transform):
+class Unit(Operation):
     """Convert a stored coordinate into an explicit or global numerical unit.
 
     Parameters
@@ -282,22 +284,24 @@ class Unit(Transform):
     unit : str
         Unit of the stored or explicitly supplied input coordinate.
     to : str or None
-        Output unit. When omitted, the active global unit for ``unit``'s physical
-        category is captured at construction.
+        Explicit output unit. When omitted, evaluation uses the current global
+        unit for ``unit``'s physical category, with the same dimensional power.
     alias : alias specification, optional
-        Local aliases inherited from :class:`~zodiax.base.Module`.
+        Local aliases inherited from :class:`~zodiax.module.Module`.
 
     Notes
     -----
-    The selected target is stored in ``output_unit``. Use ``to(unit)`` to create
-    a transform with a different output unit. Changing the global system later
-    never changes an existing transform's meaning. Conversion follows ordinary
-    JAX type promotion; scales outside the resulting dtype's range follow ordinary
-    overflow and underflow behaviour.
+    ``unit_out`` stores the explicit target, or None for the current global
+    convention. ``to(unit)`` evaluates the stored input into a converted array;
+    ``to(None)`` converts into the current global convention. JIT reads settings
+    during tracing, so cached compiled calls retain that convention until retraced.
+
+    Conversion follows ordinary JAX type promotion; scales outside the resulting
+    dtype's range follow ordinary overflow and underflow behaviour.
     """
 
     unit: str = eqx.field(static=True)
-    output_unit: str = eqx.field(static=True)
+    unit_out: str | None = eqx.field(default=None, static=True)
 
     def __init__(
         self,
@@ -307,28 +311,35 @@ class Unit(Transform):
         to: str | None = None,
         alias: Any = None,
     ):
-        """Initialise a fixed unit conversion and its optional stored input."""
+        """Store the input unit and an optional explicit output unit."""
         source = unit_info(unit)
-        if to is None:
-            target_unit = get_units()[source.category]
-            to = _format_power(target_unit, source.power)
-        target = unit_info(to)
-        if source.category != target.category or source.power != target.power:
-            raise ValueError(f"Cannot convert from {unit!r} to {to!r}.")
+        if to is not None:
+            target = unit_info(to)
+            if source.category != target.category or source.power != target.power:
+                raise ValueError(f"Cannot convert from {unit!r} to {to!r}.")
+            to = target.unit
 
         self.alias = alias
-        self.x = _operand(x, "x", optional=True)
+        self.x = as_array(x)
         self.unit = source.unit
-        self.output_unit = target.unit
+        self.unit_out = to
 
-    def to(self, unit: str) -> Unit:
-        """Return a new Unit with the requested output unit.
+    def to(self, unit: str | None, **context: Any) -> Array:
+        """Evaluate the stored input and return its value in the requested unit.
 
-        Keep the stored input, its unit, and aliases. The constructor checks that
-        the requested unit has compatible dimensions; no input is evaluated.
-        For example, ``Unit(1.0, "m").to("mm").resolve()`` returns ``1000.0``.
+        Pass None to use the current global convention. Supply any context needed
+        by the input expression; an unbound or incomplete input raises ValueError.
+        The original Unit and its stored definition remain unchanged.
+        For example, ``Unit(x=1.0, unit="m").to("mm")`` returns a scalar array
+        containing ``1000.0``.
         """
-        return Unit(self.x, self.unit, to=unit, alias=self.alias)
+        conversion = Unit(x=self.x, unit=self.unit, to=unit)
+        value = conversion.resolve(**context)
+        if isinstance(value, Unit):
+            raise ValueError(
+                "Unit.to requires a stored input and its required context."
+            )
+        return value
 
     @property
     def category(self) -> str:
@@ -337,14 +348,19 @@ class Unit(Transform):
 
     @property
     def factor(self) -> float:
-        """Multiplicative factor derived from the two stored unit names.
+        """Conversion factor for the explicit target or current global convention.
 
-        Both names are static, so JIT calculates this Python float during tracing.
+        JIT calculates this Python float during tracing. Changing global settings
+        does not change a previously compiled calculation until it is retraced.
         """
-        return conversion_factor(self.unit, self.output_unit)
+        target = self.unit_out
+        if target is None:
+            source = unit_info(self.unit)
+            target = _format_power(get_units()[source.category], source.power)
+        return conversion_factor(self.unit, target)
 
     def fwd(self, x: Array, **context: Any) -> Array:
-        """Convert a prepared input array into ``output_unit`` units."""
+        """Convert a prepared input array into the selected output units."""
         return x * self.factor
 
     def inv(self, y: Array, **context: Any) -> Array:

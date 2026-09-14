@@ -26,7 +26,6 @@ from typing import Any
 
 import equinox as eqx
 import jax.numpy as np
-import numpy as onp
 from jax import Array
 
 from .arrays import as_array
@@ -35,22 +34,9 @@ from .expressions import Expression, _missing_context, _Unresolved, resolve
 __all__ = [
     "Transform",
     "matmul",
-    "Add",
-    "Mul",
-    "Pow",
-    "Exp",
-    "Log",
-    "MatMul",
     "Mask",
     "Map",
 ]
-
-
-def _operand(value: Any, name: str, *, optional: bool = False) -> Any:
-    """Normalise an array-or-expression operand without realising expressions."""
-    if value is None and not optional:
-        raise ValueError(f"{name} must not be None.")
-    return as_array(value)
 
 
 def _preserve_shape(x: Array, y: Array, name: str) -> Array:
@@ -79,7 +65,7 @@ def matmul(x: Any, M: Any = None, **context: Any) -> Array:
         return x
     M = as_array(M)
     if M.ndim == 0:
-        raise ValueError("M must have at least one axis; use Mul for scalar scaling.")
+        raise ValueError("M must have at least one axis; use Map(s=...) for scaling.")
     if 0 in M.shape:
         raise ValueError("M must have nonzero dimensions.")
     if x.ndim == 0 or x.shape[-1] != M.shape[0]:
@@ -121,13 +107,13 @@ class Transform(Expression):
     the complete nested transform chain to an explicit deepest input.
     Declare required named context, such as coordinates, in the ``fwd`` signature.
     The inherited ``evaluate`` checks those requirements, so no forwarding override
-    is needed. Exact transforms implement :meth:`inv`; projections or rank-deficient
-    transforms implement :meth:`solve`.
+    is needed. Subclasses implement their local reverse in ``inv``. This may be an
+    exact inverse or a representative reverse, such as a matrix pseudoinverse.
 
-    Construction, ``evaluate``, ``apply``, and ``encode`` convert numerical inputs
+    Construction, ``evaluate``, and ``apply`` convert numerical inputs
     to arrays while preserving their inferred dtype. Supply floating or complex
     values for trainable parameters; integer inputs remain integers. The numerical
-    methods ``fwd``, ``inv``, and ``solve`` follow ordinary JAX type promotion and
+    methods ``fwd`` and ``inv`` follow ordinary JAX type promotion and
     resolve their stored operands where needed. Expressions used as numerical
     operands must supply numerical scalars or arrays.
     """
@@ -161,40 +147,48 @@ class Transform(Expression):
         x = as_array(x)
         return self.fwd(x, **context)
 
-    def __call__(self, x: Any = None, **context: Any) -> Array | Transform:
+    def __call__(
+        self, x: Any = None, *, inverse: bool = False, **context: Any
+    ) -> Array | Transform:
         """Resolve stored input, or apply the transform to explicit input ``x``."""
         if x is None:
+            if inverse:
+                raise ValueError("An inverse call requires an explicit input value.")
             return self.resolve(**context)
-        return self.apply(x, **context)
+        return self.apply(x, inverse=inverse, **context)
 
-    def apply(self, x: Any, **context: Any) -> Array:
-        """Apply the complete transform chain to an explicit deepest input."""
-        if isinstance(self.x, Transform):
-            x = self.x.apply(x, **context)
-        else:
-            x = resolve(x, **context)
-            x = as_array(x)
-        return self.fwd(x, **context)
+    def apply(self, x: Any, *, inverse: bool = False, **context: Any) -> Array:
+        """Apply the complete stored transform chain to an explicit input.
 
-    def inv(self, y: Array, **context: Any) -> Array:
-        """Return the exact local inverse when one is defined."""
-        raise NotImplementedError(f"{type(self).__name__} does not define inv().")
-
-    def solve(self, y: Array, **context: Any) -> Array:
-        """Return a representative local input for an output ``y``."""
-        return self.inv(y, **context)
-
-    def encode(self, y: Any, **context: Any) -> Array:
-        """Map an output back through a fully reverse-capable transform spine."""
-        value = resolve(y, **context)
+        Forward application supplies the deepest input and works outwards.
+        ``inverse=True`` reverses the chain from the outermost transform inwards,
+        using each subclass's ``inv``. A missing reverse raises NotImplementedError.
+        Representative reverses need not recover every input or output exactly.
+        Keep ``inverse`` a Python bool fixed during JAX tracing.
+        """
+        value = resolve(x, **context)
         value = as_array(value)
 
-        # Undo each transform from the outermost operation to the deepest input.
+        # Collect the chain from the outermost transform to the deepest input.
+        chain = []
         transform = self
         while isinstance(transform, Transform):
-            value = transform.solve(value, **context)
+            chain.append(transform)
             transform = transform.x
+
+        # Forward calculations run outwards; reverse calculations run inwards.
+        if not inverse:
+            chain.reverse()
+        for transform in chain:
+            if inverse:
+                value = transform.inv(value, **context)
+            else:
+                value = transform.fwd(value, **context)
         return value
+
+    def inv(self, y: Array, **context: Any) -> Array:
+        """Reverse this local calculation, when a subclass supplies a reverse."""
+        raise NotImplementedError(f"{type(self).__name__} does not define inv().")
 
     def initialise(self, y: Any, **context: Any) -> Transform:
         """Bind a deepest input when every traversed transform supports reverse."""
@@ -210,192 +204,13 @@ class Transform(Expression):
                 f"Cannot initialise {type(self).__name__} through an Expression "
                 "input; update its canonical definition or Linked owner instead."
             )
-        x = self.encode(y, **context)
+        x = self.apply(y, inverse=True, **context)
         return eqx.tree_at(
             deepest_input,
             self,
             x,
             is_leaf=lambda leaf: leaf is None,
         )
-
-    def project(self, y: Any, **context: Any) -> Array:
-        """Project ``y`` through the available reverse and forward operations."""
-        return self.apply(self.encode(y, **context), **context)
-
-
-class Add(Transform):
-    """Add a bias: ``y = x + b``, preserving the input shape; ``b=None`` is identity."""
-
-    b: Any = None
-
-    def __init__(self, x: Any = None, b: Any = None, *, alias: Any = None):
-        """Store optional input and bias arrays or expressions, with aliases."""
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.b = _operand(b, "b", optional=True)
-
-    def fwd(self, x: Array, **context: Any) -> Array:
-        b = resolve(self.b, **context)
-        if b is None:
-            return x
-        y = x + b
-        return _preserve_shape(x, y, "b")
-
-    def inv(self, y: Array, **context: Any) -> Array:
-        b = resolve(self.b, **context)
-        if b is None:
-            return y
-        x = y - b
-        return _preserve_shape(y, x, "b")
-
-
-class Mul(Transform):
-    """Scale an input: ``y = x * s``, preserving its shape; ``s=None`` is identity."""
-
-    s: Any = None
-
-    def __init__(self, x: Any = None, s: Any = None, *, alias: Any = None):
-        """Store optional input and scale arrays or expressions, with aliases."""
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.s = _operand(s, "s", optional=True)
-
-    def fwd(self, x: Array, **context: Any) -> Array:
-        s = resolve(self.s, **context)
-        if s is None:
-            return x
-        y = x * s
-        return _preserve_shape(x, y, "s")
-
-    def inv(self, y: Array, **context: Any) -> Array:
-        s = resolve(self.s, **context)
-        if s is None:
-            return y
-        x = y / s
-        return _preserve_shape(y, x, "s")
-
-
-class Pow(Transform):
-    """Raise an input to a power: ``y = x**p``.
-
-    General powers are intentionally forward-only because a globally valid real
-    inverse requires domain and branch choices.
-    """
-
-    p: Any = None
-
-    def __init__(self, x: Any = None, p: Any = None, *, alias: Any = None):
-        """Store optional input, required power, and parameter aliases."""
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.p = _operand(p, "p")
-
-    def fwd(self, x: Array, **context: Any) -> Array:
-        p = resolve(self.p, **context)
-        return np.power(x, p)
-
-
-class Exp(Transform):
-    """Exponentiate an input: ``y = exp(x)`` or ``base**x``.
-
-    ``base=None`` selects the natural exponential. An explicit base must be real,
-    positive, and unequal to one. ``inv`` uses the corresponding principal
-    logarithm. It is exact for real inputs and positive outputs, and branch-local
-    rather than globally one-to-one for complex values.
-    """
-
-    base: Any = None
-
-    def __init__(
-        self,
-        x: Any = None,
-        base: Any = None,
-        *,
-        alias: Any = None,
-    ):
-        """Store optional input and base arrays or expressions, with aliases."""
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.base = _operand(base, "base", optional=True)
-
-    def fwd(self, x: Array, **context: Any) -> Array:
-        base = resolve(self.base, **context)
-        if base is None:
-            return np.exp(x)
-        y = np.power(base, x)
-        return _preserve_shape(x, y, "base")
-
-    def inv(self, y: Array, **context: Any) -> Array:
-        base = resolve(self.base, **context)
-        if base is None:
-            return np.log(y)
-        x = np.log(y) / np.log(base)
-        return _preserve_shape(y, x, "base")
-
-
-class Log(Transform):
-    """Apply a natural or selected-base principal logarithm.
-
-    ``base=None`` selects the natural logarithm. An explicit base must be real,
-    positive, and unequal to one. ``inv`` is exact on the selected logarithm branch;
-    complex logarithms do not define a globally one-to-one transform.
-    """
-
-    base: Any = None
-
-    def __init__(
-        self,
-        x: Any = None,
-        base: Any = None,
-        *,
-        alias: Any = None,
-    ):
-        """Store optional input and base arrays or expressions, with aliases."""
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.base = _operand(base, "base", optional=True)
-
-    def fwd(self, x: Array, **context: Any) -> Array:
-        base = resolve(self.base, **context)
-        if base is None:
-            return np.log(x)
-        y = np.log(x) / np.log(base)
-        return _preserve_shape(x, y, "base")
-
-    def inv(self, y: Array, **context: Any) -> Array:
-        base = resolve(self.base, **context)
-        if base is None:
-            return np.exp(y)
-        x = np.power(base, y)
-        return _preserve_shape(y, x, "base")
-
-
-class MatMul(Transform):
-    """Apply a matrix or sampled basis: ``y = x @ M``."""
-
-    M: Any = None
-
-    def __init__(self, x: Any = None, M: Any = None, *, alias: Any = None):
-        """Store optional input, required matrix or basis, and aliases."""
-        self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.M = _operand(M, "M")
-        if not isinstance(self.M, Expression):
-            self._validate_M(self.M)
-
-    @staticmethod
-    def _validate_M(M: Array) -> None:
-        if M.ndim == 0:
-            raise ValueError("M must have at least one axis; use Mul for scaling.")
-        if 0 in M.shape:
-            raise ValueError("M must have nonzero dimensions.")
-
-    def fwd(self, x: Array, **context: Any) -> Array:
-        return matmul(x, self.M, **context)
-
-    def solve(self, y: Array, **context: Any) -> Array:
-        M = resolve(self.M, **context)
-        return _solve_matmul(y, M)
 
 
 class Mask(Transform):
@@ -406,11 +221,12 @@ class Mask(Transform):
     leading batch axes and filling unselected entries with zero.
 
     Store one boolean mask and a fixed selected count, ``size``, so JIT knows the
-    compact array length. Changing mask values must preserve this count.
+    compact array length. Construct the Mask before entering JIT; changing its
+    mask values later must preserve this count.
 
     Performance note: when the mask is passed through JIT as an array input,
     selected indices are calculated during execution. This adds work proportional
-    to the number of mask elements in both ``fwd`` and ``solve``.
+    to the number of mask elements in both ``fwd`` and ``inv``.
     """
 
     mask: Array
@@ -418,18 +234,19 @@ class Mask(Transform):
 
     def __init__(self, x: Any = None, mask: Any = None, *, alias: Any = None):
         """Store optional input, a boolean mask, its selected count, and aliases."""
-        mask = onp.asarray(mask)
-        if mask.dtype != onp.bool_:
+        mask = as_array(mask)
+        if not isinstance(mask, Array) or mask.dtype != np.bool_:
             raise TypeError("mask must have a boolean dtype.")
         if mask.ndim == 0:
             raise ValueError("mask must have at least one axis.")
-        size = int(onp.count_nonzero(mask))
+        # Count during eager construction so the compact length is static under JIT.
+        size = int(np.count_nonzero(mask))
         if size == 0:
             raise ValueError("mask must select at least one entry.")
 
         self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.mask = np.asarray(mask)
+        self.x = as_array(x)
+        self.mask = mask
         self.size = size
 
     @property
@@ -446,7 +263,7 @@ class Mask(Transform):
         flat = flat.at[..., indices].set(x)
         return flat.reshape(x.shape[:-1] + self.shape)
 
-    def solve(self, y: Array, **context: Any) -> Array:
+    def inv(self, y: Array, **context: Any) -> Array:
         """Gather representative compact values from a full output."""
         ndim = len(self.shape)
         if y.ndim < ndim or y.shape[-ndim:] != self.shape:
@@ -486,12 +303,15 @@ class Map(Transform):
     ):
         """Store input, scale, matrix or basis, bias, and aliases; all are optional."""
         self.alias = alias
-        self.x = _operand(x, "x", optional=True)
-        self.s = _operand(s, "s", optional=True)
-        self.M = _operand(M, "M", optional=True)
-        self.b = _operand(b, "b", optional=True)
+        self.x = as_array(x)
+        self.s = as_array(s)
+        self.M = as_array(M)
+        self.b = as_array(b)
         if self.M is not None and not isinstance(self.M, Expression):
-            MatMul._validate_M(self.M)
+            if self.M.ndim == 0:
+                raise ValueError("M must have at least one axis; use s for scaling.")
+            if 0 in self.M.shape:
+                raise ValueError("M must have nonzero dimensions.")
 
     def fwd(self, x: Array, **context: Any) -> Array:
         # Apply the input scale, then contract with the matrix or sampled basis.
@@ -508,7 +328,8 @@ class Map(Transform):
             y = _preserve_shape(y, shifted, "b")
         return y
 
-    def solve(self, y: Array, **context: Any) -> Array:
+    def inv(self, y: Array, **context: Any) -> Array:
+        """Return a representative input by reversing bias, matrix, and scale."""
         # Undo the bias, matrix or basis, and input scale in reverse order.
         b = resolve(self.b, **context)
         if b is not None:

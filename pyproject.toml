@@ -13,7 +13,6 @@ dependencies = [
     "optax",
     "numpy",
     "wadler-lindig>=0.1.3",
-    "interpax",
 ]
 
 [project.optional-dependencies]

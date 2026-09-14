@@ -13,8 +13,6 @@ from uuid import uuid4
 
 import equinox as eqx
 import jax.tree_util as jtu
-import numpy as onp
-from jax import Array
 
 from .arrays import as_array
 from .expressions import Expression, resolve
@@ -145,7 +143,7 @@ class Linked(Expression):
         if not key:
             raise ValueError("key must not be empty.")
 
-        if isinstance(value, (Number, Array, onp.ndarray, onp.generic)):
+        if isinstance(value, Number) or eqx.is_array(value):
             value = as_array(value)
 
         self.alias = alias

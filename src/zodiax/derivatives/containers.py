@@ -18,7 +18,7 @@ from jax import Array
 from jax import tree_util as jtu
 
 from ..base import Base, _validate_mapping_keys
-from ..numerics.arrays import as_array, _validate_float_array
+from ..numerics.arrays import as_array
 from ..stats import gauss_hessian
 
 __all__ = [
@@ -30,6 +30,14 @@ __all__ = [
     "GaussNewton",
     "Fisher",
 ]
+
+
+def _validate_float_array(value: Any, name: str) -> None:
+    """Validate constructor-free storage of a floating array."""
+    if not isinstance(value, Array):
+        raise TypeError(f"{name} must be a JAX array.")
+    if bool(value.weak_type) or not np.issubdtype(value.dtype, np.floating):
+        raise TypeError(f"{name} must be a strongly typed floating JAX array.")
 
 
 def _path_string(key_path: tuple) -> str:
