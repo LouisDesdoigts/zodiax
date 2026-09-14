@@ -7,11 +7,12 @@ from dataclasses import fields
 import json
 import math
 from types import MemberDescriptorType
+from typing import Any
 
 import equinox as eqx
 
-from ..base import _RUNTIME_FIELD
-from ._callables import _callable_identifier
+from ..module import Module
+from ..numerics.links import Deferred, Linked
 from ._leaves import _NOT_PAYLOAD, _payload_definition
 from ._reconstruction import _build_template
 from ._schema import _MAX_INTEGER, _MIN_INTEGER, _validate_definition
@@ -91,13 +92,10 @@ def _literal_definition(value, path):
     if isinstance(value, type):
         return {"kind": "type", "type": _type_identifier(value)}
     if callable(value):
-        identifier = _callable_identifier(value)
-        if identifier is None:
-            raise TypeError(
-                f"{path} contains an unsupported callable. Register a stable "
-                "symbol with register_callable() before saving."
-            )
-        return {"kind": "callable", "identifier": identifier}
+        raise TypeError(
+            f"{path} contains an unsupported callable. Put behaviour in a Zodiax "
+            "class method and persistent state in its declared fields."
+        )
     if eqx.is_array(value):
         raise TypeError(f"{path} contains an unsupported static array.")
     raise TypeError(f"{path} contains unsupported {type(value).__name__} metadata.")
@@ -120,19 +118,12 @@ def _mapping_key_definition(value, path):
     raise TypeError(f"{path} has unsupported mapping key type {type(value).__name__}.")
 
 
-def _field_metadata(field):
-    """Return behaviour-affecting Zodiax metadata for one module field."""
-    return {"runtime": bool(field.metadata.get(_RUNTIME_FIELD, False))}
-
-
 def _describe(value, *, static, template, path):
     """Recursively describe one serialisable value using public object state."""
     if static:
         # Link population follows JAX's dynamic PyTree traversal. A link hidden
         # beneath an Equinox static field would therefore be archived but could
         # never participate in ownership or deferred-reference resolution.
-        from ..numerics.links import Deferred, Linked
-
         if isinstance(value, (Linked, Deferred)):
             raise TypeError(
                 f"{path} contains a {type(value).__name__} node in static metadata. "
@@ -184,7 +175,7 @@ def _describe(value, *, static, template, path):
         for field in declared_fields:
             field_path = f"{path}.{field.name}"
             try:
-                field_value = getattr(value, field.name)
+                field_value = object.__getattribute__(value, field.name)
             except AttributeError as error:
                 raise TypeError(f"{field_path} is not initialised.") from error
             field_static = bool(field.metadata.get("static", False))
@@ -192,7 +183,6 @@ def _describe(value, *, static, template, path):
                 {
                     "name": field.name,
                     "static": field_static,
-                    "metadata": _field_metadata(field),
                     "value": _describe(
                         field_value,
                         static=static or field_static,
@@ -321,7 +311,7 @@ def _first_difference(saved, current, path="root"):
     return None
 
 
-def _structural_view(definition):
+def _structural_view(definition, module_types):
     """Remove values restored from the archive while retaining topology."""
     if definition is None:
         return {"kind": "literal", "type": "none"}
@@ -330,31 +320,29 @@ def _structural_view(definition):
 
     kind = definition["kind"]
     if kind == "module":
-        return {
-            "kind": kind,
-            "type": definition["type"],
-            "fields": [
-                {
-                    "name": field["name"],
-                    "static": field["static"],
-                    "metadata": field["metadata"],
-                    # Aliases are archived public-interface metadata, not part of
-                    # the numerical/container topology supplied by ``like``. The
-                    # saved definition remains authoritative and is still compared
-                    # exactly by ``validate`` after reconstruction.
-                    "value": (
-                        {"kind": "module_alias"}
-                        if field["name"] == "alias" and field["static"]
-                        else _structural_view(field["value"])
-                    ),
-                }
-                for field in definition["fields"]
-            ],
-        }
+        structural_fields = []
+        for field in definition["fields"]:
+            # Module aliases describe the saved interface, rather than the
+            # numerical/container topology a trusted template must match.
+            is_alias = (
+                definition["type"] in module_types
+                and field["name"] == "alias"
+                and field["static"]
+            )
+            if is_alias:
+                value = {"kind": "module_alias"}
+            else:
+                value = _structural_view(field["value"], module_types)
+            structural_fields.append(
+                {"name": field["name"], "static": field["static"], "value": value}
+            )
+        return {"kind": kind, "type": definition["type"], "fields": structural_fields}
     if kind in ("list", "tuple"):
         return {
             "kind": kind,
-            "items": [_structural_view(item) for item in definition["items"]],
+            "items": [
+                _structural_view(item, module_types) for item in definition["items"]
+            ],
         }
     if kind == "mapping":
         return {
@@ -363,7 +351,7 @@ def _structural_view(definition):
             "entries": [
                 {
                     "key": entry["key"],
-                    "value": _structural_view(entry["value"]),
+                    "value": _structural_view(entry["value"], module_types),
                 }
                 for entry in definition["entries"]
             ],
@@ -375,7 +363,7 @@ def _structural_view(definition):
             "entries": [
                 {
                     "key": entry["key"],
-                    "value": _structural_view(entry["value"]),
+                    "value": _structural_view(entry["value"], module_types),
                 }
                 for entry in definition["entries"]
             ],
@@ -385,9 +373,9 @@ def _structural_view(definition):
     if kind == "slice":
         return {
             "kind": kind,
-            "start": _structural_view(definition["start"]),
-            "stop": _structural_view(definition["stop"]),
-            "step": _structural_view(definition["step"]),
+            "start": _structural_view(definition["start"], module_types),
+            "stop": _structural_view(definition["stop"], module_types),
+            "step": _structural_view(definition["step"], module_types),
         }
     return {"kind": kind}
 
@@ -397,7 +385,9 @@ def _collect_types(value, registry=None, ancestors=None):
     registry = {} if registry is None else registry
     ancestors = set() if ancestors is None else ancestors
     if isinstance(value, type):
-        registry[_type_identifier(value)] = value
+        identifier = _type_identifier(value)
+        if registry.setdefault(identifier, value) is not value:
+            raise ValueError(f"like contains ambiguous type {identifier!r}.")
         return registry
     if not isinstance(value, (eqx.Module, eqx.nn.State, Mapping, tuple, list)):
         return registry
@@ -411,7 +401,9 @@ def _collect_types(value, registry=None, ancestors=None):
             existing = registry.setdefault(identifier, type(value))
             if existing is not type(value):
                 raise ValueError(f"like contains ambiguous type {identifier!r}.")
-            children = [getattr(value, field.name) for field in fields(value)]
+            children = [
+                object.__getattribute__(value, field.name) for field in fields(value)
+            ]
         elif isinstance(value, eqx.nn.State):
             if type(value) is not eqx.nn.State:
                 raise ValueError("like contains an unsupported Equinox State subclass.")
@@ -433,10 +425,10 @@ def _collect_types(value, registry=None, ancestors=None):
 class ObjectDefinition:
     """Automatically generated JSON definition of a serialisable object.
 
-    The definition records module classes, fields and behaviour-affecting Zodiax
-    field metadata, built-in container topology, Python scalar and literal values,
-    static values, and JAX array metadata. Concrete JAX array values are deliberately
-    absent and live in the archive payload.
+    The definition records module classes and fields, built-in container topology,
+    Python scalar and literal values, static values, and JAX array metadata.
+    Concrete JAX array values are deliberately absent and live in the archive
+    payload.
 
     Definitions are normally generated from canonical unrealised models; downstream
     Equinox and Zodiax classes do not need to declare a separate schema. Module
@@ -453,7 +445,7 @@ class ObjectDefinition:
 
     import zodiax as zdx
 
-    model = ExampleModule(array=jnp.ones((2, 2)))
+    model = zdx.Map(x=jnp.ones(2), s=2.)
     definition = zdx.ObjectDefinition.from_object(model)
     print(definition)
 
@@ -463,44 +455,49 @@ class ObjectDefinition:
 
     __slots__ = ("_root",)
 
-    def __init__(self, definition):
+    def __init__(self, definition: Any):
         """Validate and retain an independent definition tree."""
         _validate_definition(definition)
         self._root = deepcopy(definition)
 
     @property
-    def root(self):
+    def root(self) -> Any:
         """Return an independent JSON-compatible definition tree."""
         return deepcopy(self._root)
 
     @classmethod
-    def from_object(cls, obj):
+    def from_object(cls, obj: Any) -> "ObjectDefinition":
         """Generate a definition from one serialisable object."""
         return cls(_describe_root(obj, template=False))
 
     @classmethod
-    def from_dict(cls, definition):
+    def from_dict(cls, definition: Any) -> "ObjectDefinition":
         """Construct a definition from decoded JSON data."""
         return cls(definition)
 
-    def to_dict(self):
+    def to_dict(self) -> Any:
         """Return an independent JSON-compatible representation."""
         return deepcopy(self._root)
 
-    def to_json(self, *, indent=2):
+    def to_json(self, *, indent: int | None = 2) -> str:
         """Return a human-readable JSON representation."""
         return json.dumps(self._root, indent=indent, sort_keys=False, allow_nan=False)
 
-    def _difference(self, obj, *, structure_only):
+    def _difference(self, obj: Any, *, module_types=None):
         """Return the first difference from an object definition."""
         current = _describe_root(obj, template=True)
-        saved = _structural_view(self._root) if structure_only else self._root
-        current = _structural_view(current) if structure_only else current
+        saved = self._root
+        if module_types is not None:
+            # Only Zodiax Module.alias is interface metadata. A similarly named
+            # field on an unrelated Equinox class retains its ordinary topology.
+            saved = _structural_view(saved, module_types)
+            current = _structural_view(current, module_types)
         return _first_difference(saved, current)
 
-    def _validate_like(self, like) -> None:
+    def _validate_like(self, like: Any, types) -> None:
         """Validate a structural template while allowing archived values to differ."""
-        difference = self._difference(like, structure_only=True)
+        module_types = {name for name, cls in types.items() if issubclass(cls, Module)}
+        difference = self._difference(like, module_types=module_types)
         if difference is not None:
             path, saved, actual = difference
             raise ValueError(
@@ -508,13 +505,13 @@ class ObjectDefinition:
                 f"received {actual!r}."
             )
 
-    def validate(self, obj) -> None:
+    def validate(self, obj: Any) -> None:
         """Raise if an object's generated definition differs from this one.
 
         Every JSON-held value is compared. JAX array values cannot be compared
         because a definition records only their shape, dtype, and weak-type metadata.
         """
-        difference = self._difference(obj, structure_only=False)
+        difference = self._difference(obj)
         if difference is not None:
             path, saved, actual = difference
             raise ValueError(
@@ -522,24 +519,27 @@ class ObjectDefinition:
                 f"received {actual!r}."
             )
 
-    def build_template(self, *, like=None, custom_types=None):
+    def build_template(
+        self, *, like: Any = None, custom_types: Mapping[str, type] | None = None
+    ) -> Any:
         """Build a deserialisation template without running module constructors.
 
         Stored literals are realised exactly, while JAX arrays become
-        `jax.ShapeDtypeStruct` placeholders. If supplied, ``like`` resolves classes
-        and checks structure; its stored values are not copied into the template.
+        `jax.ShapeDtypeStruct` placeholders; typed PRNG keys use bounded concrete
+        placeholders to preserve their implementation. If supplied, ``like``
+        resolves classes and checks structure; its values are not copied.
         """
         if custom_types is not None and not isinstance(custom_types, Mapping):
             raise TypeError("custom_types must be a mapping from identifiers to types.")
         if like is not None:
             if custom_types is not None:
                 raise TypeError("custom_types cannot be supplied together with like.")
-            self._validate_like(like)
             custom_types = _collect_types(like)
+            self._validate_like(like, custom_types)
         obj = _build_template(self._root, custom_types)
         self.validate(obj)
         return obj
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Render this definition as readable JSON."""
         return self.to_json()

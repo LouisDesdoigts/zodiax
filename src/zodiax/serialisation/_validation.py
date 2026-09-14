@@ -1,4 +1,8 @@
-"""Opt-in semantic validation after constructor-free reconstruction."""
+"""Validate Zodiax model paths after constructor-free reconstruction.
+
+Archive schema validation owns representation; these checks own Module's public
+path and alias contract. Arbitrary downstream constructor invariants are not rerun.
+"""
 
 from collections.abc import Mapping
 from dataclasses import fields
@@ -6,27 +10,12 @@ from typing import Any
 
 import equinox as eqx
 
-from ..base import Base, _validate_mapping_keys
+from ..base import _validate_mapping_keys
 from ..module import Module, _validate_aliases
 
-_VALIDATION_HOOK = "__zodiax_validate__"
 
-
-def _bound_validation_hooks(value: eqx.Module):
-    """Resolve every class-local hook from base to derived class."""
-    hooks = []
-    for cls in reversed(type(value).__mro__):
-        namespace = type.__getattribute__(cls, "__dict__")
-        if _VALIDATION_HOOK in namespace:
-            descriptor = namespace[_VALIDATION_HOOK]
-            getter = getattr(descriptor, "__get__", None)
-            hook = descriptor if getter is None else getter(value, type(value))
-            hooks.append((cls, hook))
-    return hooks
-
-
-def _validate_rebuilt(tree: Any) -> None:
-    """Call opt-in validation hooks throughout a reconstructed object graph."""
+def _validate_modules(tree: Any) -> None:
+    """Check Module paths and aliases, including Modules inside static metadata."""
     visited: set[int] = set()
 
     def visit(value: Any, path: str) -> None:
@@ -38,65 +27,32 @@ def _validate_rebuilt(tree: Any) -> None:
         visited.add(identity)
 
         if isinstance(value, eqx.Module):
+            # Read stored fields directly: descendant lookup must not supply a
+            # missing field, and computed properties are not archive state.
             for field in fields(value):
                 child = object.__getattribute__(value, field.name)
                 visit(child, f"{path}.{field.name}")
 
-            if isinstance(value, Base):
-                try:
-                    _validate_mapping_keys(value)
-                except Exception as error:
-                    raise ValueError(
-                        f"Path validation failed at {path} "
-                        f"({type(value).__name__})."
-                    ) from error
-
-            # Alias validation is a Module invariant, not an optional subclass hook.
-            # Running it centrally prevents a numerical __zodiax_validate__ method
-            # from shadowing the inherited Module validation contract.
+            # Base permits ordinary metadata keys, including dots. The stronger
+            # structural-path contract belongs specifically to Module.
             if isinstance(value, Module):
                 try:
+                    _validate_mapping_keys(value)
                     _validate_aliases(value)
-                except Exception as error:
+                except (AttributeError, KeyError, TypeError, ValueError) as error:
                     raise ValueError(
-                        f"Alias validation failed at {path} "
-                        f"({type(value).__name__})."
-                    ) from error
-
-            # Each declaring class owns its local invariant. Running every hook
-            # base-to-derived prevents a subclass validator from shadowing parent
-            # storage contracts; hooks should therefore not call ``super()``.
-            for declaring_class, hook in _bound_validation_hooks(value):
-                if not callable(hook):
-                    raise TypeError(
-                        f"{declaring_class.__name__}.{_VALIDATION_HOOK} must be "
-                        "callable."
-                    )
-                try:
-                    hook()
-                except Exception as error:
-                    raise ValueError(
-                        f"Object validation failed at {path} "
-                        f"({type(value).__name__}, declared by "
-                        f"{declaring_class.__name__})."
+                        f"Invalid Module paths or aliases at {path} "
+                        f"({type(value).__name__}): {error}"
                     ) from error
             return
 
         if isinstance(value, eqx.nn.State):
-            try:
-                children, _ = value.tree_flatten()
-            except ValueError as error:
-                raise ValueError(f"Invalid Equinox State at {path}.") from error
-            for index, child in enumerate(children):
-                visit(child, f"{path}.values[{index}]")
-            return
-
-        if isinstance(value, Mapping):
-            for key, child in value.items():
-                visit(child, f"{path}[{key!r}]")
-            return
-
-        for index, child in enumerate(value):
+            children, _ = value.tree_flatten()
+        elif isinstance(value, Mapping):
+            children = value.values()
+        else:
+            children = value
+        for index, child in enumerate(children):
             visit(child, f"{path}[{index}]")
 
     visit(tree, "root")

@@ -8,7 +8,6 @@ _MAX_DEPTH = 128
 _MAX_NODES = 100_000
 _MAX_ITEMS = 100_000
 _MAX_TYPE_IDENTIFIER = 1_024
-_MAX_CALLABLE_IDENTIFIER = 1_024
 _MAX_STATE_KEY = 4_096
 _MAX_PRNG_WORDS = 1_000_000
 _MIN_INTEGER = -(2**63)
@@ -36,16 +35,6 @@ def _validate_identifier(identifier, path):
         or not all(part.isidentifier() or part == "<locals>" for part in qualname_parts)
     ):
         raise ValueError(f"Invalid type identifier {identifier!r} at {path}.")
-
-
-def _validate_callable_identifier(identifier, path):
-    """Validate a stable dotted symbolic-callable identifier."""
-    if (
-        type(identifier) is not str
-        or not 0 < len(identifier) <= _MAX_CALLABLE_IDENTIFIER
-        or not all(part.isidentifier() for part in identifier.split("."))
-    ):
-        raise ValueError(f"Invalid callable identifier {identifier!r} at {path}.")
 
 
 def _validate_integer(value, path):
@@ -127,24 +116,15 @@ def _validate_node(node, path, depth, state, ancestors, *, retained):
                     raise ValueError(f"Module field at {field_path} must be a mapping.")
                 _require_keys(
                     field,
-                    {"name", "static", "metadata", "value"},
+                    {"name", "static", "value"},
                     field_path,
                 )
                 name = field["name"]
                 static = field["static"]
-                metadata = field["metadata"]
                 if type(name) is not str or not name.isidentifier():
                     raise ValueError(f"Invalid module field name at {field_path}.")
                 if type(static) is not bool:
                     raise ValueError(f"Invalid static marker at {field_path}.")
-                if not isinstance(metadata, dict) or set(metadata) != {"runtime"}:
-                    raise ValueError(f"Invalid Zodiax metadata at {field_path}.")
-                if type(metadata["runtime"]) is not bool:
-                    raise ValueError(f"Invalid runtime marker at {field_path}.")
-                if static and metadata["runtime"]:
-                    raise ValueError(
-                        f"Module field at {field_path} cannot be static and runtime."
-                    )
                 names.append(name)
                 _validate_node(
                     field["value"],
@@ -176,7 +156,10 @@ def _validate_node(node, path, depth, state, ancestors, *, retained):
 
         if kind == "mapping":
             _require_keys(node, {"kind", "type", "entries"}, path)
-            if node["type"] not in {"builtins:dict", "collections:OrderedDict"}:
+            if type(node["type"]) is not str or node["type"] not in {
+                "builtins:dict",
+                "collections:OrderedDict",
+            }:
                 raise ValueError(f"Unsupported mapping type at {path}.")
             entries = node["entries"]
             if not isinstance(entries, list) or len(entries) > _MAX_ITEMS:
@@ -256,7 +239,7 @@ def _validate_node(node, path, depth, state, ancestors, *, retained):
             if retained:
                 raise ValueError(f"Static array definition at {path} is unsupported.")
             _validate_shape(node["shape"], path)
-            if node["dtype"] not in _SUPPORTED_DTYPES:
+            if type(node["dtype"]) is not str or node["dtype"] not in _SUPPORTED_DTYPES:
                 raise ValueError(f"Invalid JAX array dtype at {path}.")
             if node["weak_type"] is not False:
                 raise ValueError(f"Weak JAX arrays at {path} are unsupported.")
@@ -311,10 +294,6 @@ def _validate_node(node, path, depth, state, ancestors, *, retained):
         if kind == "type":
             _require_keys(node, {"kind", "type"}, path)
             _validate_identifier(node["type"], f"{path}.type")
-            return
-        if kind == "callable":
-            _require_keys(node, {"kind", "identifier"}, path)
-            _validate_callable_identifier(node["identifier"], f"{path}.identifier")
             return
         raise ValueError(f"Unsupported object definition kind {kind!r} at {path}.")
     finally:

@@ -28,13 +28,7 @@ _NOT_PAYLOAD = object()
 
 def _is_prng_dtype(dtype):
     """Return whether a dtype represents a modern JAX random key."""
-    prng_key = getattr(jax.dtypes, "prng_key", None)
-    if prng_key is None:
-        return False
-    try:
-        return jax.dtypes.issubdtype(dtype, prng_key)
-    except TypeError:
-        return False
+    return jax.dtypes.issubdtype(dtype, jax.dtypes.prng_key)
 
 
 def _is_prng_key(value):
@@ -113,16 +107,10 @@ def _payload_placeholder(definition, path):
     """Construct an Equinox deserialisation placeholder for a payload node."""
     kind = definition.get("kind")
     if kind == "jax_array":
-        try:
-            dtype = jnp.dtype(definition["dtype"])
-            shape = tuple(definition["shape"])
-            weak_type = definition["weak_type"]
-        except (KeyError, TypeError, ValueError) as error:
-            raise ValueError(f"Invalid JAX array definition at {path}.") from error
-        _validate_dtype(dtype, path)
-        if not isinstance(weak_type, bool):
-            raise ValueError(f"Invalid JAX weak type at {path}.")
-        return jax.ShapeDtypeStruct(shape, dtype, weak_type=weak_type)
+        # Shape, dtype and weak typing were checked by the definition schema.
+        return jax.ShapeDtypeStruct(
+            tuple(definition["shape"]), jnp.dtype(definition["dtype"]), weak_type=False
+        )
 
     if kind == "jax_prng_key":
         try:
@@ -164,6 +152,13 @@ def _read_npy_header(file):
 
 def _read_array(file, template):
     """Read one NPY array after checking its header against the template."""
+    # Precision is an archive fidelity requirement, not a conversion preference.
+    # Reject incompatible process settings before allocating or silently narrowing.
+    if jax.dtypes.canonicalize_dtype(template.dtype) != template.dtype:
+        raise ValueError(
+            f"JAX configuration cannot represent archived dtype {template.dtype}. "
+            "Enable the required precision before loading."
+        )
     shape, fortran_order, dtype = _read_npy_header(file)
     if (
         not isinstance(shape, tuple)

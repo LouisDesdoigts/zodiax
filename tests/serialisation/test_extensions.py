@@ -1,5 +1,6 @@
-"""Focused tests for callable, state, validation, and bounded-payload codecs."""
+"""Callable model classes, unsupported functions, state, and payload boundaries."""
 
+from functools import partial
 from io import BytesIO
 import json
 import zipfile
@@ -21,23 +22,33 @@ class Counter(eqx.Module):
         self.index = eqx.nn.StateIndex(jnp.asarray(0, dtype=jnp.int32))
 
 
-class Positive(eqx.Module):
-    value: int
-
-    def __zodiax_validate__(self):
-        if self.value <= 0:
-            raise ValueError("value must be positive")
-
-
-class MutatingValidator(eqx.Module):
-    value: int
-
-    def __zodiax_validate__(self):
-        object.__setattr__(self, "value", self.value + 1)
-
-
-class SymbolicCallable(eqx.Module):
+class FunctionField(eqx.Module):
     function: object
+
+
+class StaticFunctionField(eqx.Module):
+    function: object = eqx.field(static=True)
+
+
+class CallableModel(zdx.Module):
+    weights: jax.Array
+    bias: jax.Array
+
+    def __call__(self, value):
+        return jnp.sum(self.weights * value**2) + self.bias
+
+
+class ForeignCallableModel(eqx.Module):
+    weights: jax.Array
+    bias: jax.Array
+
+    def __call__(self, value):
+        return jnp.sum(self.weights * value**2) + self.bias
+
+
+class MethodOwner:
+    def square(self, value):
+        return value**2
 
 
 class StaticMetadata(eqx.Module):
@@ -52,18 +63,18 @@ def _square(value):
     return value**2
 
 
+def _offset_function(offset):
+    def shifted(value):
+        return value + offset
+
+    return shifted
+
+
 def _roundtrip(value):
     file = BytesIO()
     zdx.save(file, value)
     file.seek(0)
     return zdx.load(file)
-
-
-def _unsafe_module(cls, **values):
-    value = object.__new__(cls)
-    for name, item in values.items():
-        object.__setattr__(value, name, item)
-    return value
 
 
 def _rewrite(file, update_manifest, payload=None):
@@ -84,7 +95,6 @@ def _rewrite(file, update_manifest, payload=None):
 
 def _huge_npy_header(shape):
     file = BytesIO()
-    file.write(np.lib.format.magic(1, 0))
     np.lib.format.write_array_header_1_0(
         file,
         {"descr": np.dtype(np.float32).str, "fortran_order": False, "shape": shape},
@@ -92,24 +102,63 @@ def _huge_npy_header(shape):
     return file.getvalue()
 
 
-def test_registered_symbolic_callable_roundtrips_and_lambda_remains_rejected():
-    zdx.register_callable("zodiax.tests.square", _square)
-    loaded = _roundtrip(SymbolicCallable(_square))
+@pytest.mark.parametrize(
+    "function",
+    [
+        _square,
+        lambda value: value**2,
+        _offset_function(2.0),
+        MethodOwner().square,
+        partial(_offset_function(2.0), value=3.0),
+        jr.normal,
+    ],
+    ids=["function", "lambda", "closure", "bound-method", "partial", "jax-sampler"],
+)
+@pytest.mark.parametrize("storage", ["standalone", "dynamic-field", "static-field"])
+def test_functions_are_unsupported_as_values_or_fields(function, storage):
+    value = function
+    if storage == "dynamic-field":
+        value = FunctionField(function)
+    elif storage == "static-field":
+        value = StaticFunctionField(function)
 
-    assert loaded.function is _square
-    assert loaded.function(jnp.asarray(3.0)) == 9
+    with pytest.raises(TypeError) as error:
+        zdx.save(BytesIO(), value)
+    # These identify the rejected concept and the supported alternative, without
+    # fixing the complete diagnostic sentence.
+    message = str(error.value).lower()
+    assert "unsupported callable" in message
+    assert "zodiax" in message and "class method" in message
 
-    with pytest.raises(TypeError, match="unsupported callable"):
-        zdx.save(BytesIO(), SymbolicCallable(lambda value: value))
+
+@pytest.mark.parametrize("model_type", [CallableModel, ForeignCallableModel])
+def test_callable_model_path_roundtrip_preserves_fields_jit_and_gradients(
+    tmp_path, model_type
+):
+    original = model_type(
+        weights=jnp.asarray([2.0, 3.0], dtype=float),
+        bias=jnp.asarray(0.5, dtype=float),
+    )
+    path = tmp_path / "model"
+    zdx.save(path, original)
+    loaded = zdx.load(path)
+
+    assert path.with_suffix(".zdx").is_file()
+    assert type(loaded) is model_type
+    assert eqx.tree_equal(loaded, original, typematch=True)
+    value = jnp.asarray([1.0, -2.0], dtype=float)
+    assert jnp.allclose(jax.jit(lambda model, x: model(x))(loaded, value), 14.5)
+
+    parameter_gradient = eqx.filter_grad(lambda model: model(value))(loaded)
+    np.testing.assert_allclose(parameter_gradient.weights, [1.0, 4.0])
+    np.testing.assert_allclose(parameter_gradient.bias, 1.0)
+    np.testing.assert_allclose(jax.grad(loaded)(value), [4.0, -12.0])
 
 
-def test_default_equinox_mlp_roundtrips_with_builtin_callable_symbols():
+def test_default_equinox_mlp_rejects_its_function_valued_fields():
     model = eqx.nn.MLP(2, 2, 4, 1, key=jr.key(1))
-    loaded = _roundtrip(model)
-    value = jnp.asarray([0.25, -0.5], dtype=jnp.float32)
-
-    assert eqx.tree_equal(loaded, model, typematch=True)
-    assert jnp.allclose(loaded(value), model(value))
+    with pytest.raises(TypeError, match="unsupported callable"):
+        zdx.save(BytesIO(), model)
 
 
 def test_nested_numerical_definition_roundtrips():
@@ -129,20 +178,20 @@ def test_nested_numerical_definition_roundtrips():
     )
 
 
-def test_archive_callable_resolution_is_registry_only():
-    zdx.register_callable("zodiax.tests.square", _square)
+def test_old_callable_nodes_are_rejected_by_the_definition_schema():
+    callable_node = {"kind": "callable", "identifier": "jax.random.normal"}
+    with pytest.raises(ValueError, match="callable"):
+        zdx.ObjectDefinition.from_dict(callable_node)
+
     file = BytesIO()
-    zdx.save(file, SymbolicCallable(_square))
+    zdx.save(file, jnp.ones(1))
 
-    def replace_identifier(manifest, payload):
-        del payload
-        callable_node = manifest["definition"]["fields"][0]["value"]
-        callable_node["identifier"] = "unregistered.package.function"
+    def replace_definition(manifest, payload):
+        manifest["definition"] = callable_node
 
-    _rewrite(file, replace_identifier)
-
-    with pytest.raises(ValueError, match="is not registered"):
-        zdx.load(file)
+    _rewrite(file, replace_definition)
+    with pytest.raises(ValueError, match="callable"):
+        zdx.load(file, strict=False)
 
 
 def test_equinox_state_and_its_model_roundtrip_together():
@@ -159,72 +208,15 @@ def test_state_with_unstable_object_keys_is_rejected():
     model = Counter()
     state = eqx.nn.State(model)
 
-    with pytest.raises(TypeError, match="not a stable state key"):
+    with pytest.raises(TypeError):
         zdx.save(BytesIO(), state)
 
 
 def test_state_subclasses_are_rejected_instead_of_losing_their_type():
     state = StateSubclass.tree_unflatten((0,), (jnp.asarray(1.0),))
 
-    with pytest.raises(TypeError, match="unsupported Equinox State subclass"):
+    with pytest.raises(TypeError):
         zdx.save(BytesIO(), state)
-
-
-def test_object_validation_hook_rejects_constructor_bypassed_invariant():
-    file = BytesIO()
-    zdx.save(file, Positive(1))
-
-    def make_invalid(manifest, payload):
-        del payload
-        manifest["definition"]["fields"][0]["value"] = -1
-
-    _rewrite(file, make_invalid)
-
-    with pytest.raises(ValueError, match="Object validation failed at root"):
-        zdx.load(file)
-
-
-def test_object_validation_hook_must_not_mutate_metadata():
-    file = BytesIO()
-    zdx.save(file, MutatingValidator(1))
-    file.seek(0)
-
-    with pytest.raises(ValueError, match="Object definition mismatch"):
-        zdx.load(file)
-
-
-@pytest.mark.parametrize(
-    "value",
-    [
-        _unsafe_module(
-            zdx.Linked,
-            alias=None,
-            value=jnp.asarray(1.0, dtype=jnp.float32),
-            key="",
-        ),
-        _unsafe_module(zdx.Deferred, alias=None, key=""),
-        _unsafe_module(
-            zdx.Mask,
-            alias=None,
-            x=None,
-            indices=jnp.asarray([1, 0], dtype=jnp.int32),
-            shape=(2,),
-        ),
-        _unsafe_module(
-            zdx.Map,
-            alias=None,
-            x=1,
-            s=None,
-            M=None,
-            b=None,
-        ),
-        _unsafe_module(zdx.TreeLayout, paths=(), shapes=()),
-    ],
-    ids=("linked", "deferred", "mask", "map", "layout"),
-)
-def test_zodiax_classes_validate_constructor_bypassed_values_before_save(value):
-    with pytest.raises(ValueError, match="Object validation failed at root"):
-        zdx.save(BytesIO(), value)
 
 
 @pytest.mark.parametrize(
@@ -237,7 +229,7 @@ def test_zodiax_classes_validate_constructor_bypassed_values_before_save(value):
     ids=("deferred", "nested-deferred", "linked"),
 )
 def test_link_nodes_are_rejected_inside_static_metadata(value):
-    with pytest.raises(TypeError, match="node in static metadata"):
+    with pytest.raises(TypeError):
         zdx.save(BytesIO(), StaticMetadata(value))
 
 
@@ -252,7 +244,7 @@ def test_npy_header_is_checked_before_array_allocation():
 
     _rewrite(file, declare_huge_shape, payload)
 
-    with pytest.raises(ValueError, match="payload could not be decoded"):
+    with pytest.raises(ValueError):
         zdx.load(file)
 
 

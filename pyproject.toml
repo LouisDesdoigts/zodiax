@@ -34,6 +34,8 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+# Allow the same test filename in different package directories.
+addopts = ["--import-mode=importlib"]
 
 [tool.coverage.run]
 source = ["zodiax"]

@@ -27,7 +27,6 @@ _PACKAGE_NAMES = {
     "equinox": "equinox",
     "jax": "jax",
     "jaxlib": "jaxlib",
-    "interpax": "interpax",
     "numpy": "numpy",
     "zodiax": "zodiax",
 }
@@ -45,9 +44,8 @@ class _CountingWriter:
     def write(self, data):
         """Write one complete byte chunk to the wrapped archive member."""
         written = self.file.write(data)
-        written = len(data) if written is None else written
         if written != len(data):
-            raise OSError("Failed to write the complete Zodiax payload.")
+            raise OSError("Failed to complete the Zodiax write.")
         self.size += written
         return written
 
@@ -222,7 +220,7 @@ def _save_file(file, pytree, definition):
         if seekable:
             file.seek(0)
             file.truncate(0)
-        shutil.copyfileobj(staged, file)
+        shutil.copyfileobj(staged, _CountingWriter(file))
     if seekable:
         file.truncate()
 
