@@ -2,124 +2,267 @@
 
 ## Principles
 
-1. The unrealised Equinox PyTree retains the physical model definition. Path
-   selectors choose scientifically meaningful subsets for optimisation and layouts;
-   serialisation records the complete definition.
-2. Calling an expression resolves it; a transform call may instead supply an
-   explicit deepest input.
-3. Persistent composition is ordinary construction through `x`.
-4. A small set of mathematical nodes is preferred over composition containers,
-   callable wrappers, or semantic duplicate fields.
-5. Aliases provide downstream vocabulary without requiring remapping subclasses.
-6. Coordinate arrays are the universal consumer contract; `Grid` is an optional
-   producer of those arrays.
-7. Optional numerical leaves default to `None`, allowing Equinox to omit inactive
-   operands from the ordinary printed representation without a global repr override.
-8. Runtime scope belongs to the field owner. Ordinary resolution preserves declared
-   runtime fields until an explicit `runtime=True` evaluation boundary.
-9. Model definitions remain stable while external State carries time, iteration,
-   and other application-defined running values.
+1. A numerical definition is an ordinary Equinox PyTree. Parameter arrays remain
+   accessible by paths and aliases for editing and differentiation.
+2. `resolve()` prepares definitions and automatically connects shared values.
+   Calling an expression resolves it; a transform call may supply an explicit input.
+3. `Map` combines scale, matrix or basis contraction, and bias. Nest transforms only
+   when a calculation needs a different order or a nonlinear operation.
+4. `Operation` groups elementwise transforms under the common Transform interface.
+   Domain-specific parameterisations belong downstream as Expressions.
+5. Aliases provide concise names for existing structural paths without duplicating
+   parameter leaves or introducing another parameter graph.
+6. Optional numerical operands default to `None` and disappear from Equinox's
+   ordinary representation.
+7. An expression's calculation controls which operands and local context it needs.
+   If it cannot finish, available descendants still prepare.
+8. Model definitions remain reusable while explicit State carries time, iteration,
+   and other current numerical values.
 
 ## Object model
 
-```text
-Module
-├── State
-└── Expression
-    ├── Linked, Deferred
-    ├── StateRef
-    ├── Grid
-    └── Transform
-        ├── Add, Mul, Pow, Exp, Log
-        ├── MatMul, Mask, Map
-        ├── parametric/
-        │   ├── Basis, Polynomial, Interpolation
-        │   └── Gaussian
-        ├── Norm, MeanNorm, RMSNorm, SumNorm
-        └── Unit
+The tree below includes every public numerical class. Methods shown on a parent
+are inherited by its children; concrete transforms supply their local formula.
+
+```mermaid
+classDiagram
+    class Base {
+        +get(paths)
+        +set(paths, values)
+    }
+    class Module {
+        +alias
+        +resolve(context)
+        +populate()
+        +validate_aliases()
+    }
+    class Expression {
+        +evaluate(context)
+        +resolve_children(context)
+        +__call__(context)
+    }
+    class Transform {
+        +x
+        +evaluate(context)
+        +fwd(x, context)
+        +inv(y, context)
+        +apply(value, inverse, context)
+        +__call__(value, inverse, context)
+        +initialise(y, context)
+    }
+    class Map {
+        +s
+        +M
+        +b
+        +fwd(x)
+        +inv(y)
+    }
+    class Mask {
+        +mask
+        +size
+        +shape
+        +fwd(x)
+        +inv(y)
+    }
+    class Operation {
+        <<abstract>>
+    }
+    class Exp {
+        +base
+        +fwd(x)
+        +inv(y)
+    }
+    class Log {
+        +base
+        +fwd(x)
+        +inv(y)
+    }
+    class Pow {
+        +p
+        +fwd(x)
+    }
+    class Unit {
+        +unit
+        +unit_out
+        +factor
+        +category
+        +to(unit, **context) Array
+        +fwd(x)
+        +inv(y)
+    }
+    class Linked {
+        +value
+        +key
+        +defer()
+        +evaluate(context)
+    }
+    class Deferred {
+        +key
+        +evaluate(context)
+    }
+    class State {
+        +values
+        +value(path)
+        +ref(path)
+        +step(dt)
+    }
+    class StateRef {
+        +path
+        +evaluate(state)
+    }
+    Base <|-- Module
+    Module <|-- State
+    Module <|-- Expression
+    Expression <|-- Transform
+    Expression <|-- Linked
+    Expression <|-- Deferred
+    Expression <|-- StateRef
+    Transform <|-- Map
+    Transform <|-- Mask
+    Transform <|-- Operation
+    Operation <|-- Exp
+    Operation <|-- Log
+    Operation <|-- Pow
+    Operation <|-- Unit
 ```
 
-`evaluate(**context)` defines one expression's evaluation and `fwd(x)` describes one
-transform node. `expression(**context)` and `resolve(expression, **context)` are
-equivalent. `transform(x)` or the explicit `transform.apply(x)` applies the complete
-nested spine to a deepest input, while `transform()` resolves its stored input.
+Here `context` abbreviates named scientific inputs passed as `**context`;
+`inverse` is the optional keyword argument on `apply` and explicit calls.
 
-Fields declared with `zdx.field(runtime=True)` are opaque to ordinary recursive
-resolution. `resolve(runtime=True, **context)` is the explicit override used by the
-owning runtime boundary. Protection belongs to the downstream field rather than the
-expression class, so the same expression can be runtime-dependent in one model and
-globally resolvable in another.
+A Module contains definitions and resolves to a prepared copy of its own class. An
+Expression represents a value: it resolves to its result when ready, or a partially
+prepared Expression when an input is unavailable. State is an ordinary Module of
+current numerical arrays; expressions belong in the model.
 
-The canonical unrealised model is serialised, while path-selected leaves participate
-in optimisation. Population produces a linked model, ordinary context evaluation
-produces a context-resolved model, and runtime evaluation produces a realised model
-whose numerical definitions have been replaced by concrete arrays. `realise()` is
-the combined population-and-resolution operation.
+`base.py` owns Base's general path operations. `module.py` owns Module, canonical
+aliases, raised lookup, and multi-model updates. Equinox integration wrappers
+remain in `base.py`. These classes remain available through the package root.
 
-`TreeLayout`, `TreeVector`, `TreeMatrix`, `Jacobian`, `Hessian`, `GaussNewton`, and
-`Fisher` live in the sibling `zodiax.derivatives` package. A layout records floating
-parameter paths and shapes so derivative arrays and serialised containers share one
-ordering. Derivative operations treat every leaf of their parameter PyTree as a
-parameter and reject non-floating leaves rather than selecting parameters by dtype.
+`Map` evaluates `y = matmul(s * x, M) + b`. Omitted operands skip their stage.
+Scale and bias may
+broadcast without expanding the relevant input/output shape. The public `matmul`
+function contracts the final input axis with the first matrix or basis axis.
 
-## Basis and polynomial rules
+Operation subclasses use ordinary JAX broadcasting, including shape expansion.
+Available inverses apply elementwise on valid domains and retain the broadcasted shape;
+they do not infer or restore a smaller original shape. Mask scatters compact values
+using a dynamic boolean mask with a fixed selected count. Construct Mask before
+entering JIT to determine that count. Dynamic execution computes its indices with
+work proportional to the number of mask elements.
 
-`Basis` matches one unique trailing shape of coefficients against leading basis
-dimensions. Ambiguity raises and can be resolved with the advanced `axes` override.
-Matrix-free bases override the basis operation rather than materialising a dense
-tensor.
+## Evaluation and reverse operations
 
-`Polynomial` stores exponent array `p` and generates its own terms from contextual
-`coords`. Like every sampled coordinate consumer, it infers the component axis at
-`-ndim - 1` from the physical dimensionality and pairs broadcast leading batches.
-Term generation is an implementation detail, not a separate public expression
-object.
+`evaluate(**context)` implements one expression's calculation. Transform's inherited
+`evaluate` resolves its stored `x` and calls `fwd(x, **context)`. Required context is
+declared in `evaluate`, or in `fwd` for a Transform subclass.
 
-## Grid boundary
+`transform(x)` and `transform.apply(x)` follow the complete nested Transform chain
+stored in `x`. An explicit input overrides the deepest stored value. `transform()`
+and `transform.resolve()` instead evaluate the stored definition.
 
-`Grid` stores static `n`, numerical `d` and `c`, and an optional shared unit
-conversion. A unit string targets its category's captured global output; an unbound
-`Unit` can select a specific output through `to`. The Grid applies the conversion to
-both `d` and `c` before generating coordinates. Grid axes use dimension-generic
-`ij` indexing, so component `i` varies along sample axis `i` and the spatial shape
-is exactly `n`.
+`fwd` and `inv` are local numerical operations on prepared arrays.
+`apply(value, inverse=True)` follows the chain backwards using `inv`;
+`transform(value, inverse=True)` is the same operation. Keep `inverse` a Python
+boolean fixed during JAX tracing. Exp, Log, and Unit provide inverses on their
+numerical domains. Pow is forward-only. Map and Mask provide representative
+reverses: Map subtracts bias, applies a matrix pseudoinverse using JAX's native
+rank cutoff, and divides by scale; Mask gathers selected entries. These reverses
+need not recover arbitrary inputs or outputs exactly.
 
-dLux retains physical-category enforcement, SI conveniences, FFT conventions,
-plotting extents, builders, and propagation resizing.
+The advanced `initialise(y)` helper binds the recovered deepest input in a new
+definition. It cannot bind through a non-Transform Expression such as a StateRef
+or Linked owner; update that original definition instead.
 
-## Normalisation
+`resolve` tries an expression's calculation before preparing its children, allowing
+that calculation to choose local context and required operands. Missing context or
+a requested unresolved numerical operand falls back to child preparation. Ordinary
+Modules may retain expressions for their own later calls. Other errors propagate.
 
-Normalisation nodes store `x`, optional target `s`, optional weights `w`, and an
-advanced static `axis`. `axis=None` reduces the complete array. Invalid zero measures
-raise rather than returning infinities.
+Each context name has one scientific meaning throughout the tree. Incoming
+`coordinates` and a child's derived `basis_coordinates` must have distinct names;
+successive derived frames need further distinct names. The fallback forwards supplied
+context unchanged and cannot infer coordinate frames from arrays.
 
-`MeanNorm`, `RMSNorm`, and `SumNorm` scale their complete input expression. Additive
-centring is not represented by a separate specialised node.
+## Sharing, state, and units
 
-## Sharing, state, and context
+Normal resolution collects Linked owners before replacing them and their Deferred
+references. Each key has one owner in the supplied tree; additional uses are references.
+Population supports nested owners and PyTree values and rejects invalid link topology.
+Run resolution inside a differentiated function so all uses contribute to the original
+owner's gradient. `populate` is an advanced structural-only operation;
+`resolve(populate=False)` skips that stage when the caller has already performed it.
+Population covers the tree supplied to outer resolution. Explicit transform calls
+with references across operands use an operator prepared by resolving the complete
+unbound operator or its containing Module first.
 
-`State` is a sibling `Module` that owns named running values. `StateRef` stores only
-a static path into the call-local State and can occupy any expression leaf; for
-example an `Interpolation` can store a state-backed time query directly in `x`.
-Updates use the normal `State.set(...)` path API rather than overriding it on a
-reference. State topology and leaf array signatures remain fixed for JAX loop carry.
-`State.step()` increments `index` and advances `time` by stored or explicit `dt`; any
-`key` entry is left unchanged. Random evaluation is deliberately downstream API:
-custom expressions use ordinary JAX keys and choose their own split, fold, and
-stream semantics. `Linked` owns a model value once and `Deferred` provides
-static-key uses populated from the containing model tree.
+State converts each named entry to one numerical array at construction. StateRef
+stores a path and reads from the State supplied during resolution. Inherited `set`
+does not convert replacements; callers preserve shapes, dtypes, and tree structure
+for JAX loop carry. `step` reads the original index and time before applying their
+updates together, leaving random keys and other entries unchanged.
 
-## Paths and archives
+Unit stores an input `unit` and optional `unit_out`. With `unit_out=None`, eager
+evaluation follows the current global convention; an explicit `to` fixes the target.
+`to(unit, **context)` resolves the stored input and returns a converted array,
+leaving the original definition unchanged. `to(None)` uses the current global
+convention. An absent input or missing context raises `ValueError`. JIT captures
+global settings when tracing; cached compiled calculations retain that convention.
+Explicit-unit conversion helpers remain independent of global settings.
 
-Numerical operands use `x`, `b`, `s`, `M`, and `p`. Domain names are aliases onto
-those real paths. `TreeLayout` and archive definitions therefore inspect the same
-topology that evaluation executes; no separate parameter graph or filled semantic
-copy exists.
+## Developer contracts
 
-Dots are reserved as structural path separators. Zodiax modules reject literal
-string mapping keys containing dots at construction and after path updates. Dotted
-strings remain valid as values, including alias targets and `StateRef` paths.
+The [walkthrough's contract tables](numerics.md#12-developer-contracts) map these
+behaviours to the six focused test files in `tests/numerics/`.
 
-The `None` defaults affect presentation, not path identity. Once populated, every
-operand is still an ordinary dataclass field and therefore participates normally in
-aliases, layouts, optimisation, and archive definitions.
+- Convert numerical inputs at visible boundaries with `as_array`. Generic boundaries
+  retain inferred types; explicit `float`, `int`, `complex`, or `bool` requests use
+  JAX's configured default precision. None and Expressions pass through unchanged.
+- Expression calculations are pure and explicitly resolve the operands they use.
+  Unused expression fields do not block evaluation. Available descendants remain
+  prepared if a parent must defer; the original definition is unchanged.
+- Temporary expression bookkeeping belongs to one outer resolution call, with
+  result reuse limited to identical objects in the same JAX trace. Scientific context
+  remains explicit in method arguments.
+- Constructors establish structural contracts. Numerical execution uses ordinary
+  Python/JAX errors and numerical behaviour, without runtime validation callbacks.
+- Module aliases refer to structural topology. Resolving or replacing a subtree may
+  invalidate a target; `validate_aliases` checks it explicitly. Module construction
+  rejects dots in mapping keys because dots separate path segments. Inherited `set`
+  does not repeat constructor validation; callers supply valid replacements.
+
+## Package structure
+
+The numerical implementation is split by responsibility. Domain-specific profiles
+and sampled bases are downstream Expressions, as illustrated in the
+[walkthrough](numerics.md#9-a-gaussian-expression).
+
+```text
+src/zodiax/
+├── __init__.py
+├── base.py
+├── module.py
+├── optimisation.py
+├── stats.py
+├── numerics/
+│   ├── __init__.py
+│   ├── arrays.py
+│   ├── expressions.py
+│   ├── links.py
+│   ├── operations.py
+│   ├── state.py
+│   ├── transforms.py
+│   ├── units.py
+│   └── overview.md
+├── derivatives/
+└── serialisation/
+```
+
+| Numerical module | Public responsibilities |
+|---|---|
+| `arrays.py` | `as_array` conversion |
+| `expressions.py` | `Expression` and tree resolution |
+| `links.py` | `Linked`, `Deferred`, structural population, and link checks |
+| `transforms.py` | `Transform`, `Map`, `Mask`, and `matmul` |
+| `operations.py` | `Operation`, `Exp`, `Log`, and `Pow` |
+| `state.py` | `State`, `StateRef`, and reference checks |
+| `units.py` | `Unit`, unit conventions, and conversion helpers |

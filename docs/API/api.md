@@ -28,69 +28,51 @@ loaded = model.load("model.zdx")
 
 ## `Module` and aliases
 
-`Module` inherits `Base` and adds numerical-expression lifecycle methods plus two
-conveniences for composite scientific models:
+Module adds model preparation and concise parameter lookup to Base's path operations.
 
-- `populate()` establishes shared `Linked` ownership;
-- `resolve(**context)` evaluates ordinary `Expression` definitions while protecting
-  runtime-declared fields;
-- `realise(**context)` performs population and resolution together;
-- `resolve(runtime=True, **context)` explicitly evaluates runtime fields;
-- a uniquely named descendant can be raised to a shorter attribute lookup;
-- an explicit local alias can map a public name to one real structural path.
+Its implementation lives in `zodiax.module`; the public names remain `zdx.Module`,
+`zdx.Alias`, `zdx.update`, and `zdx.validate_aliases`.
 
 ```python
-realised = model.realise(time=t)
-```
-
-A downstream owner can declare a context-sensitive field without changing its
-expression type:
-
-```python
-class Stage(zdx.Module):
-    response: object = zdx.field(runtime=True)
-```
-
-```python
-class Model(zdx.Module):
-    output: object
+import jax
+import jax.numpy as np
+import zodiax as zdx
 
 
-model = Model(
-    output=zdx.Exp(x=zdx.Mul(x=zdx.Add(x=latent, b=offset), s=scale)),
-    alias={
-        "offset": "output.x.x.b",
-        "latent": "output.x.x.x",
-    },
+class Surface(zdx.Module):
+    coefficients: jax.Array | zdx.Expression
+
+
+class Optic(zdx.Module):
+    surface: Surface
+
+
+optic = Optic(
+    surface=Surface(coefficients=np.array([0.1, 0.2])),
+    alias={"amplitudes": "surface.coefficients"},
 )
-
-model.offset
-model.get("offset")
-updated = model.set("offset", new_offset)
+coefficients = optic.coefficients  # Raised from the nearest matching descendant.
+same = optic.amplitudes           # Selected by a local structural alias.
+updated = optic.set(amplitudes=np.array([0.3, 0.4]))
 ```
 
-Alias input may be a mapping, one `(name, path)` pair, a sequence of pairs, or
-`None`. It is stored as a sorted static tuple. Names must be unique public
-identifiers and cannot collide with attributes declared on the owning module. An
-alias may intentionally override or disambiguate a naturally raised descendant, and
-several aliases may target the same leaf. Targets must be canonical dynamic
-structural paths: they cannot cross static fields, properties, another alias, or a
-raised shorthand.
+Declared attributes take precedence, followed by local aliases and the nearest
+matching descendants. Equal-depth ambiguity requires a qualified path. Alias input
+is stored as a canonical static tuple of `(name, path)` pairs, with unique public
+names and targets following dynamic structural fields. Aliases do not add leaves.
 
-Aliases are definition-time metadata. `populate`, `resolve`, or another subtree
-replacement can remove the structure they target; lookup then reports a stale alias.
-Use aliases on the unrealised model for configuration, optimisation, layouts, and
-serialisation. `validate_aliases(tree)` checks a complete current topology.
-Aliases are constructor inputs and static JAX tree metadata, so choose them outside
-transformed loops.
+`resolve(**context)` populates shared links and prepares available Expression fields,
+returning the same ordinary Module class. `populate()` performs only structural link
+replacement. Resolving a nested definition can remove an alias target; keep edits on
+the definition and use `validate_aliases()` to check a changed topology explicitly.
+Inherited `set` does not rerun constructor validation.
 
-The normal Equinox/Wadler-Lindig representation elides the dataclass default
-`alias=None`. A non-`None` alias prints as a real field; Zodiax does not replace the
-global Equinox `repr`.
+`zdx.update(parameters, *models)` returns models in their original order. Default
+`mode="first"` assigns each path to its first match; `mode="all"` updates every match.
+`strict=True` rejects paths unused by every supplied object.
 
-Use `Base` for general path and archive behaviour. Use `Module` when numerical
-expression lifecycle methods, raised descendants, or aliases are part of the model
-API.
+The [Module reference](module.md) gives complete examples and typed contracts for
+aliases, raised lookup, immutable updates, and prepared models.
 
 ## Numerical expressions
 
@@ -98,51 +80,93 @@ API.
 `Deferred` is specifically a key-only shared link, not the subclassing base:
 
 ```python
-owner = zdx.Linked(value, key="shared")
-reference = owner.defer()
+import jax
+import zodiax as zdx
 
-mapped = zdx.Map(
-    x=reference,
-    s=scale,
-    M=matrix,
-    b=centre,
+
+class Measurements(zdx.Module):
+    science: jax.Array | zdx.Expression
+    reference: jax.Array | zdx.Expression
+
+
+gain = zdx.Linked(2.0, key="gain")
+model = Measurements(
+    science=zdx.Map(x=3.0, s=gain),
+    reference=zdx.Map(x=1.0, s=gain.defer()),
 )
-
-model = model.populate()  # inside the transformed calculation
-model = model.resolve(time=time)
+prepared = model.resolve()  # Inside the differentiated calculation.
+print(model)
+print(prepared)
+print(prepared.science, prepared.reference)
 ```
 
-`Transform` objects use `x` for input and `y` for output. Parameters use the compact
-semantic fields `b`, `s`, `M`, and `p`. The low-level functions are `add`, `mul`,
-`power`, and `matmul`.
+```text
+Measurements(
+  science=Map(x=f32[], s=Linked(value=f32[], key='gain')),
+  reference=Map(x=f32[], s=Deferred(key='gain'))
+)
+Measurements(science=f32[], reference=f32[])
+6.0 2.0
+```
+
+`Transform` objects use `x` for input and `y` for output. Map parameters use `b`,
+`s`, and `M`; the public `matmul` function provides matrix or basis contraction.
+`Operation` subclasses Exp, Log, Pow, and Unit use ordinary JAX broadcasting for
+their elementwise formulas.
 
 `Map` has the fixed order `y = matmul(s * x, M) + b`; `s`, `M`, and `b` are optional
 identity stages. Nest ordinary transforms when their order differs; calling the
-outer transform applies the complete stored spine and returns its realised array.
+outer transform with an explicit input applies the complete nested Transform chain.
+An empty call resolves its stored definition. `apply(value, inverse=True)` and
+`transform(value, inverse=True)` reverse the chain using each transform's local
+`inv`; Map and Mask provide representative reverses. Local `fwd` and `inv` operate
+on prepared arrays. The advanced `initialise(y)` helper binds a recovered deepest
+input in a new definition.
+
+Automatic link population covers the tree supplied to `resolve`. Resolve the
+containing Module or complete unbound operator before explicit calls involving
+references across operands. See the [numerics reference](numerics.md) for the
+class contracts and [design](../numerics_design.md) for the full hierarchy.
 
 Optional numerical operands have a dataclass default of `None`. As with
 `alias=None`, Equinox's ordinary representation omits them, so the printed object
 shows the active expression rather than inactive placeholders.
 
-Python scalars at numerical constructor boundaries become strong inexact arrays.
-The public `as_array` helper preserves inferred dtype and passes through `None` or
-any `Expression`.
+Python scalars at numerical constructor boundaries become strongly typed arrays
+with their inferred numerical type. The public `as_array` helper can request
+`float`, `int`, `complex`, or `bool` using JAX's configured default precision.
+`None` and Expressions pass through unchanged without attaching a future cast.
 
 ## Global numerical units
 
-`set_units(mapping)` selects one coherent realised unit per numerical category for
-subsequently constructed `Unit` transforms:
+`set_units(mapping)` selects the output convention used by Unit transforms whose
+`unit_out` is `None`:
 
 ```python
+import zodiax as zdx
+
+previous_units = zdx.get_units()
 zdx.set_units({"cartesian": "um", "angular": "mas"})
 
-distance = zdx.Unit(2.0, "mm")
-distance.resolve()  # 2000.0 um
+distance = zdx.Unit(x=2.0, unit="mm")
+print(distance)
+print(distance.resolve())
+zdx.set_units(previous_units)
 ```
 
-The transform stores and prints both its input `unit` and captured output `to` unit.
-It remains an ordinary reversible `Transform`; realised values are JAX arrays, not
-quantity wrappers.
+```text
+Unit(x=f32[], unit='mm')
+2000.0
+```
+
+The transform stores its input `unit` and optional `unit_out`. With the default
+`None`, eager evaluation follows current global settings. An explicit `to="m"`
+in the constructor fixes the output. `distance.to(unit, **context)` returns the
+converted array without changing the definition; `distance.to(None)` converts into
+the current global convention. An absent input or missing context raises
+`ValueError`. JIT captures the convention when tracing, so changing globals does
+not alter an already compiled call. Unit is an elementwise Operation with an inverse;
+realised values remain ordinary arrays.
 
 ## State
 
@@ -150,13 +174,16 @@ quantity wrappers.
 contains only a static path into the State supplied during resolution:
 
 ```python
+import jax.random as jr
+import zodiax as zdx
+
 state = zdx.State(
     index=0,
     time=0.0,
     dt=0.1,
     key=jr.key(0),
 )
-scheduled = zdx.Mul(x=state.ref("time"), s=2.0)
+scheduled = zdx.Map(x=state.ref("time"), s=2.0)
 
 current = scheduled.resolve(state=state)
 state = state.step()

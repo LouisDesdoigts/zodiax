@@ -85,6 +85,7 @@ nav:
       - Optimisation: optimisation_tools.md
   - API:
       - Base: API/base.md
+      - Module: API/module.md
       - Optimisation: API/optimisation.md
       - Stats: API/stats.md
       - Derivatives: API/derivatives.md

@@ -1,192 +1,216 @@
 # Numerical expressions
 
-Zodiax stores composable numerical definitions as ordinary Equinox PyTrees and
-resolves them when local context is available.
+Zodiax stores composable numerical definitions as ordinary Equinox PyTrees. Use
+`Map` for scale, matrix or basis contraction, and bias:
+
+```python
+import jax
+import jax.numpy as np
+import jax.random as jr
+import zodiax as zdx
+
+latent = np.array([-1.0, 0.0, 1.0])
+definition = zdx.Map(x=latent, s=2.0, b=1.0)
+value = definition.resolve()
+same = definition()
+
+print(definition)
+print(value)
+
+operation = zdx.Map(s=2.0, b=1.0)
+value = operation(latent)
+```
+
+```text
+Map(x=f32[3], s=f32[], b=f32[])
+[-1.  1.  3.]
+```
+
+The printed array dtypes use JAX's default configuration. The
+[numerics design](../numerics_design.md) shows the complete class hierarchy and
+package layout; the [walkthrough](../numerics.md) develops runnable examples.
 
 ## Core protocol
 
-- `Expression.evaluate(**context)` defines a deferred value.
-- `resolve(value, **context)` recursively evaluates expressions.
-- `Transform` adds stored input `x`, local `fwd(x)`, and optional reverse methods.
-- Calling an expression with context is equivalent to resolving it.
-- Calling a transform with an input applies its complete nested spine.
-- `transform.apply(x, **context)` is the explicit spelling of that operation.
-- Calling a transform without an input resolves its stored definition.
-- Fields declared with `zdx.field(runtime=True)` remain protected until resolution
-  explicitly supplies `runtime=True`.
+- `model.resolve(**context)` connects shared links and prepares available definitions.
+  It is the normal evaluation entry point; link population is enabled by default.
+- An ordinary Module retains its class while its fields prepare. An Expression
+  becomes its value when ready or remains partially prepared when inputs are missing.
+- `Expression.evaluate(**context)` implements one expression's calculation.
+- `Transform` adds stored input `x`, local `fwd(x)`, and optional local `inv(y)`.
+  Its inherited `evaluate` supplies the stored input to `fwd`.
+- `transform(x)` and `transform.apply(x)` apply the full nested Transform chain to
+  an explicit deepest input. `transform()` resolves the stored definition.
+- `transform.apply(y, inverse=True)` reverses that chain; the explicit call
+  `transform(y, inverse=True)` is equivalent.
+- `Operation` is a Transform for elementwise formulas using ordinary JAX broadcasting.
 
-Optional numerical operand fields have the dataclass default `None`. Equinox's
-ordinary representation omits those absent fields, so `Exp()` and `Map(M=matrix)`
-remain compact while populated leaves retain their real structural paths.
-
-```python
-transform = zdx.Mul(x=zdx.Exp(), s=2.0)
-value = transform(latent)
-same = transform.apply(latent)
-
-definition = zdx.Exp(x=zdx.Map(x=latent, M=matrix, b=origin))
-value = definition()
-
-direct = zdx.Exp()(latent)
-stored = zdx.Exp(latent)()  # equivalent to direct
-resolved = zdx.Exp(latent).resolve()
-```
-
-Persistent composition is ordinary construction under `x`.
-
-## Runtime fields and model lifecycle
-
-Runtime scope belongs to the field owner rather than the expression type. The same
-parameterisation may be globally resolvable in one model and require local runtime
-coordinates in another:
+Optional numerical operands default to `None` and are omitted by Equinox's normal
+representation. Nested transforms express calculations with different operations:
 
 ```python
-class Stage(zdx.Module):
-    response: object = zdx.field(runtime=True)
-
-    def __call__(self, coords, **context):
-        realised = self.resolve(runtime=True, coords=coords, **context)
-        return realised.response
+operation = zdx.Exp(x=zdx.Map(s=2.0, b=1.0))
+value = operation(latent)
+recovered = operation.apply(value, inverse=True)
+print(operation)
+print(recovered)
 ```
 
-Ordinary `model.resolve(**context)` leaves every runtime field opaque. A deliberate
-`model.resolve(runtime=True, **context)` overrides protection throughout the
-selected tree.
+```text
+Exp(x=Map(s=f32[], b=f32[]))
+[-1.  0.  1.]
+```
 
-`realise(model, **context)` and `model.realise(**context)` perform population and
-resolution together; call them inside JAX-transformed functions when links are
-present. The canonical **unrealised model** becomes a **linked model** after `populate()`, a
-**context-resolved model** after available high-level context is applied, and a
-**realised model** once runtime fields have also become concrete arrays. Protected
-subtrees are resolved coherently at their owning runtime boundary rather than being
-partially evaluated beforehand.
+`fwd` and `inv` operate locally on prepared arrays. Forward `apply` works from the
+deepest transform outwards; reverse `apply` follows the chain in the opposite order.
+Keep `inverse` a Python boolean fixed during JAX tracing. The advanced
+`initialise(y)` helper binds the recovered deepest input in a new definition.
 
-## Operations
+## Transform classes
 
-| Object | Kernel | Definition |
+| Class | Definition | Reverse |
 |---|---|---|
-| `Add(x=None, b=None)` | `add(x, b=None)` | `x + b` |
-| `Mul(x=None, s=None)` | `mul(x, s=None)` | `x * s` |
-| `Pow(x=None, p=None)` | `power(x, p)` | `x**p` |
-| `Exp(x=None, base=None)` | — | `exp(x)` or `base**x` |
-| `Log(x=None, base=None)` | — | natural or selected-base logarithm |
-| `MatMul(x=None, M=None)` | `matmul(x, M=None)` | final/leading-axis contraction |
-| `Mask(x=None, mask=None)` | — | compact scatter |
-| `Map(x=None, s=None, M=None, b=None)` | — | `matmul(s * x, M) + b` |
+| `Map(x=None, s=None, M=None, b=None)` | `matmul(s * x, M) + b`; omitted operands skip their stage | Representative `inv` |
+| `Mask(x=None, mask=None)` | Scatter compact values into selected entries | Gather with `inv` |
+| `Exp(x=None, base=None)` | `exp(x)` or `base**x` | Principal logarithm with `inv` |
+| `Log(x=None, base=None)` | Natural or selected-base logarithm | `inv` on the selected branch |
+| `Pow(x=None, p=None)` | `x**p` | Forward-only |
+| `Unit(x=None, unit=None, to=None)` | Convert to an explicit or global output unit | `inv` |
 
-`Exp` and `Log` use the natural base when `base=None`; an explicit base is real,
-positive, and unequal to one; use `base=10` for base-ten transforms. `Add`, `Mul`,
-`Exp`, and `Log` provide exact local inverses on their valid domains. `MatMul`,
-`Mask`, `Basis`, and `Map` provide representative solves where appropriate. Every
-transform constructor places `x` first; other numerical operands remain positional
-or keyword arguments.
+Exp, Log, Pow, and Unit inherit Operation. Their array operands follow ordinary JAX
+broadcasting, including shape expansion. Elementwise inverse results retain that
+broadcasted shape rather than reducing to a smaller original input shape. Explicit
+logarithmic bases must be real, positive, and unequal to one; complex logarithms use
+the principal branch.
 
-## Bases and polynomials
+Map scale and bias may broadcast only without expanding the relevant shape.
+`matmul(x, M)` contracts `(*batch, n)` with `(n, *output)` to produce
+`(*batch, *output)`; `M=None` is identity. Use `Map(M=matrix)` for a matrix-only
+transform. Map reverses the stages by subtracting bias, applying a numerical
+pseudoinverse with JAX's native rank cutoff, and dividing by scale. Nonzero scales
+are required for division. This stagewise representative need not recover an
+arbitrary input or output exactly, nor minimise the original input norm when a
+nonuniform scale precedes a rank-deficient matrix.
 
-These reusable parameterisations live in `zodiax.numerics.parametric` and remain
-re-exported as `zdx.Basis`, `zdx.Polynomial`, and `zdx.Interpolation`.
+Construct Mask before entering JIT so its selected count is known. It stores a
+dynamic boolean array and replaces the final compact axis with `mask.shape`,
+retaining batch axes. Updating the mask must
+preserve its count. When passed dynamically through JIT, its selected indices are
+recomputed with work proportional to the number of mask elements.
 
-`Basis(x=None, M=None, axes=None)` automatically matches one unique trailing
-coefficient shape against leading dimensions of `M`. `axes` is an advanced override
-for an ambiguous layout.
+## Partial resolution
+
+Missing context retains an expression with its available children prepared:
 
 ```python
-field = zdx.Basis(M=modes, x=coefficients)
+definition = zdx.Map(x=zdx.StateRef("input"), s=zdx.Map(x=2.0, b=1.0))
+prepared = definition.resolve()  # Scale is 3; input still requires state.
+state = zdx.State(input=[0.0, 1.0, 2.0])
+print(prepared)
+print(prepared.resolve(state=state))
 ```
 
-`Polynomial` stores exponent array `p` directly and evaluates its terms from
-`coords`. A `D`-dimensional sampled coordinate field has shape
-`(..., D, *spatial_shape)` with exactly `D` spatial axes. The component axis is
-inferred as `-D - 1`, and leading coordinate/coefficient batches are paired by JAX
-broadcasting. Bare sample arrays remain supported for one-variable polynomials:
-
-```python
-polynomial = zdx.Polynomial(degree=2, ndim=2, x=coefficients)
-value = polynomial.resolve(coords=coords)
+```text
+Map(x=StateRef(path='input'), s=f32[])
+[0. 3. 6.]
 ```
 
-`Gaussian(cov=...)` provides the general covariance-defined profile. It supports
-the same one- or higher-dimensional coordinate layout produced by `Grid`:
+Required context is declared in `evaluate` for Expressions or `fwd` for Transforms.
+The calculation resolves the operands it actually uses. If it cannot finish,
+inherited child preparation keeps available progress. Other errors propagate.
+
+Each scientific context name must retain one meaning throughout the tree. Use
+distinct names for incoming and derived coordinates. The fallback forwards supplied
+context unchanged; it cannot infer coordinate frames. Reusing the original definition
+reads changing context, while a prepared copy retains values already resolved.
+
+## Shared values and state
 
 ```python
-profile = zdx.Gaussian(cov=covariance)
-values = profile.resolve(coords=coords)
-```
+class Measurements(zdx.Module):
+    science: jax.Array | zdx.Expression
+    reference: jax.Array | zdx.Expression
 
-## Grid
 
-`Grid(n, d, c=None, unit=None)` is a coordinate expression with dimension-generic
-`ij` indexing. Component `i` varies along sample axis `i`, so the output shape is
-`(ndim, *n)` after any metadata batch axes. `unit` may be a string, which targets the
-active global unit, or an unbound `Unit` with an explicit output.
-
-```python
-grid = zdx.Grid(n=(64, 64), d=0.1, unit="mm")
-coords = grid()  # (2, 64, 64)
-
-converted_grid = zdx.Grid(
-    n=(64, 64),
-    d=0.01,
-    unit=zdx.Unit(unit="mm", to="um"),
+gain = zdx.Linked(2.0, key="gain")
+model = Measurements(
+    science=zdx.Map(x=3.0, s=gain),
+    reference=zdx.Map(x=1.0, s=gain.defer()),
 )
+prepared_model = model.resolve()
+science = prepared_model.science      # 6.0
+reference = prepared_model.reference  # 2.0
 ```
 
-The class exposes `axes`, `coordinates`, `shape`, `batch_shape`, `fov`, `measure`,
-`broadcast`, `match_shape`, `resize`, `axes_for`, and `from_axes`.
+Place one Linked owner in the tree and use Deferred references elsewhere. Owners
+may contain arrays, Expressions, or PyTrees. Resolution collects all owners before
+replacing links. Missing or duplicate owners and cycles are errors. Keep resolution
+inside differentiated calculations so gradients accumulate at the original owner.
 
-## Normalisation
-
-`MeanNorm`, `RMSNorm`, and `SumNorm` scale their input to target `s`, which defaults
-to one. Optional nonnegative `w` supplies weights or a support mask. `axis=None`
-operates over the complete array.
-
-```python
-mean_one = zdx.MeanNorm(
-    x=zdx.Add(x=zdx.Basis(M=modes, x=coefficients), b=1.0),
-    w=weights,
-)
-
-target_rms = zdx.RMSNorm(x=field, s=2.0, w=weights)
-```
-
-## Interpolation, links, and state
+`populate` is an advanced structural-only operation. `validate_links` checks the same
+topology without evaluating Expressions. `resolve(populate=False)` skips automatic
+population when the caller has already prepared the links.
+Automatic population covers the complete tree passed to `resolve`. Before calling
+an explicit-input operator whose operands reference one another, resolve the unbound
+operator or its containing Module, then call the prepared operator.
 
 ```python
-state = zdx.State(
-    index=0,
-    time=0.0,
-    dt=0.1,
-    key=jr.key(0),
-)
-time_ref = state.ref("time")
-history = zdx.Interpolation(time_ref, times, samples)
-value = history.resolve(state=state)
+state = zdx.State(index=0, time=0.0, dt=0.1, key=jr.key(0))
+scheduled = zdx.Map(x=state.ref("time"), s=2.0)
+value = scheduled.resolve(state=state)
 state = state.step()
-next_value = history.resolve(state=state)
-
-owner = zdx.Linked(value, key="shared")
-reference = owner.defer()
-realised = model.realise(state=state)
+next_value = scheduled.resolve(state=state)
 ```
 
-Population establishes shared ownership; resolution evaluates expressions. A
-`State` owns values and uses the ordinary Zodiax `set` path API. `StateRef` stores
-only a static path and may occupy any expression leaf, so interpolation does not
-need a separate named-argument selector. `State.step()` advances `index` and `time`
-without mutating any `key` entry. Random evaluation is defined by downstream
-expression classes using ordinary JAX APIs, so applications retain control over
-key splitting, folding, and stream identity.
+State converts each numerical entry to one array; expressions belong in the model.
+StateRef stores a path and reads from the supplied State. Inherited `set` does not
+convert replacements, so supply arrays and preserve loop-carry shapes, dtypes, and
+tree structure. `step` reads the original index and time before updating them;
+random keys and other entries remain unchanged.
 
 ## Units and arrays
 
 ```python
-zdx.set_units({"cartesian": "um", "angular": "mas"})
-distance = zdx.Unit(2.0, "mm")
-distance()  # 2000 um
-
-explicit = zdx.Unit(2.0, "mm", to="m")
-explicit()  # 0.002 m
+distance = zdx.Unit(x=2.0, unit="mm")
+print(distance)
+print(distance.resolve())
+print(distance.to("um"))
 ```
 
-Resolved values remain ordinary JAX arrays. `as_array` converts numerical inputs
-while preserving `None` and `Expression` objects at model-constructor boundaries.
+```text
+Unit(x=f32[], unit='mm')
+0.002
+2000.0
+```
+
+Unit stores an input `unit` and optional `unit_out`. The default `unit_out=None`
+follows global settings when evaluated; an explicit `to=` fixes the target.
+`to(unit, **context)` returns a converted array without changing the definition;
+`to(None)` converts into the current global convention. It raises `ValueError` if
+the stored input is absent or cannot finish with the supplied context. Eager calls
+read current settings; JIT retains the settings captured when tracing, so cached
+compiled calls do not change after `set_units`. Set the convention before tracing
+or retrace after changing it.
+
+`set_units` resets omitted categories to built-in defaults. `get_units` and
+`set_units` return independent dictionaries. Explicit-unit conversion helpers remain
+independent of global settings.
+
+`as_array` converts numerical inputs to strongly typed JAX arrays. Inferred dtypes
+are preserved unless `float`, `int`, `complex`, or `bool` is requested; JAX's
+configuration chooses precision. None and Expressions pass through unchanged, with
+no future cast attached. Realised numerical values remain ordinary arrays.
+
+## Reference
+
+::: zodiax.numerics.expressions
+
+::: zodiax.numerics.transforms
+
+::: zodiax.numerics.operations
+
+::: zodiax.numerics.links
+
+::: zodiax.numerics.units
+
+Array and State references are on the [arrays and state](stateful.md) page.

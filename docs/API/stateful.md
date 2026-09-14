@@ -4,32 +4,53 @@ Numerical constructor boundaries can use `as_array` to convert Python or NumPy
 values to strongly typed JAX arrays while preserving inferred dtype. `None` and any
 `Expression` pass through unchanged.
 
+Generic conversion retains inferred integer and complex types. Passing
+`dtype=float`, `int`, `complex`, or `bool` requests that numerical kind using JAX's
+configured default precision. The representations below use the default
+configuration.
+
 ## Running state
 
-`State` is an immutable Zodiax `Module` that owns named array or expression values.
+`State` is an immutable Zodiax `Module` of current numerical arrays. Expressions
+belong in the model; StateRef reads their current inputs from state.
 It uses the same path-based `get` and `set` API as every other Zodiax module:
 
 ```python
+import jax.random as jr
+import zodiax as zdx
+
 state = zdx.State(time=0.0, counter=0, key=jr.key(0))
 
 state.time
 state.get("time")
-state = state.set(time=1.5, counter=1)
+state = state.set(time=zdx.as_array(1.5), counter=zdx.as_array(1))
+print(state.time, state.counter)
 ```
 
-Numerical inputs are converted to arrays at construction and after updates. The
-state topology and every leaf's shape, dtype, and weak type remain fixed; `set`
-replaces existing paths rather than adding new entries. This is the carry contract
-required by JAX compiled loops. Nested mappings provide namespaced state when
-needed.
+```text
+1.5 1
+```
+
+Construction converts each entry to one array, including numerical lists and
+tuples and typed JAX random keys. State entries must be numerical arrays; `None`
+and Expression definitions are not valid entries. Inherited `set` does not
+normalise replacements; supply arrays. When State is a JAX loop carry, callers
+preserve its tree structure and every array's shape and dtype. Qualified paths
+such as `values.time` disambiguate entry names.
 
 A conventional State can advance its available index and time entries in one pure
 transition:
 
 ```python
 state = zdx.State(index=0, time=0.0, dt=0.1, key=jr.key(0))
-
+print(state)
 state = state.step()
+print(state.index, state.time)
+```
+
+```text
+State(values={'index': i32[], 'time': f32[], 'dt': f32[], 'key': key<fry>[]})
+1 0.1
 ```
 
 `step()` increments `index` when present and adds the stored `dt` to `time` when
@@ -45,21 +66,29 @@ same_time = zdx.StateRef("time")
 
 current_time = time.resolve(state=state)
 same_value = same_time.resolve(state=state)
+print(time)
+print(current_time, same_value)
 ```
 
-References compose anywhere an expression is accepted. Interpolation therefore
-uses its ordinary `x` operand for state-driven queries:
+```text
+StateRef(path='time')
+0.1 0.1
+```
+
+References compose anywhere an expression is accepted. For example, a transform can
+read time directly from state:
 
 ```python
-history = zdx.Interpolation(
-    knots=times,
-    values=samples,
-    x=state.ref("time"),
-)
+scheduled = zdx.Map(x=state.ref("time"), s=2.0)
 
-value = history.resolve(state=state)
+value = scheduled.resolve(state=state)
 state = state.step()
-next_value = history.resolve(state=state)
+next_value = scheduled.resolve(state=state)
+print(value, next_value)
+```
+
+```text
+0.2 0.4
 ```
 
 `validate_state(model, state)` checks that every reference targets an available
