@@ -10,10 +10,14 @@ reader is a new postgraduate student with basic Python experience.
   a new pattern. Establish the behaviour and public contract before changing APIs.
 - Make the smallest coherent change, preserve unrelated work, and discuss broad
   redesigns before implementing them. Follow the user's latest direction.
-- The current numerics pass includes the user overview, developer contracts, and
-  numerical tests. Use those contracts to guide regression tests for public
-  behaviour and promised JAX transformations. Keep serialisation and other package
-  sections outside this pass; do not run their suites or rewrite their documentation.
+- The active pass covers derivatives and serialisation, including both overviews
+  (keep serialisation short), developer contracts, and tests. Follow
+  [REVIEW_PLAN.md](REVIEW_PLAN.md). Discourage changes outside these packages; record
+  any necessary exception and its tests in [REVIEW_LOG.md](REVIEW_LOG.md) for later
+  review. Optimisation and the Equinox wrappers remain outside this pass.
+- Mirror the package layout under `tests/`: numerical, derivative, and serialisation
+  tests live in `numerics/`, `derivatives/`, and `serialisation/`. Tests for top-level
+  modules such as Base, Module, stats, and optimisation stay at the test root.
 - Preserve established Base behaviour on main. Review and change its new numerical
   features without redesigning existing path operations.
 - Keep Module, aliases, descendant lookup, and multi-object updates in `module.py`.
@@ -24,7 +28,9 @@ reader is a new postgraduate student with basic Python experience.
   a value. Aliases are static, consistently ordered name/path pairs targeting
   stored dynamic fields. Explain the difference between these fixed paths and
   descendant-name lookup, and keep structural validation at explicit boundaries.
-- Do not commit or publish externally without an explicit request.
+- The user has approved local commits for the reviewed derivatives and serialisation
+  changes, including their tests, documentation, and review records. Keep unrelated
+  work out of these commits. Do not push, merge, or publish without a further request.
 - Judge unreleased development APIs against the agreed design and current source.
   Old migration snapshots alone do not justify compatibility machinery or dead code.
 
@@ -108,6 +114,11 @@ reader is a new postgraduate student with basic Python experience.
 - Do not add per-class `__zodiax_validate__` archive hooks. Keep useful constructor
   checks visible; review generic archive structure and loading separately from
   numerical class implementations.
+- Serialisation guarantees supported declared fields, container structure, and
+  array values under the recorded class schema and compatible environment. Keep
+  behaviour in installed Zodiax/Equinox class methods and persistent state in fields.
+  Callable Modules follow this same contract; standalone functions and function-valued
+  fields are unsupported. Do not add callable registries or built-in function symbols.
 - Make inputs, outputs, shapes, dtypes, broadcasting, and relevant JAX behaviour
   explicit. Distinguish construction, validation, and numerical evaluation.
 - Keep dependencies and changes in behaviour visible at call sites where practical.
