@@ -196,10 +196,12 @@ are derived and consumed.
 
 ## Tree definitions
 
-The sibling `zodiax.derivatives` package provides `TreeLayout` and the associated
-realised vector, matrix, Jacobian, exact Hessian, Gauss--Newton, and Fisher classes.
-`TreeLayout` records selected floating-coordinate paths and shapes. Derivative
-operations include every leaf of the supplied parameter PyTree and reject
-non-floating leaves rather than silently filtering them. `ObjectDefinition`
-separately records the complete supported object topology for validated `.zdx`
-archives and is generated automatically by `save` and `load`.
+The sibling `zodiax.derivatives` package provides realised vector, matrix, Jacobian,
+exact Hessian, Gauss--Newton, and Fisher classes, plus reusable eigendecomposition,
+Cholesky, projection, and local-parameterisation results. Derivative operations
+derive backend coordinate tracking from the supplied parameter PyTree automatically;
+`TreeLayout` is the lower-level metadata object that records those paths and shapes.
+Every supplied leaf is included and non-floating leaves are rejected rather than
+silently filtered. `ObjectDefinition` separately records the complete supported
+object topology for validated `.zdx` archives and is generated automatically by
+`save` and `load`.

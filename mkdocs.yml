@@ -81,6 +81,7 @@ nav:
       - Building Classes: usage.md
       - Numerics: numerics.md
       - Derivatives: derivatives.md
+      - Decompositions: decompositions.md
       - Numerics Design Lab: numerics_design.md
       - Optimisation: optimisation_tools.md
   - API:

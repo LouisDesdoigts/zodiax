@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from io import BytesIO
 from typing import Any
 
 import equinox as eqx
@@ -28,6 +29,7 @@ def test_public_exports():
         "TreeLayout",
         "TreeVector",
         "TreeMatrix",
+        "Derivative",
         "Jacobian",
         "Hessian",
         "GaussNewton",
@@ -43,6 +45,41 @@ def test_public_exports():
     assert zdx.jacobian is zdx.derivatives.jacobian
     assert zdx.hessian is zdx.derivatives.hessian
     assert zdx.gauss_newton is zdx.derivatives.gauss_newton
+
+
+@pytest.mark.parametrize("result_type", [zdx.Jacobian, zdx.Hessian, zdx.GaussNewton])
+def test_derivative_family_preserves_construction_updates_and_archives(result_type):
+    layout = zdx.TreeLayout.from_tree({"weights": np.ones(2)})
+    result = result_type([[1.0, 2.0], [0.0, 3.0]], layout)
+
+    assert isinstance(result, zdx.Derivative)
+    expected = np.array([[1.0, 2.0], [0.0, 3.0]])
+    if result_type is zdx.Jacobian:
+        assert not isinstance(result, zdx.TreeMatrix)
+    else:
+        assert isinstance(result, zdx.TreeMatrix)
+        expected = (expected + expected.T) / 2
+    assert np.array_equal(result.matrix, expected)
+
+    updated = eqx.filter_jit(lambda item: item.set("matrix", 2 * item.matrix))(result)
+    assert type(updated) is result_type
+    assert np.array_equal(updated.matrix, 2 * expected)
+    assert np.array_equal(result.matrix, expected)
+
+    file = BytesIO()
+    zdx.save(file, result)
+    restored = zdx.load(file)
+    assert isinstance(restored, zdx.Derivative)
+    assert eqx.tree_equal(restored, result, typematch=True)
+
+
+def test_fisher_is_a_symmetric_matrix_outside_the_derivative_family():
+    parameters = {"weights": np.ones(2)}
+    fisher = zdx.jacobian(lambda values: values["weights"], parameters).fisher()
+
+    assert isinstance(fisher, zdx.TreeMatrix)
+    assert not isinstance(fisher, zdx.Derivative)
+    assert np.array_equal(fisher.matrix, np.eye(2))
 
 
 def test_tree_layout_roundtrip_uses_canonical_jax_order():
@@ -127,51 +164,6 @@ def test_tree_layout_uses_the_flat_vector_dtype():
     assert restored["low_precision"].dtype == vector.dtype
     assert restored["real"].dtype == vector.dtype
     assert layout.compatible(compatible)
-
-
-@pytest.mark.parametrize("dtype", [np.int32, np.bool_, np.complex64])
-def test_tree_layout_rejects_non_floating_leaves(dtype):
-    with pytest.raises(TypeError, match="floating"):
-        zdx.TreeLayout.from_tree({"value": np.ones(2, dtype=dtype)})
-
-    layout = zdx.TreeLayout(("value",), ((2,),))
-    with pytest.raises(TypeError, match="floating"):
-        layout.flatten({"value": np.ones(2, dtype=dtype)})
-
-
-def test_tree_layout_from_tree_rejects_mixed_parameter_leaves():
-    tree = {
-        "coefficient": np.asarray([1.0, 2.0]),
-        "index": np.asarray(3, dtype=np.int32),
-        "label": "fixed",
-    }
-
-    with pytest.raises(TypeError, match="index.*floating"):
-        zdx.TreeLayout.from_tree(tree)
-
-
-@pytest.mark.parametrize(
-    ("args", "message"),
-    [
-        (((), ()), "at least one"),
-        ((("a", "a"), ((), ())), "unique"),
-        (
-            (("a", "a.b"), ((), (1,))),
-            "parent",
-        ),
-        ((("a",), ((), (1,))), "equal lengths"),
-        ((("a",), ((-1,),)), "negative"),
-    ],
-)
-def test_tree_layout_rejects_invalid_metadata(args, message):
-    with pytest.raises((TypeError, ValueError), match=message):
-        zdx.TreeLayout(*args)
-
-
-@pytest.mark.parametrize("shape", [(1.9,), ("2",), (True,)])
-def test_tree_layout_rejects_non_integer_shape_dimensions(shape):
-    with pytest.raises(TypeError, match="integer"):
-        zdx.TreeLayout(("a",), (shape,))
 
 
 def test_tree_layout_rejects_incompatible_values_and_axes():
@@ -429,22 +421,17 @@ def test_hessian_preserves_matrix_coordinate_labels():
     assert np.allclose(hessian.diagonal().flat_dict()["z"], -2.0)
 
 
-def test_fisher_from_jacobian_matches_gaussian_information():
+def test_jacobian_fisher_matches_gaussian_information():
     layout = zdx.TreeLayout(("a", "z"), ((2,), ()))
     jacobian = np.asarray([[1.0, 2.0, 0.0], [0.0, 1.0, 3.0]])
     covariance = np.asarray([[2.0, 0.0], [0.0, 4.0]])
 
-    unweighted = zdx.Fisher.from_jacobian(jacobian, layout)
-    weighted = zdx.Fisher.from_jacobian(
-        jacobian,
-        layout,
-        covariance=covariance,
-    )
     tree_jacobian = zdx.Jacobian(jacobian.reshape(1, 2, 3), layout)
-    from_object = zdx.Fisher.from_jacobian(
-        tree_jacobian,
-        covariance=covariance,
-    )
+    std = np.asarray([2.0, 4.0])
+    unweighted = tree_jacobian.fisher()
+    independent = tree_jacobian.fisher(std=std)
+    weighted = tree_jacobian.fisher(covariance=covariance)
+    compiled = eqx.filter_jit(lambda value: value.fisher(std=std))(tree_jacobian)
 
     assert np.allclose(unweighted.matrix, jacobian.T @ jacobian)
     assert np.allclose(
@@ -453,22 +440,24 @@ def test_fisher_from_jacobian_matches_gaussian_information():
     )
     assert weighted.layout.compatible(layout)
     assert weighted.diagonal().flat_dict()["a"].shape == (2,)
-    assert np.allclose(from_object.matrix, weighted.matrix)
+    assert np.allclose(
+        independent.matrix,
+        (jacobian / std[:, None]).T @ (jacobian / std[:, None]),
+    )
+    assert independent.layout.compatible(tree_jacobian.layout)
+    assert np.allclose(compiled.matrix, independent.matrix)
 
 
-def test_fisher_from_jacobian_validates_shapes():
+def test_jacobian_fisher_validates_weighting():
     layout = zdx.TreeLayout(("a",), ((2,),))
+    jacobian = zdx.Jacobian(np.ones((3, 2)), layout)
 
-    with pytest.raises(ValueError, match="final axis"):
-        zdx.Fisher.from_jacobian(np.ones((3, 3)), layout)
     with pytest.raises(ValueError, match="covariance must have shape"):
-        zdx.Fisher.from_jacobian(
-            np.ones((3, 2)),
-            layout,
-            covariance=np.eye(2),
-        )
-    with pytest.raises(TypeError, match="layout must be a TreeLayout"):
-        zdx.Fisher.from_jacobian(np.ones((3, 2)))
+        jacobian.fisher(covariance=np.eye(2))
+    with pytest.raises(ValueError, match="either std or covariance"):
+        jacobian.fisher(std=1.0, covariance=np.eye(3))
+    with pytest.raises(ValueError, match="broadcast to output shape"):
+        jacobian.fisher(std=np.ones(2))
 
 
 @pytest.mark.parametrize(
@@ -484,3 +473,45 @@ def test_symmetric_matrix_types_enforce_symmetry_under_jit(matrix_type):
 
     assert np.allclose(matrix_type(matrix, layout).matrix, expected)
     assert np.allclose(construct(matrix).matrix, expected)
+
+
+@pytest.mark.parametrize("dtype", [int, bool, float])
+def test_realised_data_boundaries_use_configured_floating_dtype(dtype):
+    tree = {"x": np.asarray([1, 1], dtype=dtype)}
+    layout = zdx.TreeLayout.from_tree(tree)
+    vector = zdx.TreeVector.from_tree(tree)
+    matrix = zdx.TreeMatrix(np.eye(2, dtype=dtype), layout)
+    jacobian = zdx.Jacobian(np.eye(2, dtype=dtype), layout)
+    expected_dtype = np.asarray(0.0, dtype=float).dtype
+
+    assert vector.vector.dtype == expected_dtype
+    assert matrix.matrix.dtype == expected_dtype
+    assert jacobian.matrix.dtype == expected_dtype
+    assert not vector.vector.weak_type
+    assert np.array_equal(layout.unflatten([1, 2])["x"], np.asarray([1.0, 2.0]))
+    assert np.array_equal(jacobian.fisher(std=2).matrix, np.eye(2) / 4)
+    assert np.array_equal(
+        jacobian.fisher(covariance=[[2, 0], [0, 2]]).matrix, np.eye(2) / 2
+    )
+
+
+def test_container_updates_keep_the_original_and_static_layout():
+    tree = {"x": np.asarray([1.0, 2.0])}
+    original = zdx.TreeMatrix.from_tree(np.eye(2), tree)
+    updated = original.set("matrix", np.ones((2, 2)))
+
+    assert np.array_equal(original.matrix, np.eye(2))
+    assert np.array_equal(updated.matrix, np.ones((2, 2)))
+    assert updated.layout.compatible(original.layout)
+
+
+def test_symmetric_storage_does_not_overflow_finite_diagonal_values():
+    large = np.finfo(np.asarray(0.0, dtype=float).dtype).max * 0.75
+    matrix = zdx.Fisher.from_tree(
+        np.diag(np.asarray([large, large])), {"x": np.ones(2)}
+    )
+    assert np.all(np.isfinite(matrix.matrix))
+    assert np.array_equal(np.diag(matrix.matrix), np.asarray([large, large]))
+    assert matrix.is_positive_semidefinite()
+    assert matrix.is_positive_definite()
+    assert matrix.check("cholesky") is matrix

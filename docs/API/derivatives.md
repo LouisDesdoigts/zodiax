@@ -1,213 +1,72 @@
 # Derivatives
 
-The `zodiax.derivatives` package combines PyTree-aware derivative operations with
-serialisable containers. `TreeLayout` associates parameter leaves with one ordered
-coordinate axis. Dots separate nested paths, so literal mapping keys containing
-dots are rejected.
+`zodiax.derivatives` returns numerical derivative objects with parameter layouts.
+The [walkthrough](../derivatives.md) contains executable examples and the complete
+class hierarchy; the [factor reference](../decompositions.md) defines local
+coordinate and gradient equations.
 
-`jacobian`, `hessian`, and `gauss_newton` provide memory-conscious wrappers around
-JAX and return typed `Jacobian`, `Hessian`, and `GaussNewton` objects. Their arrays
-retain the realised numerical values, while the shared layout maps derivative axes
-back to model paths and shapes. No JAX transformation closures are stored.
+## Calculations
 
-The complete second argument is the parameter PyTree: every leaf is differentiated
-and appears in the resulting layout. All parameter leaves must therefore be
-floating. Integer, Boolean, complex, key, or non-array leaves raise rather than
-silently changing parameter membership. Fixed configuration should be captured by
-the differentiated function or supplied through its surrounding model context.
+| API | Function and parameter contract | Result |
+|---|---|---|
+| `jacobian(f, x, nbatches=1, jit=True, checkpoint=False)` | Floating dynamic parameter leaves; one floating array output | Jacobian with `.matrix.shape == f(x).shape + (n,)` |
+| `hessian(f, x, nbatches=1, jit=True, checkpoint=False, *, method="fwd-rev")` | Floating parameter leaves; one floating scalar objective | Hessian with `.matrix.shape == (n, n)` |
+| `gauss_newton(residual_fn, x, *, std=None, cov=None, inv_cov=None, nbatches=1, jit=True, checkpoint=False)` | Floating parameters; unreduced floating residuals; fixed local noise weighting | GaussNewton with `.matrix.shape == (n, n)` |
+| `J.fisher(*, std=None, covariance=None)` | Gaussian model Jacobian with parameter-independent noise | Fisher on J's layout |
 
-## Example
+`n` counts every scalar in the trainable parameter leaves. Fixed configuration
+belongs outside those dynamic leaves. Function outputs are checked during derivative
+tracing; calculations and decompositions require at least one parameter coordinate.
 
-```python
-import jax.numpy as jnp
-import zodiax as zdx
+Noise arguments are mutually exclusive within each API. `std` broadcasts to the
+output/residual shape and must be positive. Covariance is a symmetric
+positive-definite `(m, m)` matrix, where `m` is the flattened output size; supplied
+precision is symmetric positive semidefinite. Real numerical noise and stored-result
+inputs, including integers, convert to the configured default floating dtype.
+Trainable integer parameters remain unsupported.
 
-parameters = {
-    "layer": {
-        "weights": jnp.array([1.0, 2.0], dtype=jnp.float32),
-        "bias": jnp.array(0.5, dtype=jnp.float32),
-    },
-    "power": jnp.array(2.0, dtype=jnp.float32),
-}
+## Stored results and factors
 
+| Classes | Purpose and main accessors |
+|---|---|
+| Derivative | Shared matrix/layout base of Jacobian, Hessian, and GaussNewton; Fisher is separate |
+| Decomposition | Field-free family of all four factor/coordinate-map classes |
+| TreeLayout | Static coordinate order/shapes; `from_tree`, `from_paths`, `flatten`, `unflatten`, `split_axis` |
+| TreeVector | Flat parameter values; `flat_dict`, `nested_dict` |
+| TreeMatrix | Square parameter matrix; `rows`, `columns`, `blocks`, `diagonal`, norms, diagnostics, `check` |
+| Jacobian | Arbitrary output axes plus a parameter axis; `columns`, norms, `fisher` |
+| Hessian, GaussNewton, Fisher | Symmetric matrices; `eigh`, `cholesky`, `projection`, `parameterise` |
+| EigenDecomposition | Ascending eigenvalues and column eigenvectors; `reconstruct` |
+| CholeskyDecomposition | Lower factor; `reconstruct`, `solve`, `log_determinant` |
+| ParameterProjection | Latent-to-parameter factor; `apply`, `solve`, `pullback`, natural-gradient methods, `bind` |
+| LocalParameterisation | Bound origin tree; call, `step`, `encode`, gradient methods, variance and standard deviation |
 
-def function(values):
-    layer = values["layer"]
-    return layer["weights"] ** values["power"] + layer["bias"]
+Matrix `is_*` diagnostics return scalar JAX booleans. `check(method)` makes an
+explicit eager validation decision; numerical methods do not call it implicitly.
+See the [typed developer contracts](../derivatives.md#5-developer-reference) for
+shape, dtype, rank, and transformation details and their associated test files.
 
+## Migration from the main API
 
-def scalar_loss(values):
-    return jnp.sum(function(values) ** 2)
+Main's `jacobian` and `hessian` returned `(array, unflatten_function)`. The new
+functions return Jacobian and Hessian objects. Read `.matrix` for the array and use
+`.columns()` or `.blocks()` for named parameter views. A layout's `unflatten`
+returns dictionaries rather than recreating arbitrary original Module/list types;
+no reconstruction closure is stored in a derivative result.
 
+Top-level names such as `zdx.hessian` remain available. Module imports now come
+from `zodiax.derivatives`, replacing `zodiax.diffops`.
 
-observations = jnp.array([1.2, 4.1], dtype=jnp.float32)
-residuals = lambda values: function(values) - observations
-covariance = jnp.diag(jnp.array([0.2, 0.3], dtype=jnp.float32) ** 2)
+`hessian_to_pytree(H, x)` remains available with its existing deprecated status.
+It accepts a Hessian or a raw `(n, n)` matrix and returns the original
+PyTree-of-PyTrees structure, with paired leaf shapes concatenated. Use it when
+that exact container structure is required; new dictionary-based views normally
+use `H.blocks(nested=True)`.
 
-jacobian = zdx.jacobian(function, parameters)
-hessian = zdx.hessian(scalar_loss, parameters)
-gauss_newton = zdx.gauss_newton(residuals, parameters, cov=covariance)
+## API reference
 
-print(jacobian)
-# Jacobian(
-#   matrix=f32[2,4],
-#   layout=TreeLayout(
-#     paths=('layer.bias', 'layer.weights', 'power'), shapes=((), (2,), ())
-#   )
-# )
+::: zodiax.derivatives.operations
 
-print(hessian)
-# Hessian(
-#   matrix=f32[4,4],
-#   layout=TreeLayout(
-#     paths=('layer.bias', 'layer.weights', 'power'), shapes=((), (2,), ())
-#   )
-# )
+::: zodiax.derivatives.containers
 
-print(gauss_newton)
-# GaussNewton(
-#   matrix=f32[4,4],
-#   layout=TreeLayout(
-#     paths=('layer.bias', 'layer.weights', 'power'), shapes=((), (2,), ())
-#   )
-# )
-
-# Map the parameter axis, square blocks, or diagonal back to named leaves.
-jacobian.columns(nested=True)
-hessian.blocks(nested=True)
-hessian.diagonal().nested_dict()
-gauss_newton.blocks(nested=True)
-```
-
-The four derivative columns correspond to scalar `layer.bias`, the two elements of
-`layer.weights`, and scalar `power`.
-
-`nbatches` divides derivative columns into fixed blocks to reduce peak memory;
-`checkpoint=True` trades additional computation for memory. Jacobians accept one
-floating array-like output and preserve its axes. Exact Hessians require one floating
-scalar output. Gauss--Newton matrices require an unreduced floating residual output.
-
-## Exact Hessian methods
-
-`hessian` supports two mixed-mode automatic-differentiation compositions:
-
-```python
-forward_over_reverse = zdx.hessian(
-    scalar_loss,
-    parameters,
-    method="fwd-rev",
-    nbatches=4,
-)
-reverse_over_forward = zdx.hessian(
-    scalar_loss,
-    parameters,
-    method="rev-fwd",
-    nbatches=4,
-)
-```
-
-Both calculate the same exact Hessian for a smooth scalar function. `"fwd-rev"` is
-the default: it linearises a reverse-mode gradient once and normally has less
-overhead for scalar objectives. Its retained gradient linearisation is reused across
-the parameter-column blocks.
-
-`"rev-fwd"` reverse-differentiates a scalar directional forward derivative. The
-outer reverse transformation acts on the larger primal-and-tangent computation, so
-this method is usually slower and may repeat more work across blocks. It remains
-useful when a model has unusually favourable forward derivative rules or memory
-behaviour, and for compatibility tests and independent numerical cross-checks. It
-requires forward-mode derivative support; a custom-VJP-only operation may therefore
-be incompatible. The methods differ in execution rather than mathematical accuracy.
-
-## Gauss--Newton Hessians
-
-`gauss_newton` calculates
-
-\[
-G(x) = J_r(x)^\mathsf{T} C^{-1} J_r(x)
-\]
-
-from the Jacobian of a residual function. It applies JVPs, residual weighting, and
-the transposed linearisation in parameter-column blocks, so the full residual
-Jacobian is never materialised.
-
-!!! warning "Pass residuals, not a scalar loss"
-
-    `residual_fn(x)` must return the complete, unreduced residual array. Do not pass
-    a loss that sums, averages, squares, or otherwise reduces those residuals. A
-    scalar return value is accepted because a problem may genuinely have one scalar
-    residual; Zodiax cannot distinguish that case from an incorrectly supplied
-    scalar objective.
-
-```python
-# Correct: the individual residuals remain visible to the linearisation.
-residual_fn = lambda values: function(values) - observations
-G = zdx.gauss_newton(residual_fn, parameters, cov=covariance)
-
-# Incorrect: this is a reduced scalar objective, not a residual function.
-loss_fn = lambda values: jnp.sum(residual_fn(values) ** 2)
-G_wrong = zdx.gauss_newton(loss_fn, parameters)
-```
-
-For the constant-covariance weighted least-squares objective
-
-\[
-L(x) = \frac{1}{2} r(x)^\mathsf{T} C^{-1} r(x),
-\]
-
-the exact Hessian is
-
-\[
-\nabla^2 L(x)
-= J_r(x)^\mathsf{T} C^{-1}J_r(x)
-+ \sum_i \left(C^{-1}r(x)\right)_i\nabla^2r_i(x).
-\]
-
-Gauss--Newton omits the second term. It is exact for affine residual functions and
-agrees with the exact Hessian at a zero-residual solution. It is often a useful
-positive-semidefinite local approximation when residuals are small or the model is
-locally linear. It can be misleading far from a solution, for strongly nonlinear
-residuals, when negative curvature matters, or when the covariance depends on the
-parameters. Use `hessian` on the complete scalar objective when all curvature terms
-are required.
-
-A Gauss--Newton matrix coincides with Fisher information only under additional
-statistical assumptions. Zodiax therefore returns a `GaussNewton`, not a `Fisher`.
-
-### Covariance or inverse covariance
-
-Pass `cov` when the residual covariance itself is available:
-
-```python
-G = zdx.gauss_newton(residual_fn, parameters, cov=covariance)
-```
-
-Zodiax applies its inverse action with a linear solve; it does not explicitly form
-`C^-1`. This is generally more stable and avoids constructing a full inverse when
-only its action on residual responses is required. `cov` should be symmetric and
-positive definite.
-
-Pass `inv_cov` when a precision matrix has already been calculated and can be reused:
-
-```python
-precision = jnp.linalg.inv(covariance)
-G = zdx.gauss_newton(residual_fn, parameters, inv_cov=precision)
-```
-
-This replaces each covariance solve with direct multiplication and is often faster
-when the same precision is reused across many parameter points. Explicit inversion
-can be less stable for poorly conditioned covariance matrices, so it should normally
-be performed once outside `gauss_newton` using an appropriate factorisation. `cov`
-and `inv_cov` are mutually exclusive; omitting both selects identity weighting. Both
-matrices have shape `(residuals.size, residuals.size)` under row-major residual
-flattening and are treated as constant with respect to the parameters.
-
-## Legacy Hessian conversion
-
-`hessian_to_pytree` is deprecated as of version 0.5.0. It remains available during
-the compatibility period for callers that need the original PyTree-of-PyTrees
-representation. New code should use `Hessian.blocks(nested=True)`, which reads the
-layout already stored on the realised result. A raw matrix can first be wrapped as
-`Hessian(matrix, TreeLayout.from_tree(parameters))`.
-
-::: zodiax.derivatives
+::: zodiax.derivatives.decompositions

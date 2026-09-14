@@ -1,721 +1,504 @@
 # Zodiax derivatives overview
 
-Zodiax derivatives provides PyTree-aware Jacobian, exact Hessian, and
-Gauss--Newton calculations. Differentiated parameter leaves are flattened into one
-stable coordinate axis, while `TreeLayout` records how that axis maps back to model
-paths and shapes.
+Zodiax calculates derivatives from a parameter dictionary and returns numerical
+objects that retain the parameter names and shapes.
 
-The numerical results are returned as ordinary Equinox modules containing arrays
-and static layout metadata. The differentiated function and temporary JAX
-linearisation closures are consumed during calculation rather than stored. The
-resulting derivative objects remain inspectable, serialisable, and compatible with
-JAX transformations.
+## 1. Define a prediction and calculate its derivatives
 
-## 1. High-level operations
-
-The three primary calculations differ by the contract of their first argument:
-
-| Operation | Function output | Result |
-|---|---|---|
-| `jacobian(f, x)` | Floating array | Exact output Jacobian |
-| `hessian(f, x)` | Floating scalar objective | Exact objective Hessian |
-| `gauss_newton(residual_fn, x)` | Unreduced floating residual array | Gauss--Newton Hessian approximation |
-
-```python
-import jax.numpy as np
-import zodiax as zdx
-
-parameters = {
-    "slope": np.array(1.2),
-    "offset": np.array(-0.1),
-}
-coordinates = np.array([-1.0, 0.0, 1.0])
-observations = np.array([-1.0, 0.2, 1.1])
-
-
-def model(values):
-    return values["slope"] * coordinates + values["offset"]
-
-
-def residuals(values):
-    return model(values) - observations
-
-
-cov = np.diag(np.array([0.1, 0.2, 0.1]) ** 2)
-
-J = zdx.jacobian(model, parameters)
-G = zdx.gauss_newton(residuals, parameters, cov=cov)
-
-
-def loss(values):
-    residual = residuals(values)
-    return 0.5 * residual @ np.linalg.solve(cov, residual)
-
-
-H = zdx.hessian(loss, parameters)
-```
-
-`J`, `G`, and `H` share the parameter layout even though they represent different
-derivative objects:
-
-```text
-J.matrix.shape == (3, 2)
-G.matrix.shape == (2, 2)
-H.matrix.shape == (2, 2)
-
-J.layout.paths == ('offset', 'slope')
-G.layout.paths == ('offset', 'slope')
-H.layout.paths == ('offset', 'slope')
-```
-
-Plain dictionaries use JAX's canonical key order, not insertion order, so `offset`
-precedes `slope` in this example.
-
-## 2. Package structure
-
-The public classes and operations are re-exported from `zodiax`, so normal use is
-`zdx.TreeLayout`, `zdx.jacobian`, `zdx.hessian`, and `zdx.gauss_newton`.
-
-```text
-zodiax/derivatives/
-├── overview.md
-├── containers.py
-│   ├── TreeLayout
-│   ├── TreeVector
-│   ├── TreeMatrix
-│   ├── Jacobian
-│   ├── Hessian
-│   ├── GaussNewton
-│   └── Fisher
-└── operations.py
-    ├── jacobian
-    ├── hessian
-    ├── gauss_newton
-    └── hessian_to_pytree (deprecated)
-```
-
-The realised container hierarchy is deliberately small:
-
-```mermaid
-classDiagram
-    class Base
-    class TreeLayout
-    class TreeVector
-    class TreeMatrix
-    class Jacobian
-    class Hessian
-    class GaussNewton
-    class Fisher
-
-    Base <|-- TreeLayout
-    Base <|-- TreeVector
-    Base <|-- TreeMatrix
-    Base <|-- Jacobian
-    TreeMatrix <|-- Hessian
-    TreeMatrix <|-- GaussNewton
-    TreeMatrix <|-- Fisher
-```
-
-`TreeLayout` is shared metadata rather than a matrix superclass. A `Jacobian` has
-arbitrary output axes and one parameter axis, whereas the `TreeMatrix` subclasses
-have the same parameter layout on both square axes.
-
-## 3. Parameter coordinates and `TreeLayout`
-
-Derivative operations treat the complete second argument as the parameter PyTree.
-Every leaf is included and must be floating and array-like. Integer, Boolean,
-complex, key, string, or other fixed leaves should be captured by the differentiated
-function or its surrounding model rather than included in `x`.
-
-```python
-tree = {
-    "layer": {
-        "weights": np.array([1.0, 2.0]),
-        "bias": np.array(3.0),
-    },
-    "matrix": np.zeros((2, 2)),
-}
-
-layout = zdx.TreeLayout.from_tree(tree)
-```
-
-```text
-layout.paths
-# ('layer.bias', 'layer.weights', 'matrix')
-
-layout.shapes
-# ((), (2,), (2, 2))
-
-layout.sizes
-# (1, 2, 4)
-
-layout.size
-# 7
-```
-
-`paths`, `shapes`, and their implied slices define one stable flattened coordinate
-axis. Dots separate structural path components, so literal dictionary keys that
-contain dots are rejected.
-
-The layout can flatten a matching tree and split it back into path-keyed leaves:
-
-```python
-flat = layout.flatten(tree)
-leaves = layout.unflatten(flat)
-nested = layout.unflatten(flat, nested=True)
-```
-
-`unflatten` reconstructs shaped dictionaries rather than the original model class.
-The derivative operations separately retain JAX's `ravel_pytree` closure while they
-are running so that each trial flat parameter vector can rebuild the original input
-structure.
-
-### Explicit layouts
-
-`TreeLayout.from_paths` constructs a layout for an explicitly selected and ordered
-set of paths:
-
-```python
-selected = zdx.TreeLayout.from_paths(
-    tree,
-    ("layer.weights", "layer.bias"),
-)
-```
-
-This is useful when constructing containers manually. The current `jacobian`,
-`hessian`, and `gauss_newton` operations do not accept a selected layout: they
-differentiate every leaf in the supplied parameter PyTree.
-
-Layout compatibility compares paths and shapes. Numerical values and dtypes belong
-to the vectors and matrices rather than to the layout itself.
-
-## 4. Realised derivative containers
-
-### `TreeVector`
-
-`TreeVector` associates a flat numerical vector with one layout:
-
-```python
-vector = zdx.TreeVector.from_tree(tree)
-
-vector.vector
-vector.flat_dict()
-vector.nested_dict()
-```
-
-Matrix diagonals and parameter-axis norms return `TreeVector` objects, making it
-possible to map those quantities back to named model leaves without carrying the
-original model.
-
-### `TreeMatrix`
-
-`TreeMatrix` represents a square `(n, n)` matrix whose two axes share one layout:
-
-```python
-matrix = zdx.TreeMatrix(np.eye(layout.size), layout)
-
-rows = matrix.rows()
-columns = matrix.columns()
-blocks = matrix.blocks()
-diagonal = matrix.diagonal()
-row_norms = matrix.row_norms()
-column_norms = matrix.column_norms()
-```
-
-`blocks()` returns a path-keyed tree of parameter-pair blocks. If one parameter leaf
-has shape `row_shape` and another has shape `column_shape`, their block has shape
-`row_shape + column_shape`.
-
-`Hessian`, `GaussNewton`, and `Fisher` are symmetric `TreeMatrix` subclasses. Their
-constructors store `(matrix + matrix.T) / 2`, removing small antisymmetric numerical
-differences and enforcing the container invariant. They do not project eigenvalues
-or assert positive definiteness.
-
-### `Jacobian`
-
-A `Jacobian` preserves all output axes and appends one flattened parameter axis:
-
-```text
-jacobian.matrix.shape == f(x).shape + (jacobian.layout.size,)
-```
-
-```python
-columns = J.columns()
-output_norms = J.row_norms()
-parameter_norms = J.column_norms()
-```
-
-`columns()` replaces the final flat parameter axis with named parameter leaves.
-`row_norms()` reduces the parameter axis and retains the original output shape.
-`column_norms()` reduces every output axis and returns a `TreeVector` over the
-parameters.
-
-## 5. Jacobians
-
-`jacobian` accepts one floating array-valued function:
-
-```python
-J = zdx.jacobian(
-    model,
-    parameters,
-    nbatches=1,
-    jit=True,
-    checkpoint=False,
-)
-```
-
-With `nbatches=1`, Zodiax uses the direct JAX Jacobian path. With more blocks, it
-linearises the function once and applies the resulting JVP to batches of parameter
-basis vectors. Each application produces a block of Jacobian columns without
-re-evaluating the primal model for every column.
-
-The function output axes are never flattened in the returned `Jacobian`. Only the
-input parameter coordinates are flattened.
-
-## 6. Exact Hessians
-
-`hessian` accepts one floating scalar objective and computes its exact second
-derivative:
-
-```python
-H = zdx.hessian(
-    loss,
-    parameters,
-    method="fwd-rev",
-    nbatches=1,
-    jit=True,
-    checkpoint=False,
-)
-```
-
-The result may be indefinite. Unlike Gauss--Newton, it includes every source of
-curvature in the scalar objective: nonlinear residual curvature, priors,
-regularisation, parameter-dependent weighting, and any other differentiable terms.
-
-### Forward over reverse
-
-`method="fwd-rev"` is the default. Conceptually, it calculates Hessian-vector
-products as
-
-```python
-_, hvp = jax.linearize(jax.grad(loss), x)
-column = hvp(direction)
-```
-
-Reverse mode first produces the gradient of the scalar objective. Forward mode then
-linearises that gradient. For a batched Hessian, the gradient linearisation is
-constructed once and reused across parameter directions. This is normally the most
-efficient mixed-mode ordering for a scalar objective.
-
-With `nbatches=1`, Zodiax uses `jax.hessian` directly. JAX's default Hessian
-composition is also forward over reverse.
-
-### Reverse over forward
-
-`method="rev-fwd"` calculates the same exact product by reverse-differentiating a
-scalar directional forward derivative:
-
-```python
-def directional(x):
-    return jax.jvp(loss, (x,), (direction,))[1]
-
-
-column = jax.grad(directional)(x)
-```
-
-Reverse mode now acts on the larger primal-and-tangent computation. This usually has
-more execution and compilation overhead, and may repeat more work between parameter
-blocks. It can still be useful when:
-
-- a model provides especially efficient custom JVP rules;
-- its memory or compilation behaviour favours the opposite nesting;
-- one mixed-mode transformation fails while the other remains supported;
-- or the two exact methods are being compared as a derivative cross-check.
-
-`"rev-fwd"` requires forward-mode derivative rules. In particular, an operation
-that provides only a custom VJP may not support this path.
-
-The two methods differ in execution rather than mathematical accuracy. For a smooth
-objective they calculate the same Hessian up to floating-point effects.
-
-## 7. Gauss--Newton Hessian approximations
-
-`gauss_newton` accepts a residual function rather than a scalar objective:
-
-```python
-G = zdx.gauss_newton(
-    residuals,
-    parameters,
-    cov=cov,
-    nbatches=1,
-    jit=True,
-    checkpoint=False,
-)
-```
-
-For residuals $r(x) \in \mathbb{R}^m$, parameter coordinates
-$x \in \mathbb{R}^n$, and covariance $C$, it computes
-
-\[
-G(x) = J_r(x)^\mathsf{T} C^{-1} J_r(x).
-\]
-
-Zodiax linearises the residual function once. Each matrix column is calculated as
-
-```text
-parameter direction v
-        |
-        | residual JVP
-        v
-      J v
-        |
-        | covariance weighting
-        v
-   C^-1 J v
-        |
-        | transposed residual linearisation
-        v
- J.T C^-1 J v
-```
-
-The complete residual Jacobian is never materialised. The final dense `(n, n)`
-Gauss--Newton matrix is still materialised and therefore still requires quadratic
-parameter storage.
-
-### Residuals are not scalar losses
-
-`residual_fn(x)` must return the complete residual array before it is squared,
-summed, averaged, or otherwise reduced:
-
-```python
-# Correct
-def residual_fn(values):
-    return model(values) - observations
-
-
-G = zdx.gauss_newton(residual_fn, parameters, cov=cov)
-```
-
-Do not pass a reduced scalar objective:
-
-```python
-# Incorrect for gauss_newton
-def scalar_loss(values):
-    residual = residual_fn(values)
-    return np.sum(residual**2)
-
-
-G_wrong = zdx.gauss_newton(scalar_loss, parameters)
-```
-
-A scalar function is not rejected because a problem may genuinely contain one
-scalar residual. Zodiax cannot determine whether a scalar output represents one
-residual or an already reduced loss, so the semantic distinction is part of the
-public function contract.
-
-Passing the complete scalar loss to `hessian` is different: automatic
-differentiation traces through the internal reduction and retains its complete
-curvature. No residual information is lost merely because the final objective value
-is scalar.
-
-### What the approximation omits
-
-For the constant-covariance weighted least-squares objective
-
-\[
-L(x) = \frac{1}{2}r(x)^\mathsf{T}C^{-1}r(x),
-\]
-
-the exact Hessian is
-
-\[
-\nabla^2L(x)
-= J_r(x)^\mathsf{T}C^{-1}J_r(x)
-+ \sum_i \left(C^{-1}r(x)\right)_i\nabla^2r_i(x).
-\]
-
-Gauss--Newton retains the first term and omits the residual-weighted second
-derivatives. Zodiax does not calculate or optionally add this correction. If the
-complete curvature is required, construct the scalar objective and pass it to
-`hessian`.
-
-Gauss--Newton is exact when the residual function is affine, because every residual
-Hessian is zero. It also agrees with the exact weighted least-squares Hessian at a
-zero-residual solution. It is often useful near a small-residual solution or where
-the residual model is locally close to linear.
-
-It can be misleading:
-
-- far from the solution when residuals are large;
-- for strongly nonlinear residual functions;
-- when negative curvature is important;
-- when covariance or other weighting depends on the parameters;
-- for robust or non-quadratic objectives without a corresponding generalised
-  Gauss--Newton derivation;
-- or for arbitrary scalar objectives that have no exposed residual structure.
-
-A positive-semidefinite residual weighting gives a positive-semidefinite
-Gauss--Newton matrix. That property is often useful for optimisation, but it is also
-evidence that the approximation cannot represent negative curvature in the exact
-objective.
-
-### Gauss--Newton is not generally Fisher information
-
-The same numerical matrix can equal Fisher information under additional statistical
-conditions, such as particular Gaussian likelihood models and the relevant
-expectation over data. Those conditions are not implied merely by supplying a
-residual function and covariance.
-
-`gauss_newton` therefore returns a `GaussNewton`, not a `Fisher`. The separate
-`Fisher` container and `Fisher.from_jacobian` constructor should be used only where
-the statistical interpretation is established independently.
-
-## 8. Covariance and inverse covariance
-
-`cov` and `inv_cov` are alternative residual-space weighting inputs. They both have
-shape `(m, m)`, where `m = residual_fn(x).size` after row-major flattening.
-
-### Covariance input
-
-```python
-G = zdx.gauss_newton(
-    residual_fn,
-    parameters,
-    cov=cov,
-)
-```
-
-For every parameter block, Zodiax applies `C^-1` by solving against `cov`. All JVP
-responses in that block are passed as multiple right-hand sides to the same solve.
-This avoids constructing the complete inverse and is normally the more stable path
-when a symmetric positive-definite covariance is available.
-
-The cost includes a solve for each sequential parameter block. Smaller numbers of
-larger blocks can therefore use dense linear algebra more efficiently.
-
-### Precomputed inverse covariance
-
-```python
-G = zdx.gauss_newton(
-    residual_fn,
-    parameters,
-    inv_cov=precision,
-)
-```
-
-When `inv_cov` is already available, Zodiax applies it by matrix multiplication.
-This avoids repeated covariance solves and can be substantially faster when the same
-precision is reused at many parameter points.
-
-Explicitly forming an inverse can lose numerical accuracy for an ill-conditioned
-covariance and may perform unnecessary work when only inverse products are needed.
-Prefer `inv_cov` when the precision is supplied naturally or has been calculated
-once with an appropriate factorisation, rather than repeatedly inverting the
-covariance inside an optimisation loop.
-
-`cov` and `inv_cov` are mutually exclusive. Passing both raises. Omitting both
-selects identity weighting:
-
-```python
-G = zdx.gauss_newton(residual_fn, parameters)
-```
-
-Both matrices are treated as constants with respect to `parameters`. A
-parameter-dependent covariance contributes additional terms to an exact likelihood
-Hessian and is outside this Gauss--Newton contract.
-
-## 9. Batching and memory
-
-All three derivative operations use the same `nbatches` interpretation: it is the
-number of sequential parameter-column blocks, not the number of columns per block.
-
-For `n` flattened parameters:
-
-```text
-block_size = ceil(n / nbatches)
-```
-
-The basis is padded to a fixed rectangular grid so every scanned block has the same
-shape, then the padded columns are removed from the final result. `nbatches` must be
-a positive integer no larger than `n`.
-
-```python
-J = zdx.jacobian(model, parameters, nbatches=2)
-H = zdx.hessian(loss, parameters, nbatches=2)
-G = zdx.gauss_newton(residual_fn, parameters, cov=cov, nbatches=2)
-```
-
-Increasing `nbatches` reduces the number of simultaneous tangent directions and
-usually lowers temporary memory. It also increases sequential work and may reduce
-accelerator throughput. The best value depends on the model, parameter count,
-residual size, and device.
-
-Batching does not reduce the storage of the returned dense matrix. Both exact
-Hessians and Gauss--Newton matrices always contain `n * n` floating values. A future
-matrix-free operator API would be needed for algorithms that should never
-materialise that result.
-
-The batching paths use `jax.lax.scan` so each fixed-shape block follows the same
-compiled program.
-
-## 10. JIT and checkpointing
-
-`jit=True` compiles the inner flattened function and the reusable derivative product:
-
-```python
-H = zdx.hessian(loss, parameters, jit=True)
-```
-
-The returned container can cross an outer filtered-JIT boundary:
+A small linear model illustrates the prediction, residual, and loss functions used by the three derivative calculations.
 
 ```python
 import equinox as eqx
+import jax
+import jax.numpy as np
+import zodiax as zdx
+
+
+class Linear(zdx.Module):
+    slope: jax.Array
+    offset: jax.Array
+
+    def __call__(self, x):
+        return self.slope * x + self.offset
+
+
+parameters = {"slope": np.array(2.0), "offset": np.array(0.0)}
+linear = Linear(slope=parameters["slope"], offset=parameters["offset"])
+coordinates = np.array([-1.0, 0.0, 1.0])
+observations = np.array([-1.0, 1.0, 3.0])
+noise = 0.5
+
+
+def prediction(values):
+    updated = linear.set(values)
+    return updated(coordinates)
+
+
+def residuals(values):
+    return prediction(values) - observations
+
+
+def loss(values):
+    standardised = residuals(values) / noise
+    return 0.5 * np.sum(standardised**2)
+```
+
+`prediction` updates a copy of `linear` from the supplied dictionary. Pass that
+same parameter dictionary to each derivative function:
+
+```python
+J = zdx.jacobian(prediction, parameters)
+H = zdx.hessian(loss, parameters)
+G = zdx.gauss_newton(residuals, parameters, std=noise)
+print(linear)
+print(J)
+print(H)
+print(G)
+print(J.matrix)
+print(H.matrix)
+print(G.matrix)
+```
+
+```text
+Linear(slope=weak_f32[], offset=weak_f32[])
+Jacobian(
+  matrix=f32[3,2], layout=TreeLayout(paths=('offset', 'slope'), shapes=((), ()))
+)
+Hessian(
+  matrix=f32[2,2], layout=TreeLayout(paths=('offset', 'slope'), shapes=((), ()))
+)
+GaussNewton(
+  matrix=f32[2,2], layout=TreeLayout(paths=('offset', 'slope'), shapes=((), ()))
+)
+[[ 1. -1.]
+ [ 1.  0.]
+ [ 1.  1.]]
+[[12.  0.]
+ [ 0.  8.]]
+[[12.  0.]
+ [ 0.  8.]]
+```
+
+| Result | Meaning |
+|---|---|
+| Jacobian | Change in each prediction with each parameter |
+| Hessian | Exact second derivatives of the scalar loss |
+| GaussNewton | Curvature approximation from the individual residuals |
+
+Hessian and Gauss–Newton agree for this linear least-squares problem. For nonlinear
+predictions, Gauss–Newton omits residual second derivatives. Use the complete
+scalar loss with `hessian` when those terms matter; `gauss_newton` takes unreduced
+residuals, not a sum of squared residuals.
+
+TreeLayout in the printed objects is internal bookkeeping for parameter names and
+shapes. The examples use JAX's default precision and floating trainable parameters.
+
+## 2. Use the curvature for factors and parameter steps
+
+Decompositions reuse the calculated Hessian to describe local parameter changes.
+
+```python
+eigen = H.eigh()
+cholesky = H.cholesky()
+projection = H.projection(method="cholesky")
+print(eigen)
+print(cholesky)
+print(projection)
+assert np.allclose(eigen.reconstruct().matrix, H.matrix)
+assert np.allclose(cholesky.reconstruct().matrix, H.matrix)
+```
+
+```text
+EigenDecomposition(
+  values=f32[2],
+  vectors=f32[2,2],
+  layout=TreeLayout(paths=('offset', 'slope'), shapes=((), ()))
+)
+CholeskyDecomposition(
+  factor=f32[2,2], layout=TreeLayout(paths=('offset', 'slope'), shapes=((), ()))
+)
+ParameterProjection(
+  matrix=f32[2,2],
+  retained=bool[2],
+  eigenvalues=None,
+  layout=TreeLayout(paths=('offset', 'slope'), shapes=((), ())),
+  method='cholesky'
+)
+```
+
+The eigen decomposition exposes eigenvalues and eigenvectors. Cholesky stores a
+lower-triangular factor. The projection maps latent coordinates into parameter
+steps, scaled by the local curvature. Cholesky requires positive definiteness;
+the default eigen projection, `H.projection()`, also supports positive-semidefinite
+matrices by discarding unresolved modes.
+
+Bind the projection to the same parameter dictionary:
+
+```python
+geometry = projection.bind(parameters)
+latent = np.array([1.0, 0.0])
+trial_parameters = geometry(latent)
+print(geometry)
+print(trial_parameters)
+print(prediction(trial_parameters))
+assert np.allclose(geometry.encode(trial_parameters), latent)
+```
+
+```text
+LocalParameterisation(
+  projection=ParameterProjection(
+    matrix=f32[2,2],
+    retained=bool[2],
+    eigenvalues=None,
+    layout=TreeLayout(paths=('offset', 'slope'), shapes=((), ())),
+    method='cholesky'
+  ),
+  origin={'slope': weak_f32[], 'offset': weak_f32[]}
+)
+{'offset': Array(0.28867516, dtype=float32), 'slope': Array(2., dtype=float32)}
+[-1.7113248   0.28867516  2.288675  ]
+```
+
+`geometry.zeros` represents the original parameters. Calling `geometry(latent)`
+adds the corresponding step and returns another parameter dictionary; `step(latent)`
+returns only the change. `encode` recovers latent coordinates. The shortcut
+`H.parameterise(parameters, method="cholesky")` constructs and binds the projection
+in one call.
+
+```python
+gradient = jax.grad(loss)(parameters)
+print(geometry.natural_gradient(gradient))
+print(geometry.standard_deviation)
+```
+
+```text
+{'offset': Array(-1.0000001, dtype=float32), 'slope': Array(0., dtype=float32)}
+{'offset': Array(0.28867516, dtype=float32), 'slope': Array(0.3535534, dtype=float32)}
+```
+
+`natural_gradient` applies the represented inverse curvature to a gradient,
+without choosing a sign or step size. Here the standard deviations have the local
+Gaussian uncertainty interpretation. Discarded modes contribute zero to the
+represented covariance; this does not mean an unconstrained parameter has zero
+uncertainty. The [factor reference](decompositions.md) gives the equations,
+rank-selection rules, and differentiation limits.
+
+## 3. Inspect named results and Fisher information
+
+The same derivative objects provide named parameter views and Gaussian Fisher information.
+
+```python
+print(J.columns()["slope"])
+print(H.blocks()["offset"]["slope"])
+F = J.fisher(std=noise)
+print(F)
+assert np.allclose(F.matrix, H.matrix)
+```
+
+```text
+[-1.  0.  1.]
+0.0
+Fisher(
+  matrix=f32[2,2], layout=TreeLayout(paths=('offset', 'slope'), shapes=((), ()))
+)
+```
+
+`columns` groups sensitivities by parameter name, while `blocks` groups pairs of
+parameters. Fisher information uses the model Jacobian and a Gaussian noise model;
+its matrix agrees with the Hessian in this example.
+
+## 4. Adjust noise and execution options
+
+Noise arguments and column batching adapt the same calculation to the data and available memory.
+
+```python
+covariance = noise**2 * np.eye(observations.size)
+weighted = zdx.gauss_newton(residuals, parameters, cov=covariance, nbatches=2)
+assert np.allclose(weighted.matrix, G.matrix)
 
 calculate = eqx.filter_jit(
-    lambda values: zdx.hessian(loss, values, nbatches=2)
+    lambda values: zdx.hessian(loss, values, nbatches=2, checkpoint=True)
 )
-H = calculate(parameters)
+assert np.allclose(calculate(parameters).matrix, H.matrix)
 ```
 
-`checkpoint=True` applies `jax.checkpoint` before differentiation:
+Use `std` for independent noise, `cov` for covariance, or `inv_cov` for an existing
+precision matrix; supply at most one. `J.fisher` calls its covariance argument
+`covariance`. These describe fixed noise for the local derivative calculation.
 
-```python
-H = zdx.hessian(
-    loss,
-    parameters,
-    nbatches=2,
-    checkpoint=True,
-)
+`nbatches` is the number of sequential parameter-column blocks. More blocks reduce
+simultaneous tangent storage, while the returned dense matrix keeps the same size.
+`checkpoint=True` trades repeated computation for fewer saved intermediates.
+Both Hessian methods are exact: `"fwd-rev"` is the default, and `"rev-fwd"` is an
+alternative execution order.
+
+If the prediction uses numerical Expressions or shared values, resolve the
+containing model inside `prediction` so those parameters remain part of the
+calculation. Returned derivative objects store arrays rather than executable
+linearisation closures; recalculate them when the parameter point changes.
+
+## 5. Developer reference
+
+The structure and contract tables below define the implementation and test boundaries.
+
+### 5.1. Package structure and classes
+
+The package separates parameter layouts and results, derivative calculations, and reusable matrix factors.
+
+```text
+src/zodiax/derivatives/
+├── __init__.py
+├── containers.py       Layouts, vectors, matrices, Jacobian, curvature results
+├── operations.py       jacobian, hessian, gauss_newton, hessian_to_pytree
+├── decompositions.py   Eigen/Cholesky factors and local parameter coordinates
+└── overview.md
 ```
 
-Checkpointing asks JAX to rematerialise selected primal computations during reverse
-differentiation instead of retaining all intermediates. It can lower peak memory at
-the cost of extra computation. Its benefit depends on the differentiated program
-and transform composition, so it should be benchmarked rather than assumed.
+Public names are available as `zdx.<name>`. Derivative groups Jacobian, Hessian, and
+GaussNewton; Fisher uses the symmetric-matrix interface separately. Decomposition
+groups the four factor and coordinate-map classes without imposing shared fields.
+`_SymmetricTreeMatrix` is the internal implementation shared by symmetric results.
 
-`nbatches` and `checkpoint` address different memory sources and may be used
-together.
-
-## 11. Mapping results back to parameter trees
-
-Typed containers already know their parameter layout:
-
-```python
-parameter_columns = J.columns(nested=True)
-hessian_blocks = H.blocks(nested=True)
-gauss_newton_diagonal = G.diagonal().nested_dict()
+```mermaid
+classDiagram
+    class Base {
+        +get(paths)
+        +set(paths, values)
+    }
+    class Derivative {
+        +matrix
+        +layout
+        +Derivative(matrix, layout)
+    }
+    class Decomposition {
+    }
+    class TreeLayout {
+        +paths
+        +shapes
+        +size
+        +slices
+        +from_tree(tree)
+        +from_paths(tree, paths)
+        +compatible(other)
+        +flatten(tree)
+        +unflatten(vector, nested)
+        +split_axis(array, axis, nested)
+    }
+    class TreeVector {
+        +vector
+        +layout
+        +from_tree(tree, layout)
+        +flat_dict()
+        +nested_dict()
+    }
+    class TreeMatrix {
+        +matrix
+        +layout
+        +from_tree(matrix, tree)
+        +rows(nested)
+        +columns(nested)
+        +blocks(nested)
+        +diagonal()
+        +row_norms(ord)
+        +column_norms(ord)
+        +is_finite()
+        +is_symmetric()
+        +is_positive_semidefinite()
+        +is_positive_definite()
+        +check(method)
+    }
+    class Jacobian {
+        +matrix
+        +layout
+        +output_shape
+        +columns(nested)
+        +row_norms(ord)
+        +column_norms(ord)
+        +fisher(std, covariance)
+    }
+    class _SymmetricTreeMatrix {
+        +eigh()
+        +cholesky()
+        +projection(method, rtol, damping, equilibrate)
+        +parameterise(origin, options)
+    }
+    class Hessian {
+        +Hessian(matrix, layout)
+    }
+    class GaussNewton {
+        +GaussNewton(matrix, layout)
+    }
+    class Fisher {
+        +Fisher(matrix, layout)
+    }
+    class EigenDecomposition {
+        +values
+        +vectors
+        +layout
+        +from_matrix(matrix)
+        +reconstruct()
+    }
+    class CholeskyDecomposition {
+        +factor
+        +layout
+        +log_determinant
+        +from_matrix(matrix)
+        +reconstruct()
+        +solve(value)
+    }
+    class ParameterProjection {
+        +matrix
+        +retained
+        +eigenvalues
+        +layout
+        +method
+        +rank
+        +covariance
+        +from_matrix(matrix, options)
+        +apply(latent)
+        +__call__(latent)
+        +solve(step)
+        +pullback(gradient)
+        +natural_gradient(gradient)
+        +natural_norm(gradient)
+        +bind(origin)
+    }
+    class LocalParameterisation {
+        +projection
+        +origin
+        +zeros
+        +variance
+        +standard_deviation
+        +__call__(latent)
+        +step(latent)
+        +encode(parameters)
+        +pullback(gradient)
+        +natural_gradient(gradient)
+        +natural_norm(gradient)
+    }
+    Base <|-- TreeLayout
+    Base <|-- TreeVector
+    Base <|-- TreeMatrix
+    Base <|-- Derivative
+    Derivative <|-- Jacobian
+    Derivative <|-- Hessian
+    Derivative <|-- GaussNewton
+    Decomposition <|-- EigenDecomposition
+    Decomposition <|-- CholeskyDecomposition
+    Decomposition <|-- ParameterProjection
+    Decomposition <|-- LocalParameterisation
+    Base <|-- Decomposition
+    TreeMatrix <|-- _SymmetricTreeMatrix
+    _SymmetricTreeMatrix <|-- Hessian
+    _SymmetricTreeMatrix <|-- GaussNewton
+    _SymmetricTreeMatrix <|-- Fisher
+    ParameterProjection --> TreeLayout : coordinates
+    LocalParameterisation --> ParameterProjection : uses
 ```
 
-`hessian_to_pytree` is deprecated as of version 0.5.0. It remains temporarily
-available for legacy code that needs JAX's exact PyTree-of-PyTrees representation:
+Tests live in `tests/derivatives/`: `test_containers.py` covers layouts and stored
+results, `test_operations.py` derivative calculations, `test_decompositions.py`
+matrix factors and coordinate maps, and `test_edge_cases.py` additional shape,
+dtype, and transformation boundaries.
 
-```python
-tree_hessian = zdx.hessian_to_pytree(H, parameters)
-```
+### 5.2. Layouts and realised data
 
-For each pair of parameter leaves `i` and `j`, the legacy representation's block has
-shape `shape_i + shape_j`. If a typed `Hessian` is supplied, its stored layout must
-be compatible with the supplied parameter tree. A plain `(n, n)` array is validated
-against the flattened parameter size.
+Layouts describe coordinate structure; numerical containers own array conversion.
 
-New code should use `H.blocks(nested=True)`, which uses the layout already attached
-to the result and avoids supplying the parameter tree again. To migrate code that
-starts with a raw matrix, attach the layout explicitly:
+| Input or API | Output type and shape | Contract |
+|---|---|---|
+| `TreeLayout.from_tree(tree)` with real numerical leaves | TreeLayout | JAX leaf order; static paths/shapes; no stored values or dtype. |
+| `TreeLayout.from_paths(tree, paths)` | TreeLayout | Explicit path order; unique selected leaves; dots delimit structural paths. |
+| `layout.compatible(other)` | Python bool | Compare paths and shapes independently of values/dtypes. |
+| `layout.flatten(tree)` | Floating Array `(n,)` | Selected shapes match; use configured default float. |
+| `layout.unflatten(vector, nested=False/True)` | Flat/nested dictionary of Arrays | Restore leaf shapes, not original Module/list classes. |
+| `layout.split_axis(a, axis)`, axis length `n` | Dictionary of Arrays | Replace that axis with each leaf shape; preserve other axes. |
+| `Derivative(matrix, layout)` | Derivative with final axis `(n,)` | Shared stored-result fields; Jacobian, Hessian, and GaussNewton are Derivatives, Fisher is not. |
+| `TreeVector(vector, layout)` | TreeVector, Array `(n,)` | Real array-like data convert to configured default float. |
+| `TreeMatrix(matrix, layout)` | TreeMatrix, Array `(n, n)` | Both axes share the layout. |
+| Zero-length numerical leaves in layouts/storage views | Zero-coordinate arrays and shaped views | Storage is allowed; derivative calculations and factorisation need `n > 0`. |
+| Hessian/GaussNewton/Fisher construction | Same class, Array `(n, n)` | Symmetrise with `(matrix + matrix.T) / 2`; no spectrum check. |
+| `matrix.blocks()` for leaf shapes `a`, `b` | Dictionaries of Arrays `a + b` | Scalar/scalar blocks have shape `()`. |
+| Matrix diagonal and parameter-axis norms | TreeVector `(n,)` | Preserve parameter layout. |
+| Inherited immutable `set` | New container | No constructor conversion/validation; supply valid replacements. |
 
 ```python
 layout = zdx.TreeLayout.from_tree(parameters)
-H = zdx.Hessian(hessian_matrix, layout)
-hessian_blocks = H.blocks(nested=True)
+vector = zdx.TreeVector.from_tree(parameters)
+assert J.matrix.shape == coordinates.shape + (layout.size,)
+assert H.blocks()["offset"]["slope"].shape == ()
+assert np.allclose(layout.flatten(layout.unflatten(vector.vector)), vector.vector)
 ```
 
-## 12. Transformation and storage boundaries
+### 5.3. Differentiation and weighting
 
-The realised arrays inside `Jacobian`, `Hessian`, `GaussNewton`, and `Fisher` are
-ordinary dynamic JAX leaves. Their `TreeLayout` metadata contains static paths and
-shapes. This lets derivative values participate in filtered JIT, further automatic
-differentiation, and Zodiax serialisation without retaining executable function
-closures.
+Trainable parameters are floating leaves; noise defines a fixed weighting for the local derivative.
 
-The derivative operations themselves consume:
-
-- the callable being differentiated;
-- the temporary `ravel_pytree` reconstruction closure;
-- JVP, VJP, or Hessian-vector-product closures;
-- and batching scan state.
-
-None of those executable closures is placed in the returned object. Reusing a
-realised derivative result therefore reuses its numerical matrix, not its original
-linearisation. Call the derivative operation again when curvature at a new parameter
-point is required.
-
-## 13. Validation and common mistakes
-
-### Fixed leaves in the parameter PyTree
-
-Every leaf of `x` is a differentiation parameter and must be floating:
+| Input or API | Output type and shape | Contract |
+|---|---|---|
+| `jacobian(f, x)`, floating `f(x)` shape `s` | Jacobian, Array `s + (n,)` | Flatten only parameter coordinates. |
+| `hessian(f, x)`, floating scalar `f(x)` | Hessian, Array `(n, n)` | Exact second derivative; indefinite results allowed. |
+| `gauss_newton(r, x)`, unreduced floating residual shape `s` | GaussNewton, Array `(n, n)` | `J_r.T @ W @ J_r`; scalar means one residual. |
+| Parameter PyTree `x` | Same structure supplied to function | Dynamic leaves are floating; integers, booleans, complex values, and keys unsupported. |
+| Real array-like noise inputs | Arrays in configured default float | Data conversion accepts integers; shapes and exclusivity are checked. |
+| Positive `std`, broadcastable to `s` | Whitened derivative products | Divide before products; no dense diagonal covariance. |
+| Covariance/precision `(m, m)`, `m = prod(s)` | Residual-space solve/product | Covariance positive definite; precision positive semidefinite; row-major order. |
+| `J.fisher(std=... / covariance=...)` | Fisher, Array `(n, n)` | Gaussian, parameter-independent noise interpretation; preserve J's layout. |
+| Static integer `nbatches` in `[1, n]` | Same dense numerical result | Sequential column blocks; final padding trimmed. |
+| Static Hessian method `"fwd-rev"` / `"rev-fwd"` | Same exact Hessian | Required JAX derivative rules must exist. |
 
 ```python
-# Invalid: the integer is part of the supplied parameter tree.
-parameters = {
-    "coefficient": np.array([1.0, 2.0]),
-    "power": np.array(2, dtype=np.int32),
-}
+reference = J.matrix.T @ J.matrix / noise**2
+assert np.allclose(G.matrix, reference)
+assert np.allclose(J.fisher(covariance=covariance).matrix, reference)
 ```
 
-Capture fixed configuration outside the explicit parameter argument or construct a
-parameter-only subtree.
+### 5.4. Decompositions and coordinate maps
 
-### Wrong function output
+Factorisation contracts distinguish matrix equations, coordinate conversions, and statistical interpretation.
 
-- `jacobian` requires one floating array-like output.
-- `hessian` requires one floating scalar output.
-- `gauss_newton` requires one floating residual array, which may be scalar only when
-  it genuinely represents one residual.
+| Input or API | Output type and shape | Contract |
+|---|---|---|
+| `Decomposition` family | EigenDecomposition, CholeskyDecomposition, ParameterProjection, LocalParameterisation | Common Base family, without a shared field or numerical-method requirement. |
+| Nonempty symmetric result `.eigh()` | EigenDecomposition: `(n,)`, `(n, n)` | Ascending eigenvalues; column eigenvectors; indefinite allowed. |
+| Positive-definite result `.cholesky()` | CholeskyDecomposition, factor `(n, n)` | Reconstruct `L @ L.T`; scalar log determinant. |
+| `cholesky.solve(v)`, Array/TreeVector `(n,)` | TreeVector `(n,)` | Solve original matrix system; matching layout. |
+| PSD result `.projection(method="eigh")` | ParameterProjection `(n, n)` | Optional equilibration; relative positive-mode threshold; zero discarded columns. |
+| `.projection(method="cholesky")` | ParameterProjection `(n, n)` | Positive-definite damped matrix; retain all modes. |
+| Nonempty zero metric, eigen method | Rank-zero ParameterProjection | `apply`, `solve`, and induced covariance return zeros. |
+| Empty input to decomposition `from_matrix` / matrix factor methods | ValueError | Require at least one coordinate; this does not prohibit empty stored arrays. |
+| `projection.apply(u)`, real flat `(n,)` | TreeVector `(n,)` | Parameter step `P @ u`; calling projection is equivalent. |
+| `projection.solve(step)`, Array/TreeVector `(n,)` | Latent Array `(n,)` | Minimum-norm least-squares coordinates in retained columns; no second relative cutoff. |
+| `projection.pullback(g)` | Array `(n,)` | `P.T @ g`, distinct from solving for coordinates. |
+| `projection.natural_gradient(g)` / `natural_norm(g)` | TreeVector `(n,)` / scalar Array | `P @ P.T @ g` / `sqrt(g.T @ P @ P.T @ g)`. |
+| `projection.bind(origin)` or `metric.parameterise(origin)` | LocalParameterisation | Origin paths and shapes match the metric layout. |
+| `geometry(u)` / `geometry.step(u)` | PyTree of default-floating Arrays | `x0 + P @ u` / `P @ u`; preserve structure/static metadata. |
+| `geometry.encode(x)` | Latent Array `(n,)` | Solve for coordinates of `x - x0`. |
+| `geometry.variance` / `standard_deviation` | PyTree matching origin | Diagonal of induced covariance / its nonnegative square root; truncation does not establish certainty. |
 
-Complex outputs and complex parameter leaves are not part of the current contract.
+```python
+P = geometry.projection.matrix
+assert np.allclose(P.T @ F.matrix @ P, np.eye(2))
+assert np.allclose(P @ P.T, np.linalg.inv(F.matrix))
+assert np.allclose(geometry.encode(parameters), geometry.zeros)
+```
 
-### Mismatched residual weighting
+### 5.5. Transformations and validation
 
-For `m` flattened residual values, both `cov` and `inv_cov` must have shape `(m, m)`.
-The residual array is flattened in row-major order, so the matrix ordering must match
-that convention.
+Numerical methods use ordinary JAX calculations; explicit diagnostics have separate execution boundaries.
 
-The `cov` path assumes an invertible covariance and should normally receive a
-symmetric positive-definite matrix. `inv_cov` should normally be symmetric and
-positive semidefinite. These value-level properties are documented contracts rather
-than expensive runtime eigenvalue checks.
+| API or boundary | Output / behaviour | Contract |
+|---|---|---|
+| Matrix `is_*` diagnostics | Scalar boolean Array | Usable under JIT; definiteness tolerances explicit. |
+| `check("eigh"/"projection"/"cholesky")` | Original object or exception | Eager decision from JAX scalar diagnostics; finite/symmetry/domain checks; never implicit. |
+| JIT, checkpointing, batching, method options | Same promised numerical result | Static options; checkpointing changes storage/recomputation. |
+| Differentiating realised arrays or a fixed coordinate map | Ordinary JAX derivatives | No executable closure stored in results. |
+| Differentiating eigen projection construction | Domain-limited derivatives | Rank crossings and repeated eigenvalues unsupported; fixed projection application is separate. |
+| Differentiating `solve` | Linear in its right-hand side | Factor derivatives inherit SVD limits at repeated singular values. |
+| Invalid numerical domains | Python/JAX errors, NaNs, or infinities | No runtime numerical-validation callbacks. |
+| Supported derivative object serialisation | Restored fields, layouts, behaviour | Store arrays and definitions; no derivative/reconstruction closures. |
 
-### Confusing exact and approximate curvature
-
-`hessian` and `gauss_newton` can return matrices with the same shape and layout, but
-they do not generally contain the same values. Use the concrete result type to
-preserve that distinction in downstream code and serialised artifacts.
-
-## 14. Choosing an operation
-
-Use `jacobian` when:
-
-- output sensitivities themselves are required;
-- downstream code needs the complete derivative of an array-valued model;
-- or an explicitly materialised `J` will be reused for several calculations.
-
-Use `hessian` when:
-
-- the natural input is a scalar objective;
-- exact observed curvature is required;
-- negative curvature matters;
-- residual second derivatives should be retained;
-- or covariance and other objective terms depend on the parameters.
-
-Use `gauss_newton` when:
-
-- the complete unreduced residual function is available;
-- the local objective is constant-covariance weighted least squares;
-- a positive-semidefinite curvature approximation is desirable;
-- the residual model is locally linear or residuals are expected to be small;
-- or materialising the residual Jacobian would use excessive memory.
-
-Start exact Hessian calculations with `method="fwd-rev"`. Try `"rev-fwd"` when
-model-specific performance, memory, or derivative-rule compatibility warrants it.
-Start all operations with `nbatches=1`, then increase the number of blocks when peak
-memory is excessive.
+`hessian_to_pytree` remains the deprecated main-API compatibility route for an exact
+PyTree-of-PyTrees result. New code uses `H.blocks(nested=True)`. That returns
+dictionaries, so its structure is not a drop-in replacement for every legacy
+list, tuple, or Module tree. See [API migration notes](API/derivatives.md).

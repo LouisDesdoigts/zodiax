@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import equinox as eqx
+import jax
 import pytest
 import zodiax
 from jax import numpy as np
+from jax.experimental import enable_x64
 
 
 def _make_x():
@@ -21,29 +23,6 @@ def _vector_fn(x):
 
 def _scalar_fn(x):
     return np.sum(x["a"] ** 2) + x["a"][0] * x["b"][0] + x["b"][0] ** 3
-
-
-def test_get_batch_sizes_padding_and_shape():
-    idx, total = zodiax.derivatives.operations._get_batch_sizes(5, 2)
-    assert idx.shape == (2, 3)
-    assert int(total) == 6
-    assert int(idx[0, 0]) == 0
-
-
-def test_get_batch_sizes_raises_for_too_many_batches():
-    with pytest.raises(ValueError, match="nbatches"):
-        zodiax.derivatives.operations._get_batch_sizes(3, 4)
-
-
-@pytest.mark.parametrize("nbatches", [0, -1])
-def test_get_batch_sizes_requires_positive_batches(nbatches):
-    with pytest.raises(ValueError, match="positive integer"):
-        zodiax.derivatives.operations._get_batch_sizes(3, nbatches)
-
-
-def test_get_batch_sizes_requires_integer_batches():
-    with pytest.raises(TypeError, match="positive integer"):
-        zodiax.derivatives.operations._get_batch_sizes(3, 1.5)
 
 
 @pytest.mark.parametrize("jit", [True, False])
@@ -105,15 +84,6 @@ def test_hessian_batched_matches_unbatched(jit, checkpoint, method):
     assert np.allclose(batched.blocks()["a"]["b"], expected[:2, 2:].reshape(2, 1))
 
 
-def test_hessian_raises_for_too_many_batches():
-    x = _make_x()
-    with pytest.raises(ValueError, match="nbatches"):
-        zodiax.derivatives.hessian(_scalar_fn, x, nbatches=4, jit=False)
-
-    with pytest.raises(ValueError, match="nbatches"):
-        zodiax.derivatives.jacobian(_vector_fn, x, nbatches=4, jit=False)
-
-
 def test_hessian_requires_scalar_output():
     with pytest.raises(ValueError, match="scalar"):
         zodiax.derivatives.hessian(_vector_fn, _make_x(), jit=False)
@@ -165,6 +135,29 @@ def test_gauss_newton_identity_weighting_and_scalar_residual():
     assert np.allclose(scalar.matrix, expected_scalar)
 
 
+@pytest.mark.parametrize("jit", [True, False])
+@pytest.mark.parametrize("checkpoint", [True, False])
+@pytest.mark.parametrize("std", [2.0, np.asarray([2.0, 4.0])])
+def test_gauss_newton_uncorrelated_noise_fast_path(jit, checkpoint, std):
+    x = _make_x()
+    jacobian = np.asarray([[2.0, 1.0, 1.0], [2.0, 0.0, 2.0]])
+    standard_deviation = np.broadcast_to(std, (2,))
+    expected = (jacobian / standard_deviation[:, None]).T @ (
+        jacobian / standard_deviation[:, None]
+    )
+
+    matrix = zodiax.gauss_newton(
+        _vector_fn,
+        x,
+        std=std,
+        nbatches=2,
+        jit=jit,
+        checkpoint=checkpoint,
+    )
+
+    assert np.allclose(matrix.matrix, expected)
+
+
 def test_gauss_newton_omits_nonlinear_residual_correction():
     x = {"value": np.asarray(2.0)}
     residual_fn = lambda values: values["value"] ** 2 - 1.0
@@ -181,7 +174,7 @@ def test_gauss_newton_validates_weighting():
     x = _make_x()
     cov = np.eye(2)
 
-    with pytest.raises(ValueError, match="either cov or inv_cov"):
+    with pytest.raises(ValueError, match="only one of std, cov, or inv_cov"):
         zodiax.gauss_newton(
             _vector_fn,
             x,
@@ -189,24 +182,18 @@ def test_gauss_newton_validates_weighting():
             inv_cov=cov,
             jit=False,
         )
-    with pytest.raises(ValueError, match="cov must have shape"):
-        zodiax.gauss_newton(_vector_fn, x, cov=np.eye(3), jit=False)
-    with pytest.raises(TypeError, match="inv_cov.*floating"):
+    with pytest.raises(ValueError, match="only one of std, cov, or inv_cov"):
         zodiax.gauss_newton(
             _vector_fn,
             x,
-            inv_cov=np.eye(2, dtype=np.int32),
+            std=1.0,
+            cov=cov,
             jit=False,
         )
-
-
-def test_gauss_newton_requires_floating_residuals():
-    with pytest.raises(TypeError, match="floating residual"):
-        zodiax.gauss_newton(
-            lambda values: np.asarray([values["a"].size], dtype=np.int32),
-            _make_x(),
-            jit=False,
-        )
+    with pytest.raises(ValueError, match="cov must have shape"):
+        zodiax.gauss_newton(_vector_fn, x, cov=np.eye(3), jit=False)
+    with pytest.raises(ValueError, match="broadcast to output shape"):
+        zodiax.gauss_newton(_vector_fn, x, std=np.ones(3), jit=False)
 
 
 def test_gauss_newton_result_crosses_outer_jit_boundary():
@@ -224,6 +211,16 @@ def test_gauss_newton_result_crosses_outer_jit_boundary():
     assert matrix.matrix.shape == (3, 3)
     assert matrix.layout.paths == ("a", "b")
 
+    independent = eqx.filter_jit(
+        lambda x, std: zodiax.gauss_newton(
+            _vector_fn,
+            x,
+            std=std,
+            nbatches=2,
+        )
+    )(_make_x(), np.asarray([2.0, 4.0]))
+    assert np.all(np.isfinite(independent.matrix))
+
 
 def test_jacobian_result_crosses_outer_jit_boundary():
     calculate = eqx.filter_jit(
@@ -234,20 +231,6 @@ def test_jacobian_result_crosses_outer_jit_boundary():
     assert isinstance(jacobian, zodiax.Jacobian)
     assert jacobian.matrix.shape == (2, 3)
     assert jacobian.layout.paths == ("a", "b")
-
-
-def test_derivatives_reject_non_floating_parameter_leaves():
-    values = {
-        "coefficient": np.asarray([2.0, 3.0]),
-        "power": np.asarray(2, dtype=np.int32),
-    }
-
-    with pytest.raises(TypeError, match="power.*floating"):
-        zodiax.jacobian(
-            lambda model: model["coefficient"] ** model["power"],
-            values,
-            jit=False,
-        )
 
 
 def test_hessian_to_pytree_structure_and_values():
@@ -301,3 +284,91 @@ def test_hessian_to_pytree_supports_python_float_leaves():
     assert tree["a"]["a"].shape == ()
     assert tree["a"]["b"].shape == ()
     assert np.allclose(tree["b"]["a"], 2.0)
+
+
+@pytest.mark.parametrize(
+    "operation", [zodiax.jacobian, zodiax.hessian, zodiax.gauss_newton]
+)
+@pytest.mark.parametrize("nbatches", [0, -1, 1.5, True, 4])
+def test_derivative_batch_configuration_is_structural(operation, nbatches):
+    with pytest.raises((TypeError, ValueError), match="positive integer|nbatches"):
+        operation(_scalar_fn, _make_x(), nbatches=nbatches)
+
+
+@pytest.mark.parametrize(
+    "operation", [zodiax.jacobian, zodiax.hessian, zodiax.gauss_newton]
+)
+@pytest.mark.parametrize("dtype", [int, bool, complex])
+def test_trainable_trees_never_filter_or_coerce_nonfloating_leaves(operation, dtype):
+    values = {
+        "coefficient": np.asarray([2.0, 3.0]),
+        "configuration": np.asarray(1, dtype=dtype),
+    }
+    with pytest.raises(TypeError, match="parameter leaf must be floating"):
+        operation(lambda p: p["coefficient"].sum(), values)
+
+
+@pytest.mark.parametrize("weighting", ["std", "cov", "inv_cov"])
+def test_real_noise_data_are_converted_to_default_float(weighting):
+    weights = {"std": 2, "cov": [[4, 0], [0, 4]], "inv_cov": [[1, 0], [0, 1]]}
+    expected = np.asarray([[2.0, 1.0, 1.0], [2.0, 0.0, 2.0]])
+    expected = expected.T @ expected
+    if weighting != "inv_cov":
+        expected = expected / 4
+    result = zodiax.gauss_newton(
+        _vector_fn, _make_x(), **{weighting: weights[weighting]}
+    )
+    assert np.allclose(result.matrix, expected)
+
+
+@pytest.mark.parametrize("scale", [1e-20, 1e20])
+@pytest.mark.parametrize("jit", [False, True])
+def test_standard_deviation_weighting_avoids_variance_overflow(scale, jit):
+    # Exercise float32 even when the wider scientific suite uses x64.
+    with enable_x64(False):
+        noise = np.asarray(scale, dtype=float)
+        parameters = {"x": np.asarray([1.0, 2.0])}
+        residuals = lambda p: noise * p["x"]
+        result = zodiax.gauss_newton(
+            residuals, parameters, std=noise, nbatches=2, jit=jit
+        )
+        fisher = zodiax.jacobian(residuals, parameters, jit=jit).fisher(std=noise)
+        assert np.allclose(result.matrix, np.eye(2), rtol=2e-6)
+        assert np.allclose(result.matrix, fisher.matrix, rtol=2e-6)
+
+
+def test_multidimensional_residual_noise_broadcasts_before_flattening():
+    parameters = np.asarray([1.0, 2.0, 3.0])
+    noise = np.asarray([[2.0], [3.0]])
+
+    def residuals(p):
+        return np.asarray([[p[0] * p[1], p[2]], [p[0] ** 2, p[1] + p[2]]])
+
+    jacobian = jax.jacfwd(residuals)(parameters)
+    whitened = (jacobian / noise[..., None]).reshape(4, 3)
+    result = zodiax.gauss_newton(residuals, parameters, std=noise, nbatches=2)
+    assert np.allclose(result.matrix, whitened.T @ whitened)
+
+
+def test_gauss_newton_supports_outer_derivatives_of_point_and_noise():
+    def calculate(point, noise):
+        parameters = {"x": point}
+        return zodiax.gauss_newton(lambda p: p["x"] ** 2, parameters, std=noise).matrix[
+            0, 0
+        ]
+
+    point, noise = np.asarray(3.0), np.asarray(2.0)
+    point_gradient, noise_gradient = jax.grad(calculate, argnums=(0, 1))(point, noise)
+    assert np.allclose(point_gradient, 8 * point / noise**2)
+    assert np.allclose(noise_gradient, -8 * point**2 / noise**3)
+
+
+def test_hessian_legacy_conversion_preserves_sequence_containers_under_jit():
+    parameters = (np.asarray(1.0), [np.asarray([2.0, 3.0])])
+    matrix = np.arange(9.0).reshape(3, 3)
+    with pytest.warns(DeprecationWarning):
+        result = jax.jit(lambda m: zodiax.hessian_to_pytree(m, parameters))(matrix)
+    assert isinstance(result, tuple)
+    assert isinstance(result[1], list)
+    assert np.array_equal(result[0][1][0], matrix[0, 1:])
+    assert np.array_equal(result[1][0][1][0], matrix[1:, 1:])

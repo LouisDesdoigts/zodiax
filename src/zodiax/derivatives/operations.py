@@ -1,6 +1,13 @@
+"""Dense derivatives calculated in reusable parameter-column blocks.
+
+Every leaf of the supplied parameter tree is differentiated and must be floating.
+Realised arrays and noise inputs use the configured default floating dtype; the
+parameter tree itself is never coerced or filtered.
+"""
+
 from collections.abc import Callable
 from operator import index
-from typing import Literal, Union
+from typing import Any, Literal
 from warnings import warn
 
 import equinox as eqx
@@ -9,9 +16,16 @@ import jax.numpy as np
 from jax import Array
 from jax.flatten_util import ravel_pytree
 
-from .containers import GaussNewton, Hessian, Jacobian, TreeLayout
+from ..numerics.arrays import as_array
+from .containers import (
+    GaussNewton,
+    Hessian,
+    Jacobian,
+    TreeLayout,
+    _standard_deviation,
+)
 
-PyTree = Union[dict, list, tuple, eqx.Module]
+PyTree = Any
 
 __all__ = [
     "jacobian",
@@ -21,7 +35,33 @@ __all__ = [
 ]
 
 
+def _flatten_parameters(
+    x: PyTree,
+) -> tuple[TreeLayout, Array, Callable[[Array], PyTree]]:
+    """Check parameter membership, retaining each floating leaf's original dtype."""
+    for leaf in jax.tree.leaves(x):
+        array = as_array(leaf)
+        if not eqx.is_array(array) or not np.issubdtype(array.dtype, np.floating):
+            raise TypeError("Every parameter leaf must be floating and array-like.")
+
+    layout = TreeLayout.from_tree(x)
+    vector, unravel = ravel_pytree(x)
+    return layout, vector, unravel
+
+
+def _floating_output(value: Any, name: str) -> Array:
+    """Convert a function result without coercing a non-floating calculation."""
+    try:
+        output = as_array(value)
+    except (TypeError, ValueError) as error:
+        raise TypeError(f"{name} must return one floating array-like value.") from error
+    if not eqx.is_array(output) or not np.issubdtype(output.dtype, np.floating):
+        raise TypeError(f"{name} must return one floating array-like value.")
+    return output
+
+
 def _get_batch_sizes(n: int, nbatches: int) -> tuple[Array, int]:
+    """Build fixed-size blocks of column indices, padding the final block."""
     if isinstance(nbatches, bool):
         raise TypeError("nbatches must be a positive integer.")
     try:
@@ -30,13 +70,15 @@ def _get_batch_sizes(n: int, nbatches: int) -> tuple[Array, int]:
         raise TypeError("nbatches must be a positive integer.") from error
     if nbatches < 1:
         raise ValueError("nbatches must be a positive integer.")
+    if n == 0:
+        raise ValueError("The parameter tree must contain at least one coordinate.")
 
     # Convert "nbatches" into a fixed block size
     batch_size = (n + nbatches - 1) // nbatches
     total = nbatches * batch_size
     pad = total - n
 
-    # Check that we dont have more batches than parameters
+    # Each block contains at least one real parameter column.
     if nbatches > n:
         raise ValueError(
             f"nbatches={nbatches} is too large for n={n} parameters. "
@@ -47,21 +89,21 @@ def _get_batch_sizes(n: int, nbatches: int) -> tuple[Array, int]:
     idx = np.arange(n, dtype=int)
     if pad:
         idx = np.pad(idx, (0, pad), constant_values=0)
-    idx = idx.reshape(nbatches, batch_size)  # (nbatches, batch_size)
+    idx = idx.reshape(nbatches, batch_size)
 
-    return (idx, total)  # batch_size
+    return idx, total
 
 
 def _materialise_columns(
-    product: Callable,
+    product: Callable[[Array], Array],
     x_flat: Array,
-    nbatches: int,
+    indices: Array,
+    total: int,
     *,
     batched: bool = False,
 ) -> Array:
     """Apply a linear product to basis vectors in fixed column blocks."""
     n = x_flat.size
-    idx, total = _get_batch_sizes(n, nbatches)
 
     def step(carry, idxs):
         basis = jax.nn.one_hot(idxs, n, dtype=x_flat.dtype)
@@ -69,19 +111,14 @@ def _materialise_columns(
         columns = np.moveaxis(outputs, 0, -1)
         return carry, columns
 
-    _, blocks = jax.lax.scan(step, None, idx)
+    _, blocks = jax.lax.scan(step, None, indices)
     blocks = np.moveaxis(blocks, 0, -2)
     return blocks.reshape(*blocks.shape[:-2], total)[..., :n]
 
 
-def _square_matrix(value, name: str, size: int) -> Array:
-    """Validate one residual-space covariance matrix."""
-    try:
-        matrix = np.asarray(value)
-    except (TypeError, ValueError) as error:
-        raise TypeError(f"{name} must be one floating array-like matrix.") from error
-    if not np.issubdtype(matrix.dtype, np.floating):
-        raise TypeError(f"{name} must be one floating array-like matrix.")
+def _square_matrix(value: Any, name: str, size: int) -> Array:
+    """Convert one covariance or precision array and check its residual axes."""
+    matrix = as_array(value, dtype=float)
     if matrix.shape != (size, size):
         raise ValueError(f"{name} must have shape ({size}, {size}).")
     return matrix
@@ -98,8 +135,8 @@ def jacobian(
     A batched version of `jax.jacobian` that computes the Jacobian in column blocks
     to reduce peak memory. Increase `nbatches` to reduce block size. Set
     `checkpoint=True` to trade extra computation for further memory savings. `f(x)`
-    must return one floating array-like value and is evaluated once eagerly to
-    establish its fixed output shape before differentiation.
+    must return one floating array-like value. Its output contract is checked
+    while tracing the differentiated calculation.
 
     Parameters
     ----------
@@ -122,37 +159,24 @@ def jacobian(
         Realised Jacobian with shape `f(x).shape + (n,)`, where `n` is the flattened
         parameter size. Its single layout describes the final parameter axis.
     """
-    # Every leaf in x is an explicit differentiation parameter.
-    layout = TreeLayout.from_tree(x)
-    x_flat, unflatten = ravel_pytree(x)
-    _get_batch_sizes(x_flat.size, nbatches)
-    try:
-        output = np.asarray(f(x))
-    except (TypeError, ValueError) as error:
-        raise TypeError("f(x) must return one floating array-like value.") from error
-    if not np.issubdtype(output.dtype, np.floating):
-        raise TypeError("f(x) must return one floating array-like value.")
 
-    def f_flat(z):
-        return np.asarray(f(unflatten(z)))
+    # Flatten parameter coordinates without changing the original leaf dtypes.
+    layout, x_flat, unravel = _flatten_parameters(x)
+    indices, total = _get_batch_sizes(x_flat.size, nbatches)
 
-    # Apply the requested memory transformations
-    f_flat = jax.checkpoint(f_flat) if checkpoint else f_flat
-    f_flat = jax.jit(f_flat) if jit else f_flat
+    def function(vector):
+        return _floating_output(f(unravel(vector)), "f(x)")
 
-    # Straight jax jacobian if only one batch (no batching overhead)
-    if nbatches == 1:
-        matrix = jax.jacobian(f_flat)(x_flat)
-        return Jacobian(matrix, layout)
+    function = jax.checkpoint(function) if checkpoint else function
+    function = jax.jit(function) if jit else function
 
-    # Use linearise to get the jvp without re-evaluating f for each column
-    _, jvp = jax.linearize(f_flat, x_flat)
-    jvp = jax.jit(jvp) if jit else jvp
-
-    # Calculate and assemble the Jacobian columns
-    matrix = _materialise_columns(jvp, x_flat, nbatches)
-
-    # Package the realised result with its final-axis parameter layout
+    # A single block uses JAX directly; otherwise reuse one linearisation.
+    if indices.shape[0] == 1:
+        matrix = jax.jacobian(function)(x_flat)
+    else:
+        _, product = jax.linearize(function, x_flat)
+        product = jax.jit(product) if jit else product
+        matrix = _materialise_columns(product, x_flat, indices, total)
     return Jacobian(matrix, layout)
 
 
@@ -169,8 +193,8 @@ def hessian(
     Calculate an exact Hessian in column blocks using forward-over-reverse or
     reverse-over-forward automatic differentiation. Increase `nbatches` to reduce
     block size. Set `checkpoint=True` to trade extra computation for further memory
-    savings. `f(x)` must return a scalar and is evaluated once eagerly to validate
-    that contract before differentiation.
+    savings. `f(x)` must return a scalar; its output contract is checked while tracing
+    the differentiated calculation.
 
     Parameters
     ----------
@@ -200,48 +224,37 @@ def hessian(
         Realised Hessian with shape `(n, n)` and the shared parameter layout of both
         axes, where `n` is the flattened parameter size.
     """
-    # Every leaf in x is an explicit differentiation parameter.
-    layout = TreeLayout.from_tree(x)
-    x_flat, unflatten = ravel_pytree(x)
-    _get_batch_sizes(x_flat.size, nbatches)
-    try:
-        output = np.asarray(f(x))
-    except (TypeError, ValueError) as error:
-        raise TypeError("f(x) must return one numerical scalar.") from error
-    if output.shape != () or not np.issubdtype(output.dtype, np.floating):
-        raise ValueError("f(x) must return one floating scalar.")
+
+    layout, x_flat, unravel = _flatten_parameters(x)
+    indices, total = _get_batch_sizes(x_flat.size, nbatches)
     if method not in ("fwd-rev", "rev-fwd"):
         raise ValueError("method must be 'fwd-rev' or 'rev-fwd'.")
 
-    # Flatten input, checkpoint, and jit
-    def f_flat(z):
-        return f(unflatten(z))
+    def function(vector):
+        output = _floating_output(f(unravel(vector)), "f(x)")
+        if output.shape != ():
+            raise ValueError("f(x) must return one floating scalar.")
+        return output
 
-    f_flat = jax.checkpoint(f_flat) if checkpoint else f_flat
-    f_flat = jax.jit(f_flat) if jit else f_flat
+    function = jax.checkpoint(function) if checkpoint else function
+    function = jax.jit(function) if jit else function
 
-    # Straight JAX Hessian for the default composition if there is only one block
-    if method == "fwd-rev" and nbatches == 1:
-        matrix = jax.hessian(f_flat)(x_flat)
-        return Hessian(matrix, layout)
+    if method == "fwd-rev" and indices.shape[0] == 1:
+        return Hessian(jax.hessian(function)(x_flat), layout)
 
+    # Build the requested Hessian-vector product, keeping closures temporary.
     if method == "fwd-rev":
-        # Linearise the reverse-mode gradient once and reuse its forward product.
-        _, hvp = jax.linearize(jax.grad(f_flat), x_flat)
+        _, product = jax.linearize(jax.grad(function), x_flat)
     else:
-        # Reverse-differentiate each scalar directional forward derivative.
-        def hvp(vector):
-            def directional(z):
-                return jax.jvp(f_flat, (z,), (vector,))[1]
+
+        def product(direction):
+            def directional(vector):
+                return jax.jvp(function, (vector,), (direction,))[1]
 
             return jax.grad(directional)(x_flat)
 
-    hvp = jax.jit(hvp) if jit else hvp
-
-    # Calculate and assemble the Hessian columns
-    matrix = _materialise_columns(hvp, x_flat, nbatches)
-
-    # Package the realised result with its shared parameter layout
+    product = jax.jit(product) if jit else product
+    matrix = _materialise_columns(product, x_flat, indices, total)
     return Hessian(matrix, layout)
 
 
@@ -249,8 +262,9 @@ def gauss_newton(
     residual_fn: Callable,
     x: PyTree,
     *,
-    cov: Array | None = None,
-    inv_cov: Array | None = None,
+    std: Any | None = None,
+    cov: Any | None = None,
+    inv_cov: Any | None = None,
     nbatches: int = 1,
     jit: bool = True,
     checkpoint: bool = False,
@@ -258,10 +272,12 @@ def gauss_newton(
     """Calculate a Gauss--Newton Hessian from unreduced residuals.
 
     This function materialises ``J.T @ C^-1 @ J`` using chunked JVP--VJP
-    products, without materialising the residual Jacobian ``J``. Exactly one of
-    ``cov`` and ``inv_cov`` may be supplied. When ``cov`` is supplied, its inverse
-    action is evaluated with a linear solve; a supplied ``inv_cov`` is applied
-    directly. Omitting both selects identity weighting.
+    products, without materialising the residual Jacobian ``J``. At most one of
+    ``std``, ``cov``, and ``inv_cov`` may be supplied. Independent noise supplied
+    through ``std`` uses elementwise inverse-variance weighting without constructing
+    a dense diagonal matrix. When ``cov`` is supplied, its inverse action is
+    evaluated with a linear solve; a supplied ``inv_cov`` is applied directly.
+    Omitting all three selects identity weighting.
 
     ``residual_fn`` must return the complete, unreduced floating residual array. A
     scalar output is accepted for genuine one-residual problems, but a scalar loss
@@ -279,6 +295,11 @@ def gauss_newton(
         residual array. Array axes are flattened in row-major order for weighting.
     x : PyTree
         Point at which to evaluate the residual Jacobian.
+    std : array-like, optional
+        Positive standard deviation of independent residual noise. A scalar or an
+        array broadcastable to ``residual_fn(x).shape`` is accepted. This is the
+        fast path for uncorrelated Gaussian noise. Mutually exclusive with ``cov``
+        and ``inv_cov``.
     cov : array-like, optional
         Constant residual covariance with shape ``(m, m)``, where ``m`` is the
         flattened residual size. It should be symmetric and positive definite. A
@@ -308,40 +329,40 @@ def gauss_newton(
     ``sum_i (C^-1 @ r(x))[i] * hessian(r_i)(x)``. Use :func:`hessian` on the full
     scalar loss when that correction or other objective terms are required.
     """
-    if cov is not None and inv_cov is not None:
-        raise ValueError("Pass either cov or inv_cov, not both.")
 
-    # Every leaf in x is an explicit differentiation parameter.
-    layout = TreeLayout.from_tree(x)
-    x_flat, unflatten = ravel_pytree(x)
-    _get_batch_sizes(x_flat.size, nbatches)
-    try:
-        residual = np.asarray(residual_fn(x))
-    except (TypeError, ValueError) as error:
-        raise TypeError(
-            "residual_fn(x) must return one floating residual array."
-        ) from error
-    if not np.issubdtype(residual.dtype, np.floating):
-        raise TypeError("residual_fn(x) must return one floating residual array.")
+    if sum(value is not None for value in (std, cov, inv_cov)) > 1:
+        raise ValueError("Pass only one of std, cov, or inv_cov.")
 
-    residual_size = residual.size
-    cov = None if cov is None else _square_matrix(cov, "cov", residual_size)
-    inv_cov = (
-        None if inv_cov is None else _square_matrix(inv_cov, "inv_cov", residual_size)
-    )
+    layout, x_flat, unravel = _flatten_parameters(x)
+    indices, total = _get_batch_sizes(x_flat.size, nbatches)
 
-    def residual_flat(z):
-        return np.asarray(residual_fn(unflatten(z))).reshape(-1)
+    def residuals(vector):
+        output = _floating_output(residual_fn(unravel(vector)), "residual_fn(x)")
+        if std is None:
+            return output.reshape(-1)
 
-    residual_flat = jax.checkpoint(residual_flat) if checkpoint else residual_flat
-    residual_flat = jax.jit(residual_flat) if jit else residual_flat
+        # Whiten before differentiating, so both sides of J.T @ J are scaled.
+        # Forming std**2 first can overflow or underflow for finite noise scales.
+        noise = _standard_deviation(std, output.shape)
+        return output.reshape(-1) / noise
+
+    residuals = jax.checkpoint(residuals) if checkpoint else residuals
+    residuals = jax.jit(residuals) if jit else residuals
 
     # Freeze one residual linearisation and transpose that exact linear map.
-    _, jvp = jax.linearize(residual_flat, x_flat)
+    residual, jvp = jax.linearize(residuals, x_flat)
     vjp = jax.linear_transpose(jvp, x_flat)
+    if cov is not None:
+        cov = _square_matrix(cov, "cov", residual.size)
+    if inv_cov is not None:
+        inv_cov = _square_matrix(inv_cov, "inv_cov", residual.size)
 
     def product(basis):
         responses = jax.vmap(jvp)(basis)
+        if std is not None:
+            # Keep the two whitening stages separate: compiler reassociation of
+            # their reciprocal factors can otherwise recreate 1 / std**2.
+            responses = jax.lax.optimization_barrier(responses)
         if cov is not None:
             responses = np.linalg.solve(cov, responses.T).T
         elif inv_cov is not None:
@@ -349,7 +370,7 @@ def gauss_newton(
         return jax.vmap(lambda response: vjp(response)[0])(responses)
 
     product = jax.jit(product) if jit else product
-    matrix = _materialise_columns(product, x_flat, nbatches, batched=True)
+    matrix = _materialise_columns(product, x_flat, indices, total, batched=True)
     return GaussNewton(matrix, layout)
 
 
@@ -375,6 +396,7 @@ def hessian_to_pytree(H: Array | Hessian, x: PyTree) -> PyTree:
         A pytree-of-pytrees with the same structure as `x` twice over, where
         each leaf block `H_tree[i][j]` has shape `leaf_i.shape + leaf_j.shape`.
     """
+
     warn(
         "hessian_to_pytree is deprecated as of v0.5.0; use "
         "Hessian.blocks(nested=True) instead.",
@@ -385,31 +407,23 @@ def hessian_to_pytree(H: Array | Hessian, x: PyTree) -> PyTree:
     if isinstance(H, Hessian):
         if not H.layout.compatible(layout):
             raise ValueError("Hessian layout is not compatible with x.")
-        H = H.matrix
-
-    leaves, treedef = jax.tree_util.tree_flatten(x)
-
-    # leaf sizes and shapes define the partition of the flat axis
-    sizes = [int(np.size(leaf)) for leaf in leaves]
-    shapes = [np.shape(leaf) for leaf in leaves]
-
-    # build flat slices for each leaf
-    starts = np.cumsum(np.array([0] + sizes[:-1], dtype=int))
-    slices = [slice(int(s), int(s) + sz) for s, sz in zip(starts, sizes)]
-
-    # sanity check (helps catch mismatched x vs H early)
-    if H.shape != (sum(sizes), sum(sizes)):
+        matrix = H.matrix
+    else:
+        matrix = as_array(H, dtype=float)
+    if matrix.shape != (layout.size, layout.size):
         raise ValueError(
-            f"H has shape {H.shape}, but x flattens to {sum(sizes)} elements. "
+            f"H has shape {matrix.shape}, but x flattens to {layout.size} elements. "
             "Did you pass the same x used to compute H?"
         )
 
-    # assemble tree-of-trees
+    # The existing helper preserves actual container types on both axes. Layout
+    # views instead return dictionaries, so this main-API conversion stays local.
+    structure = jax.tree.structure(x)
     rows = []
-    for sli, shi in zip(slices, shapes):
+    for row_slice, row_shape in zip(layout.slices, layout.shapes):
         row = []
-        for slj, shj in zip(slices, shapes):
-            row.append(H[sli, slj].reshape(shi + shj))
-        rows.append(treedef.unflatten(row))
-
-    return treedef.unflatten(rows)
+        for column_slice, column_shape in zip(layout.slices, layout.shapes):
+            block = matrix[row_slice, column_slice]
+            row.append(block.reshape(row_shape + column_shape))
+        rows.append(structure.unflatten(row))
+    return structure.unflatten(rows)
