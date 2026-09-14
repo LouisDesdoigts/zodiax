@@ -270,16 +270,14 @@ def test_array_payload_must_match_definition(corruption):
         zdx.load(file, strict=False)
 
 
-def test_precision_configuration_must_preserve_archived_dtype():
-    import jax
-
+def test_precision_configuration_must_preserve_archived_dtype(x64_context):
     file = BytesIO()
-    with jax.experimental.enable_x64():
+    with x64_context(True):
         zdx.save(file, np.asarray([1.0 + 2**-40], dtype=np.float64))
-    with jax.experimental.disable_x64():
+    with x64_context(False):
         with pytest.raises(ValueError):
             zdx.load(file, strict=False)
-    with jax.experimental.enable_x64():
+    with x64_context(True):
         loaded = zdx.load(file)
         assert loaded.dtype == np.float64
         assert loaded[0] == 1.0 + 2**-40

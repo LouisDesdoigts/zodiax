@@ -636,9 +636,11 @@ def test_cholesky_covariance_has_finite_metric_derivatives():
     assert np.allclose(jax.grad(covariance_sum)(metric), expected, rtol=2e-5)
 
 
-def test_decompositions_do_not_overflow_when_symmetry_is_already_established():
+def test_decompositions_do_not_overflow_when_symmetry_is_already_established(
+    x64_context,
+):
     # Keep this case in float32 even when the main suite enables x64.
-    with jax.experimental.disable_x64():
+    with x64_context(False):
         diagonal = np.array([2e38, 1.0], dtype=np.float32)
         metric = zdx.Fisher.from_tree(np.diag(diagonal), {"x": np.zeros(2)})
         eigen = metric.eigh()

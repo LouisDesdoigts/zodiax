@@ -312,3 +312,58 @@ default cache path was blocked by the workspace sandbox; no hooks were skipped.
 The staged `.coverage` deletion and pending `.gitignore`, optimisation source,
 optimisation tests, and optimisation documentation changes remain separate and
 unchanged. No pushes were made.
+
+## CI follow-up: current JAX imports and precision tests
+
+The user reported failing [GitHub Actions run 34837346856](https://github.com/LouisDesdoigts/zodiax/actions/runs/34837346856).
+It tested the committed `f9ede37` source. The Python 3.11 job failed during
+collection because `jax.experimental.enable_x64` is no longer exported. The
+cancelled Python 3.13 job also recorded an import failure for
+`jax.core.get_opaque_trace_state` before cancellation.
+
+The earlier local runs were valid for their environment but did not cover the
+dependency versions selected by fresh CI installs. The local interpreter imports
+JAX 0.7.2 even though installed distribution metadata reports 0.8.3; runtime version
+reporting is therefore used for this follow-up. Existing environments were not
+modified. Fresh temporary environments installed the ordinary `.[tests]` extra.
+
+Changes:
+
+- A shared test fixture uses `jax.enable_x64` when available and the older
+  experimental context manager otherwise. All precision-switching tests use that
+  fixture and retain the native scoped restoration behaviour.
+- The expression resolver imports `get_opaque_trace_state` from `jax.extend.core`,
+  with the older import as a fallback for supported older JAX versions. This is a
+  necessary change outside derivatives/serialisation; the full suite, including
+  expression, staged-resolution, and nested differentiation tests, verifies both
+  import paths. Resolution semantics are unchanged.
+- The intentional nonfinite archive test constructs and restores its NaN data
+  inside `jax.debug_nans(False)`. This avoids interaction with global NaN debugging
+  enabled by other tests and with newer JAX host-array staging. Its shape, dtype,
+  and value assertions are retained.
+- CI prints imported dependency versions, devices, and precision configuration.
+  Matrix jobs no longer cancel each other after the first failure, allowing each
+  supported Python environment to report its result. No dependency pins or test
+  skips were added.
+
+| Environment and check | Result | Evidence |
+|---|---|---|
+| Clean Python 3.11.16 / JAX 0.10.2, original HEAD | Reproduced the reported collection ImportError | `/private/tmp/zodiax-ci-python311-20260914-ku23ijqg/baseline-collection.txt` |
+| Clean Python 3.11.16 / JAX 0.10.2, fixes, default precision with coverage | **689 passed**, 96% coverage | Same directory, `fixed-default-coverage.txt` |
+| Clean Python 3.12.2 / JAX 0.11.1, original HEAD | Reproduced removed trace-state import | `/private/tmp/zodiax-ci-fix-20260914/baseline-collection.txt` |
+| Clean Python 3.12.2 / JAX 0.11.1, fixes, default precision with coverage | **689 passed**, 96% coverage | Same directory, `full-modern-default.txt` |
+| Python 3.12.2 / JAX 0.11.1, x64 enabled | **689 passed** | Same directory, `full-modern-x64.txt` |
+| Existing Python 3.14.3 / JAX 0.7.2, isolated fixed source, x64 enabled | **689 passed** | Same directory, `full-old-x64.txt` |
+| Final nonfinite test adjustment, newer JAX with x64 and NaN debugging enabled | All three cases passed | `nonfinite-modern-x64.txt`; Python 3.11 evidence in `final-nonfinite-x64-debug.txt` |
+| Formatting, lint, whitespace; workflow YAML and diagnostic script syntax | Passed | Changed Python files and `.github/workflows/tests.yml` |
+
+The Python 3.11 and default-precision Python 3.12 coverage runs used committed-source
+snapshots with only the compatibility fixes overlaid, excluding pending optimisation
+edits. The final intentional-NaN fixture adjustment was then checked separately.
+The remaining JAX warnings concern generator use in the existing optimisation code;
+they are outside this fix. These reproductions ran on macOS CPU, not a Linux hosted
+runner; the remote workflow must run again after the fix is pushed.
+
+Outside-package changes in this follow-up are the single expression import,
+`tests/conftest.py`, the CI workflow, and this record. No user environment, unrelated
+working changes, or staged coverage deletion is included in the fix commit.

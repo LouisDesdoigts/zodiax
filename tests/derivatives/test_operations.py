@@ -5,7 +5,6 @@ import jax
 import pytest
 import zodiax
 from jax import numpy as np
-from jax.experimental import enable_x64
 
 
 def _make_x():
@@ -323,9 +322,9 @@ def test_real_noise_data_are_converted_to_default_float(weighting):
 
 @pytest.mark.parametrize("scale", [1e-20, 1e20])
 @pytest.mark.parametrize("jit", [False, True])
-def test_standard_deviation_weighting_avoids_variance_overflow(scale, jit):
+def test_standard_deviation_weighting_avoids_variance_overflow(scale, jit, x64_context):
     # Exercise float32 even when the wider scientific suite uses x64.
-    with enable_x64(False):
+    with x64_context(False):
         noise = np.asarray(scale, dtype=float)
         parameters = {"x": np.asarray([1.0, 2.0])}
         residuals = lambda p: noise * p["x"]

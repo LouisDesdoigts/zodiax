@@ -9,7 +9,12 @@ import inspect
 from typing import Any
 
 import jax.tree_util as jtu
-from jax.core import get_opaque_trace_state
+
+# JAX moved this trace-state API; older supported releases use jax.core.
+try:
+    from jax.extend.core import get_opaque_trace_state
+except ImportError:
+    from jax.core import get_opaque_trace_state
 
 from ..module import Module
 

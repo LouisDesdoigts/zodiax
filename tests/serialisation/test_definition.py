@@ -422,12 +422,8 @@ def test_custom_type_arguments_are_validated():
         "bfloat16",
     ],
 )
-def test_supported_jax_dtype_roundtrip(dtype_name):
-    enable_x64 = getattr(jax, "enable_x64", None)
-    if enable_x64 is None:
-        enable_x64 = jax.experimental.enable_x64
-
-    with enable_x64():
+def test_supported_jax_dtype_roundtrip(dtype_name, x64_context):
+    with x64_context(True):
         original = np.asarray([0, 1], dtype=getattr(np, dtype_name))
         loaded = _roundtrip(original)
 
@@ -551,15 +547,18 @@ def test_prng_implementation_and_batched_key_data_are_preserved(implementation):
 
 
 @pytest.mark.parametrize(
-    "original",
+    "values",
     [
-        np.zeros((2, 0, 3), dtype=np.float32),
-        np.asarray(1 + 2j, dtype=np.complex64),
-        np.asarray([float("nan"), float("inf"), -0.0], dtype=np.float32),
+        onp.zeros((2, 0, 3), dtype=onp.float32),
+        onp.asarray(1 + 2j, dtype=onp.complex64),
+        onp.asarray([float("nan"), float("inf"), -0.0], dtype=onp.float32),
     ],
 )
-def test_empty_scalar_complex_and_nonfinite_arrays_retain_shape_dtype_values(original):
-    loaded = _roundtrip(original)
+def test_empty_scalar_complex_and_nonfinite_arrays_retain_shape_dtype_values(values):
+    # Create and restore intentional NaNs inside the scoped debugging override.
+    with jax.debug_nans(False):
+        original = np.asarray(values)
+        loaded = _roundtrip(original)
     assert loaded.shape == original.shape
     assert loaded.dtype == original.dtype
     onp.testing.assert_array_equal(loaded, original)
