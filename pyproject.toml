@@ -6,7 +6,14 @@ readme = "README.md"
 requires-python = ">=3.10" # Zensical requires 3.10+
 license = {file = "LICENSE.md"}
 authors = [{name = "Louis Desdoigts", email = "louis.desdoigts@gmail.com"}]
-dependencies = ["jax", "jaxlib", "equinox", "optax"]
+dependencies = [
+    "jax",
+    "jaxlib",
+    "equinox",
+    "optax",
+    "numpy",
+    "wadler-lindig>=0.1.3",
+]
 
 [project.optional-dependencies]
 tests = [
@@ -27,6 +34,8 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+# Allow the same test filename in different package directories.
+addopts = ["--import-mode=importlib"]
 
 [tool.coverage.run]
 source = ["zodiax"]

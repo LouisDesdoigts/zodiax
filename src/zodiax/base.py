@@ -1,10 +1,17 @@
-import jax.numpy as np
-import jax.tree as jtu
-import equinox as eqx
-from jax import lax, Array
+from collections.abc import Mapping
 from typing import Any
 
-__all__ = ["Base", "build_wrapper", "EquinoxWrapper", "WrapperHolder"]
+import equinox as eqx
+import jax.numpy as np
+import jax.tree as jtu
+from jax import Array, lax
+
+__all__ = [
+    "Base",
+    "build_wrapper",
+    "EquinoxWrapper",
+    "WrapperHolder",
+]
 
 PyTree = dict | list | tuple | eqx.Module
 Params = str | list[str] | tuple[str] | dict[str, Any]
@@ -53,18 +60,66 @@ def _get_leaf(pytree: PyTree, param: Params) -> Any:
     leaf : Any
         The leaf object specified at the end of the param object.
     """
+    # Path access uses Module's lookup rules even if a subclass supplies its
+    # own attribute shortcut.
     key = param[0]
-    if hasattr(pytree, key):
-        pytree = getattr(pytree, key)
-    elif isinstance(pytree, dict):
+    if isinstance(pytree, Module):
+        try:
+            pytree = object.__getattribute__(pytree, key)
+        except AttributeError:
+            pytree = Module.__getattr__(pytree, key)
+    elif isinstance(pytree, Mapping):
         pytree = pytree[key]
     elif isinstance(pytree, (list, tuple)):
         pytree = pytree[int(key)]
+    elif hasattr(pytree, key):
+        pytree = getattr(pytree, key)
     else:
         raise KeyError("key: {} not found in object: {}".format(key, type(pytree)))
 
     # Return param if at the end of param, else recurse
     return pytree if len(param) == 1 else _get_leaf(pytree, param[1:])
+
+
+def _validate_mapping_keys(tree: Any) -> None:
+    """Reject mapping keys that collide with dotted structural path syntax."""
+    visited: set[int] = set()
+
+    def visit(value: Any, path: str) -> None:
+        if not isinstance(value, (Mapping, tuple, list)) and not hasattr(
+            type(value), "__dataclass_fields__"
+        ):
+            return
+        identity = id(value)
+        if identity in visited:
+            return
+        visited.add(identity)
+
+        if isinstance(value, Mapping):
+            for key, child in value.items():
+                if isinstance(key, str) and "." in key:
+                    raise ValueError(
+                        f"Mapping key {key!r} at {path} contains '.'. Dots are "
+                        "reserved as structural path separators."
+                    )
+                visit(child, f"{path}[{key!r}]")
+            return
+
+        if isinstance(value, (tuple, list)):
+            for index, child in enumerate(value):
+                visit(child, f"{path}[{index}]")
+            return
+
+        for name in getattr(type(value), "__dataclass_fields__", {}):
+            if name.startswith("_"):
+                continue
+            try:
+                child = object.__getattribute__(value, name)
+            except AttributeError:
+                continue
+            visit(child, f"{path}.{name}")
+
+    visit(tree, "root")
 
 
 def _get_leaves(pytree: PyTree, parameters: list) -> list:
@@ -268,6 +323,18 @@ class Base(eqx.Module):
     for working with pytrees by adding a series of methods used to interface
     with the leaves of the pytree using parameters.
     """
+
+    def save(self, file_or_path: Any) -> None:
+        """Save this object to a validated Zodiax archive."""
+        from .serialisation import save
+
+        save(file_or_path, self)
+
+    def load(self, file_or_path: Any, *, strict: bool = True) -> Any:
+        """Load an archive using this object as its structural template."""
+        from .serialisation import load
+
+        return load(file_or_path, like=self, strict=strict)
 
     def get(
         self: PyTree,
@@ -655,6 +722,11 @@ class Base(eqx.Module):
         )
 
 
+# Module imports Base, so Base must be defined before importing it here. The
+# wrappers below retain their Module inheritance and their existing location.
+from .module import Module  # noqa: E402
+
+
 def build_wrapper(pytree: PyTree, filter_fn: callable = eqx.is_array):
     """
     Deconstructs an equinox model into its values and structure, and returns a
@@ -682,7 +754,7 @@ def build_wrapper(pytree: PyTree, filter_fn: callable = eqx.is_array):
     return values, EquinoxWrapper(static, leaves, tree_def)
 
 
-class EquinoxWrapper(Base):
+class EquinoxWrapper(Module):
     """
     A wrapper class designed to store an Equinox model (typically a neural network)
     in a way that makes it easily compatible within the Zodiax framework. This is
@@ -699,12 +771,13 @@ class EquinoxWrapper(Base):
     starts: list
     tree_def: None
 
-    def __init__(self, static, leaves, tree_def):
+    def __init__(self, static, leaves, tree_def, *, alias=None):
         self.static = static
         self.tree_def = tree_def
         self.shapes = [v.shape for v in leaves]
         self.sizes = [int(v.size) for v in leaves]
         self.starts = [int(i) for i in np.cumsum(np.array([0] + self.sizes))]
+        self.alias = alias
 
     def inject(self, values):
         leaves = [
@@ -714,7 +787,7 @@ class EquinoxWrapper(Base):
         return eqx.combine(jtu.unflatten(self.tree_def, leaves), self.static)
 
 
-class WrapperHolder(Base):
+class WrapperHolder(Module):
     """
     A class designed to hold an Equinox model, its structure and values. This helps it
     operate smoothly within the Zodiax framework.
