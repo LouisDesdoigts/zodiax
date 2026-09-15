@@ -29,10 +29,9 @@ import jax.numpy as np
 from jax import Array
 
 from .arrays import as_array
-from .expressions import Expression, _missing_context, _Unresolved, resolve
+from .expressions import Expression, _missing_context, Unresolved, resolve
 
 __all__ = [
-    "Parametric",
     "Transform",
     "matmul",
     "Mask",
@@ -98,24 +97,17 @@ def _solve_matmul(y: Any, M: Any) -> Array:
     return x.reshape(batch_shape + (M.shape[0],))
 
 
-class Parametric(Expression):
-    """A numerical expression evaluated from one principal stored input.
+class Transform(Expression):
+    """A numerical transformation with optional stored input ``x``.
 
-    Subclasses choose the field name and expose it through the read-only ``input``
-    property. Return the stored value unchanged so immutable updates can locate it
-    in the tree. ``None`` leaves the expression unbound.
-
-    Implement the local calculation in ``fwd``, declaring required named context
-    in its signature. ``evaluate`` resolves the stored input, while ``apply``
-    follows nested Parametric inputs from the deepest one outwards. An optional
-    ``inv`` supplies the local reverse; ``initialise`` binds a recovered deepest
-    input without replacing the surrounding definitions.
+    Subclasses implement ``fwd`` and optionally ``inv``. Evaluation resolves the
+    stored input; ``apply`` follows a nested chain of Transforms in either direction.
+    Leave ``x=None`` for an unbound transform. Required context belongs in the
+    ``fwd`` signature, so concrete transforms do not need an ``evaluate`` override.
+    Numerical operations preserve ordinary JAX dtype promotion and broadcasting.
     """
 
-    @property
-    @abstractmethod
-    def input(self) -> Any:
-        """Return the principal stored field unchanged, without resolving it."""
+    x: Any = None
 
     @abstractmethod
     def fwd(self, x: Array, **context: Any) -> Array:
@@ -128,16 +120,16 @@ class Parametric(Expression):
 
     def evaluate(self, **context: Any) -> Array:
         """Resolve stored input and pass it to the subclass's ``fwd`` calculation."""
-        value = self.input
+        value = self.x
         if value is None:
-            raise _Unresolved(f"{type(self).__name__} has no stored input.")
+            raise Unresolved(f"{type(self).__name__} has no stored input.")
 
         # fwd receives x positionally; its remaining required inputs come from
         # context. Defer through the usual resolver signal if any are unavailable,
         # allowing child preparation to retain whatever can already resolve.
         missing = _missing_context(self.fwd, context, value)
         if missing:
-            raise _Unresolved(
+            raise Unresolved(
                 f"{type(self).__name__}.fwd requires context: {', '.join(missing)}."
             )
 
@@ -147,7 +139,7 @@ class Parametric(Expression):
 
     def __call__(
         self, x: Any = None, *, inverse: bool = False, **context: Any
-    ) -> Array | Parametric:
+    ) -> Array | Transform:
         """Resolve stored input, or apply the transform to explicit input ``x``."""
         if x is None:
             if inverse:
@@ -156,7 +148,7 @@ class Parametric(Expression):
         return self.apply(x, inverse=inverse, **context)
 
     def apply(self, x: Any, *, inverse: bool = False, **context: Any) -> Array:
-        """Apply the complete stored Parametric chain to an explicit input.
+        """Apply the complete stored Transform chain to an explicit input.
 
         Forward application supplies the deepest input and works outwards.
         ``inverse=True`` reverses the chain from the outermost transform inwards,
@@ -167,35 +159,35 @@ class Parametric(Expression):
         value = resolve(x, **context)
         value = as_array(value)
 
-        # Follow each principal input from the outermost owner to the deepest one.
+        # Follow each stored input from the outermost owner to the deepest one.
         chain = []
-        parametric = self
-        while isinstance(parametric, Parametric):
-            chain.append(parametric)
-            parametric = parametric.input
+        transform = self
+        while isinstance(transform, Transform):
+            chain.append(transform)
+            transform = transform.x
 
         # Forward calculations run outwards; reverse calculations run inwards.
         if not inverse:
             chain.reverse()
-        for parametric in chain:
+        for transform in chain:
             if inverse:
-                value = parametric.inv(value, **context)
+                value = transform.inv(value, **context)
             else:
-                value = parametric.fwd(value, **context)
+                value = transform.fwd(value, **context)
         return value
 
     def inv(self, y: Array, **context: Any) -> Array:
         """Reverse this local calculation, when a subclass supplies a reverse."""
         raise NotImplementedError(f"{type(self).__name__} does not define inv().")
 
-    def initialise(self, y: Any, **context: Any) -> Parametric:
+    def initialise(self, y: Any, **context: Any) -> Transform:
         """Bind a deepest input when every traversed transform supports reverse."""
 
         # Locate the stored input without evaluating or replacing the transforms.
-        def deepest_input(parametric):
-            while isinstance(parametric.input, Parametric):
-                parametric = parametric.input
-            return parametric.input
+        def deepest_input(transform):
+            while isinstance(transform.x, Transform):
+                transform = transform.x
+            return transform.x
 
         if isinstance(deepest_input(self), Expression):
             raise ValueError(
@@ -209,35 +201,6 @@ class Parametric(Expression):
             x,
             is_leaf=lambda leaf: leaf is None,
         )
-
-
-class Transform(Parametric):
-    """A stored-input numerical transform.
-
-    ``x`` is always the stored upstream input and ``fwd(x)`` always returns the
-    output ``y``. A transform with ``x=None`` is unbound, while any Expression may
-    provide its stored input. Subclasses put the local numerical formula in ``fwd``;
-    the inherited ``evaluate`` supplies the stored input, while ``apply`` applies
-    the complete nested transform chain to an explicit deepest input.
-    Declare required named context, such as coordinates, in the ``fwd`` signature.
-    The inherited ``evaluate`` checks those requirements, so no forwarding override
-    is needed. Subclasses implement their local reverse in ``inv``. This may be an
-    exact inverse or a representative reverse, such as a matrix pseudoinverse.
-
-    Construction, ``evaluate``, and ``apply`` convert numerical inputs
-    to arrays while preserving their inferred dtype. Supply floating or complex
-    values for trainable parameters; integer inputs remain integers. The numerical
-    methods ``fwd`` and ``inv`` follow ordinary JAX type promotion and
-    resolve their stored operands where needed. Expressions used as numerical
-    operands must supply numerical scalars or arrays.
-    """
-
-    x: Any = None
-
-    @property
-    def input(self) -> Any:
-        """Return the stored transform input."""
-        return self.x
 
 
 class Mask(Transform):

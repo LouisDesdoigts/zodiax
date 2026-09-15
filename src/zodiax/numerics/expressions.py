@@ -18,7 +18,7 @@ except ImportError:
 
 from ..module import Module
 
-__all__ = ["Expression", "resolve"]
+__all__ = ["Expression", "Unresolved", "resolve"]
 
 
 _ACTIVE_EXPRESSIONS: ContextVar[tuple[int, ...]] = ContextVar(
@@ -105,7 +105,7 @@ def _evaluate_expression(expression: Expression, context: dict[str, Any]) -> Any
             try:
                 output = expression.evaluate(**context)
                 return _resolve_tree(output, context)
-            except _Unresolved:
+            except Unresolved:
                 # A requested numerical operand could not provide a value. Keep
                 # partial progress through the child-preparation step below.
                 pass
@@ -197,16 +197,19 @@ def resolve(
         # This check applies only to an operand actually requested by a calculation,
         # not to every field stored on its parent. Modules may remain partial.
         if nested and _has_unresolved_operand(resolved):
-            raise _Unresolved("A required expression remains unresolved.")
+            raise Unresolved("A required expression remains unresolved.")
         return resolved
     finally:
         if cache_token is not None:
             _RESOLVED_EXPRESSIONS.reset(cache_token)
 
 
-class _Unresolved(ValueError):
+class Unresolved(ValueError):
     """Interrupt an incomplete calculation so its owning expression is retained.
 
+    Expression implementations may raise this ValueError subclass when alternative
+    inputs (such as a grid or coordinates) are absent. A direct evaluation raises
+    the error; ``resolve`` retains the definition and prepares available children.
     Only this dedicated signal is caught by the expression evaluator. Ordinary
     exceptions, including other ValueErrors, remain visible to the caller.
     """
@@ -224,6 +227,10 @@ class Expression(Module):
     context. Unused expression fields and stored callable transforms do not prevent
     evaluation. When a calculation cannot finish, inherited ``resolve_children``
     prepares available descendants using the supplied context.
+    Declare required context in the evaluate signature. For alternative inputs
+    that a signature cannot express, raise Unresolved when neither is supplied.
+    Other exceptions propagate normally.
+
     Each context name must denote the same scientific input throughout the tree.
     Use distinct names for derived inputs, such as ``coordinates`` for incoming
     coordinates and ``sample_coordinates`` for a child's transformed coordinates.

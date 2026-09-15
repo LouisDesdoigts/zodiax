@@ -786,3 +786,12 @@ assert isinstance(converted, jax.Array) and converted.shape == ()
 assert np.allclose(converted, 2000.0)
 assert isinstance(distance.x, zdx.StateRef) and distance.unit_out == "m"
 ```
+
+### Alternative required inputs
+
+Transform inherits Expression directly; application-specific base contracts belong
+in the consuming library. An Expression normally declares required context in its
+`evaluate` signature. When inputs are alternatives, such as a grid or explicit
+coordinates, it may raise `zdx.Unresolved` if neither is supplied. Direct evaluation
+raises this error; resolution retains the expression and prepares available children.
+Ordinary calculation errors still propagate.

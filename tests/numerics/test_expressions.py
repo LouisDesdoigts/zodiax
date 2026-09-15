@@ -398,3 +398,26 @@ def test_contextual_sampling_supports_gradients_and_vmap():
 
     np.testing.assert_allclose(gradient, 2.0)
     np.testing.assert_allclose(samples, [0.0, 4.0, 8.0])
+
+
+def test_explicit_missing_context_signal_defers_without_hiding_other_errors():
+    class EitherInput(zdx.Expression):
+        child: zdx.Expression
+
+        def evaluate(self, *, first=None, second=None, **context):
+            if first is None and second is None:
+                raise zdx.Unresolved("Provide first or second.")
+            value = first if first is not None else second
+            if value < 0:
+                raise ValueError("Input must be non-negative.")
+            return zdx.resolve(self.child) + value
+
+    definition = EitherInput(zdx.Map(2.0, s=3.0))
+    prepared = definition.resolve()
+    assert isinstance(prepared, EitherInput)
+    assert prepared.child == 6.0
+    assert definition.resolve(second=4.0) == 10.0
+    with pytest.raises(zdx.Unresolved, match="first or second"):
+        definition.evaluate()
+    with pytest.raises(ValueError, match="non-negative"):
+        definition.resolve(first=-1.0)
