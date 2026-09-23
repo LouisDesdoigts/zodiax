@@ -1,0 +1,1 @@
+--8<-- "src/zodiax/numerics/overview.md"

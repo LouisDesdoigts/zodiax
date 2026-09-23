@@ -1,0 +1,368 @@
+"""Global numerical unit conventions and composable unit transforms.
+
+Zodiax deliberately keeps realised values as ordinary JAX arrays. The active unit
+system therefore defines the numerical convention used by those arrays, while a
+:class:`Unit` transform converts a stored coordinate from its declared unit into the
+current convention, or into an explicitly selected output unit.
+
+The public unit system is a small mapping such as
+``{"cartesian": "um", "angular": "mas"}``. Conversion definitions are an
+internal catalogue rather than a mutable user registry.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+import math
+from typing import Any, NamedTuple
+
+import equinox as eqx
+from jax import Array
+
+from .arrays import as_array
+from .operations import Operation
+
+__all__ = [
+    "unit_info",
+    "canonical_unit",
+    "conversion_factor",
+    "convert",
+    "Unit",
+    "get_units",
+    "set_units",
+]
+
+
+class _UnitInfo(NamedTuple):
+    """Canonical unit spelling, category, dimensional power, and reference scale."""
+
+    unit: str
+    category: str
+    power: int
+    factor: float
+
+
+# Simple units are measured relative to metre, radian, and photon reference units.
+# These references are an implementation detail; realised arrays use the active
+# global unit system rather than necessarily using SI values.
+_UNIT_CATALOGUE = {
+    "rad": ("angular", 1.0),
+    "deg": ("angular", math.pi / 180.0),
+    "arcmin": ("angular", math.pi / (180.0 * 60.0)),
+    "arcsec": ("angular", math.pi / (180.0 * 3_600.0)),
+    "mas": ("angular", math.pi / (180.0 * 3.6e6)),
+    "uas": ("angular", math.pi / (180.0 * 3.6e9)),
+    "m": ("cartesian", 1.0),
+    "angstrom": ("cartesian", 1e-10),
+    "photon": ("photon", 1.0),
+}
+
+_UNIT_ALIASES = {
+    "radian": "rad",
+    "radians": "rad",
+    "degree": "deg",
+    "degrees": "deg",
+    "am": "arcmin",
+    "arcmins": "arcmin",
+    "arcminute": "arcmin",
+    "arcminutes": "arcmin",
+    "as": "arcsec",
+    "arcsecs": "arcsec",
+    "arcsecond": "arcsec",
+    "arcseconds": "arcsec",
+    "metre": "m",
+    "metres": "m",
+    "meter": "m",
+    "meters": "m",
+    "micron": "um",
+    "microns": "um",
+    "µm": "um",
+    "a": "angstrom",
+    "aa": "angstrom",
+    "ångström": "angstrom",
+    "angstroms": "angstrom",
+    "photons": "photon",
+}
+
+_PREFIXES = {
+    "G": 1e9,
+    "M": 1e6,
+    "k": 1e3,
+    "m": 1e-3,
+    "u": 1e-6,
+    "n": 1e-9,
+}
+
+_CATEGORY_ALIASES = {
+    "cartesian": "cartesian",
+    "length": "cartesian",
+    "angular": "angular",
+    "angle": "angular",
+    "photon": "photon",
+    "photons": "photon",
+}
+
+_DEFAULT_UNITS = {
+    "cartesian": "m",
+    "angular": "rad",
+    "photon": "photon",
+}
+
+_ACTIVE_UNITS = dict(_DEFAULT_UNITS)
+"""Current units for transforms without an explicit output unit. set_units replaces
+this dictionary after validation; get_units returns a copy. JIT reads these Python
+settings during tracing, so cached compiled calculations retain that convention.
+"""
+
+
+def _normalise_category(category: Any) -> str:
+    """Return one canonical public unit-system category."""
+    if not isinstance(category, str):
+        raise TypeError("Unit-system categories must be strings.")
+    try:
+        return _CATEGORY_ALIASES[category.strip().lower()]
+    except KeyError as error:
+        accepted = ", ".join(_DEFAULT_UNITS)
+        raise ValueError(
+            f"Unknown unit-system category {category!r}; expected {accepted}."
+        ) from error
+
+
+def _simple_unit_info(unit: str) -> _UnitInfo:
+    """Resolve a non-compound unit spelling."""
+    unit = _UNIT_ALIASES.get(unit.lower(), unit)
+    direct = _UNIT_CATALOGUE.get(unit)
+    if direct is not None:
+        category, factor = direct
+        return _UnitInfo(unit, category, 1, factor)
+
+    if len(unit) > 1:
+        prefix = unit[0]
+        base = _UNIT_ALIASES.get(unit[1:].lower(), unit[1:])
+        base_info = _UNIT_CATALOGUE.get(base)
+        if prefix in _PREFIXES and base_info is not None:
+            category, factor = base_info
+            return _UnitInfo(
+                prefix + base,
+                category,
+                1,
+                _PREFIXES[prefix] * factor,
+            )
+    raise ValueError(f"Unknown unit {unit!r}.")
+
+
+def _format_power(unit: str, power: int) -> str:
+    """Return a canonical spelling for one powered Cartesian unit."""
+    if power == 1:
+        return unit
+    if power == -1:
+        return f"1/{unit}"
+    return f"{unit}^{power}"
+
+
+def unit_info(unit: str) -> _UnitInfo:
+    """Return the canonical spelling, category, power, and reference factor.
+
+    Factors refer to metres, radians, or photons, independently of ``set_units``.
+    Cartesian units also support reciprocals and integer powers, such as ``1/mm``
+    and ``um^2``. Prefixes are case-sensitive: ``mm`` and ``Mm`` differ.
+    """
+    if not isinstance(unit, str):
+        raise TypeError("unit must be a string.")
+    unit = unit.strip()
+    if not unit:
+        raise ValueError("unit must not be empty.")
+
+    # Separate the reciprocal and exponent from the base unit spelling.
+    reciprocal = unit.startswith("1/")
+    body = unit[2:] if reciprocal else unit
+    if not reciprocal and "^" not in body:
+        return _simple_unit_info(body)
+
+    if "^" in body:
+        body, exponent_text = body.split("^", 1)
+        try:
+            power = int(exponent_text)
+        except ValueError as error:
+            raise ValueError(f"Unknown unit {unit!r}.") from error
+    else:
+        power = 1
+    if reciprocal:
+        power = -power
+    if power == 0 or abs(power) > 8:
+        raise ValueError("Unit powers must be nonzero integers between -8 and 8.")
+
+    # Apply the power to both the canonical name and its reference factor.
+    base = _simple_unit_info(body)
+    if base.category != "cartesian":
+        raise ValueError("Only Cartesian units currently support derived powers.")
+    return _UnitInfo(
+        _format_power(base.unit, power),
+        base.category,
+        power,
+        base.factor**power,
+    )
+
+
+def canonical_unit(unit: str) -> str:
+    """Validate a unit and return its canonical spelling."""
+    return unit_info(unit).unit
+
+
+def conversion_factor(unit_in: str, unit_out: str) -> float:
+    """Return the multiplicative factor converting compatible physical units."""
+    source = unit_info(unit_in)
+    target = unit_info(unit_out)
+
+    if source.category != target.category or source.power != target.power:
+        raise ValueError(f"Cannot convert from {unit_in!r} to {unit_out!r}.")
+    return source.factor / target.factor
+
+
+def convert(value: Any, unit_in: str, unit_out: str) -> Any:
+    """Convert a scalar or array between compatible units without global state.
+
+    Results remain Python scalars, NumPy values, or JAX arrays according to the
+    input, following that type's ordinary multiplication and dtype promotion.
+    """
+    factor = conversion_factor(unit_in, unit_out)
+    return value * factor
+
+
+def get_units() -> dict[str, str]:
+    """Return an independent snapshot of the active global unit system.
+
+    The mapping defines the numerical units used by :class:`Unit` transforms whose
+    ``unit_out`` is None. Mutating the returned dictionary has no effect on the
+    active system.
+    """
+    return dict(_ACTIVE_UNITS)
+
+
+def set_units(units: Mapping[str, str]) -> dict[str, str]:
+    """Replace the global unit system and return an independent normalised copy.
+
+    ``units`` may override any of ``"cartesian"``, ``"angular"``, or
+    ``"photon"``. Omitted categories retain their built-in defaults. Category
+    aliases ``"length"`` and ``"angle"`` are accepted. Every chosen unit must be
+    a simple unit of the corresponding category.
+
+    :class:`Unit` objects with ``unit_out=None`` use these settings when evaluated.
+    Explicit output units remain fixed. JIT reads the settings during tracing;
+    cached compiled calls keep that convention until retraced.
+    """
+    global _ACTIVE_UNITS
+
+    if not isinstance(units, Mapping):
+        raise TypeError("units must be a mapping of category names to unit strings.")
+
+    normalised = dict(_DEFAULT_UNITS)
+    supplied: set[str] = set()
+    for raw_category, raw_unit in units.items():
+        category = _normalise_category(raw_category)
+        if category in supplied:
+            raise ValueError(f"Unit-system category {category!r} was supplied twice.")
+        supplied.add(category)
+
+        info = unit_info(raw_unit)
+        if info.category != category or info.power != 1:
+            raise ValueError(f"Unit {raw_unit!r} is not a simple {category!r} unit.")
+        normalised[category] = info.unit
+
+    _ACTIVE_UNITS = normalised
+    return dict(normalised)
+
+
+class Unit(Operation):
+    """Convert a stored coordinate into an explicit or global numerical unit.
+
+    Parameters
+    ----------
+    x : array-like, Expression, or None
+        Stored input coordinate. Leave as ``None`` to construct an unbound symbolic
+        transform.
+    unit : str
+        Unit of the stored or explicitly supplied input coordinate.
+    to : str or None
+        Explicit output unit. When omitted, evaluation uses the current global
+        unit for ``unit``'s physical category, with the same dimensional power.
+    alias : alias specification, optional
+        Local aliases inherited from :class:`~zodiax.module.Module`.
+
+    Notes
+    -----
+    ``unit_out`` stores the explicit target, or None for the current global
+    convention. ``to(unit)`` evaluates the stored input into a converted array;
+    ``to(None)`` converts into the current global convention. JIT reads settings
+    during tracing, so cached compiled calls retain that convention until retraced.
+
+    Conversion follows ordinary JAX type promotion; scales outside the resulting
+    dtype's range follow ordinary overflow and underflow behaviour.
+    """
+
+    unit: str = eqx.field(static=True)
+    unit_out: str | None = eqx.field(default=None, static=True)
+
+    def __init__(
+        self,
+        x: Any = None,
+        unit: str | None = None,
+        *,
+        to: str | None = None,
+        alias: Any = None,
+    ):
+        """Store the input unit and an optional explicit output unit."""
+        source = unit_info(unit)
+        if to is not None:
+            target = unit_info(to)
+            if source.category != target.category or source.power != target.power:
+                raise ValueError(f"Cannot convert from {unit!r} to {to!r}.")
+            to = target.unit
+
+        self.alias = alias
+        self.x = as_array(x)
+        self.unit = source.unit
+        self.unit_out = to
+
+    def to(self, unit: str | None, **context: Any) -> Array:
+        """Evaluate the stored input and return its value in the requested unit.
+
+        Pass None to use the current global convention. Supply any context needed
+        by the input expression; an unbound or incomplete input raises ValueError.
+        The original Unit and its stored definition remain unchanged.
+        For example, ``Unit(x=1.0, unit="m").to("mm")`` returns a scalar array
+        containing ``1000.0``.
+        """
+        conversion = Unit(x=self.x, unit=self.unit, to=unit)
+        value = conversion.resolve(**context)
+        if isinstance(value, Unit):
+            raise ValueError(
+                "Unit.to requires a stored input and its required context."
+            )
+        return value
+
+    @property
+    def category(self) -> str:
+        """Physical category shared by the input and realised units."""
+        return unit_info(self.unit).category
+
+    @property
+    def factor(self) -> float:
+        """Conversion factor for the explicit target or current global convention.
+
+        JIT calculates this Python float during tracing. Changing global settings
+        does not change a previously compiled calculation until it is retraced.
+        """
+        target = self.unit_out
+        if target is None:
+            source = unit_info(self.unit)
+            target = _format_power(get_units()[source.category], source.power)
+        return conversion_factor(self.unit, target)
+
+    def fwd(self, x: Array, **context: Any) -> Array:
+        """Convert a prepared input array into the selected output units."""
+        return x * self.factor
+
+    def inv(self, y: Array, **context: Any) -> Array:
+        """Convert a prepared output array back into the stored coordinate unit."""
+        return y / self.factor
