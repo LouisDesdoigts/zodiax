@@ -377,3 +377,192 @@ def test_unavailable_properties_and_missing_names_raise_attribute_errors():
         _ = Holder(model).unavailable
     with pytest.raises(AttributeError):
         _ = Holder(model).not_present
+
+
+class DefaultValue(zdx.Module):
+    value: object = None
+    child: object = None
+
+
+def test_descendant_lookup_prefers_visible_values_before_nearer_defaults():
+    leaf = DefaultValue(value=jnp.array(3.0))
+    model = Pair(DefaultValue(child=leaf), None)
+    assert model.value == 3
+    assert model.get("value", to_array=False) == 3
+    changed = model.set(value=jnp.array(4.0))
+    assert changed.left.value is None
+    assert changed.left.child.value == 4
+    assert model.get("left.value", to_array=False) is None
+
+
+def test_default_lookup_fallback_and_exact_fields_remain_authoritative():
+    model = Pair(DefaultValue(), Pair(DefaultValue(), None))
+    assert model.value is None
+    direct = DefaultValue(child=DefaultValue(value=jnp.array(2.0)))
+    assert direct.value is None
+    with pytest.raises(AttributeError, match="ambiguous"):
+        Pair(DefaultValue(), DefaultValue()).value
+    with pytest.raises(AttributeError, match="ambiguous"):
+        Pair(DefaultValue(jnp.array(2.0)), DefaultValue(jnp.array(3.0))).value
+
+
+def test_visible_descendant_lookup_is_stable_under_jit_and_grad():
+    model = Pair(DefaultValue(child=DefaultValue(jnp.array(3.0))), None)
+    evaluate = eqx.filter_jit(lambda value: value.value**2)
+    assert evaluate(model) == 9
+    gradient = eqx.filter_grad(evaluate)(model)
+    assert gradient.left.child.value == 6
+
+
+@pytest.mark.parametrize(
+    "operation, value, expected",
+    [
+        ("add", 2.0, 5.0),
+        ("multiply", 2.0, 6.0),
+        ("divide", 2.0, 1.5),
+        ("power", 2.0, 9.0),
+        ("min", 2.0, 2.0),
+        ("max", 4.0, 4.0),
+    ],
+)
+def test_mutations_use_the_same_visible_descendant(operation, value, expected):
+    model = Pair(DefaultValue(child=DefaultValue(jnp.array(3.0))), None)
+    changed = getattr(model, operation)(value=value)
+    assert changed.left.value is None
+    assert changed.left.child.value == expected
+
+
+@pytest.mark.parametrize("base", [zdx.Base, zdx.Module])
+@pytest.mark.parametrize(
+    "value",
+    [jnp.array(1.0), jnp.ones(2), np.ones(2), {"nested": [(jnp.ones(2),)]}],
+)
+@pytest.mark.filterwarnings("ignore:A JAX array is being set as static:UserWarning")
+def test_static_arrays_are_rejected_including_nested_containers(base, value):
+    class Metadata(base):
+        value: Any = eqx.field(static=True)
+
+    with pytest.raises(TypeError, match=r"Metadata.value is static.*array"):
+        Metadata(value)
+
+
+@pytest.mark.filterwarnings("ignore:A JAX array is being set as static:UserWarning")
+def test_static_check_runs_after_converters_and_custom_subclass_initialisation():
+    class Metadata(zdx.Module):
+        value: Any = eqx.field(static=True, converter=jnp.asarray)
+
+    class CustomMetadata(Metadata):
+        def __init__(self, value):
+            self.value = value
+
+    with pytest.raises(TypeError, match="static.*array"):
+        CustomMetadata([1.0, 2.0])
+
+
+def test_static_python_metadata_and_dynamic_arrays_remain_supported():
+    class Metadata(zdx.Module):
+        value: Any
+        settings: Any = eqx.field(static=True)
+
+    settings = (None, False, 3, 1.25, "linear", (500.0, 700.0))
+    model = Metadata(jnp.array(3.0), settings)
+    assert model.settings == settings
+    assert jax.jit(lambda m: m.value**2)(model) == 9
+    assert eqx.filter_grad(lambda m: m.value**2)(model).value == 6
+
+
+class StaticDefaultValue(zdx.Module):
+    child: Any
+    value: float = eqx.field(static=True, default=1.25)
+
+
+class DynamicDefaultValue(zdx.Module):
+    child: Any
+    value: float = 1.25
+
+
+@pytest.mark.parametrize("compile", [jax.jit, eqx.filter_jit])
+@pytest.mark.parametrize("reverse", [False, True])
+def test_equal_static_defaults_select_same_path_under_jit(compile, reverse):
+    child = Leaf(jnp.array(3.0))
+    original = Holder(StaticDefaultValue(child))
+    equivalent = Holder(StaticDefaultValue(child, value=float("1.25")))
+    assert original.child.value == equivalent.child.value
+    assert original.child.value is not equivalent.child.value
+
+    models = [original, equivalent]
+    if reverse:
+        models.reverse()
+    read_value = compile(lambda model: jnp.asarray(model.value))
+    for model in models:
+        assert model.value == 3
+        assert read_value(model) == 3
+        changed = model.set(value=jnp.array(4.0))
+        assert changed.child.value == 1.25
+        assert changed.child.child.value == 4
+
+    # A different static value is populated and changes the compiled route.
+    populated = Holder(StaticDefaultValue(child, value=2.0))
+    assert populated.value == read_value(populated) == 2
+    assert original.get("child.value", to_array=False) == 1.25
+
+
+@pytest.mark.parametrize("compile", [jax.jit, eqx.filter_jit])
+def test_dynamic_numbers_are_populated_even_when_equal_to_defaults(compile):
+    model = Holder(DynamicDefaultValue(Leaf(jnp.array(3.0))))
+    assert model.value == 1.25
+    assert compile(lambda m: m.value)(model) == 1.25
+    assert model.set(value=2.0).child.value == 2
+    assert jax.grad(lambda m: m.value)(model).child.value == 1
+
+
+def test_static_tuple_defaults_use_equality_and_preserve_fallback_ambiguity():
+    class Settings(zdx.Module):
+        child: Any = None
+        value: tuple = eqx.field(static=True, default=(1.25, 2.5))
+
+    child = Leaf(jnp.array(3.0))
+    model = Holder(Settings(child, tuple([1.25, 2.5])))
+    assert model.value == 3
+    assert Holder(Settings()).value == (1.25, 2.5)
+    with pytest.raises(AttributeError, match="ambiguous"):
+        Pair(Settings(), Settings()).value
+
+
+@pytest.mark.filterwarnings("ignore:A JAX array is being set as static:UserWarning")
+def test_static_array_check_also_runs_when_subclass_defines_its_own_check():
+    class Metadata(zdx.Module):
+        value: Any = eqx.field(static=True)
+
+        def __check_init__(self):
+            pass
+
+    with pytest.raises(TypeError, match="static.*array"):
+        Metadata(Leaf(jnp.ones(2)))
+    with pytest.raises(TypeError, match="static.*array"):
+        jax.jit(lambda value: Metadata(value))(jnp.array(1.0))
+
+
+def test_converter_can_turn_input_into_python_metadata_before_validation():
+    class Metadata(zdx.Module):
+        value: Any = eqx.field(static=True, converter=lambda x: tuple(map(float, x)))
+
+    model = Metadata(jnp.array([1.0, 2.0]))
+    assert model.value == (1.0, 2.0)
+
+
+def test_default_factories_are_not_reexecuted_during_lookup():
+    calls = []
+
+    def make_default():
+        calls.append(True)
+        return "metadata"
+
+    class Metadata(zdx.Module):
+        value: str = eqx.field(static=True, default_factory=make_default)
+        child: Any = None
+
+    model = Holder(Metadata(child=Leaf(jnp.array(3.0))))
+    assert model.value == "metadata"
+    assert model.value == "metadata"
+    assert len(calls) == 1

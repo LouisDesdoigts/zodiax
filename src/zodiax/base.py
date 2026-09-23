@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+from dataclasses import fields
 from typing import Any
 
 import equinox as eqx
@@ -324,6 +325,24 @@ class Base(eqx.Module):
     with the leaves of the pytree using parameters.
     """
 
+    def __check_init__(self) -> None:
+        """Keep arrays in dynamic fields, including inside static containers.
+
+        Equinox runs this after constructors and converters, also for subclasses.
+        Static fields describe tree structure; arrays belong in its dynamic leaves
+        so JAX can trace and differentiate them.
+        """
+        for field in fields(self):
+            if not field.metadata.get("static", False):
+                continue
+            value = object.__getattribute__(self, field.name)
+            if any(eqx.is_array(leaf) for leaf in jtu.leaves(value)):
+                raise TypeError(
+                    f"{type(self).__name__}.{field.name} is static but contains an "
+                    "array. Use a dynamic field for arrays, or Python values "
+                    "for static metadata."
+                )
+
     def save(self, file_or_path: Any) -> None:
         """Save this object to a validated Zodiax archive."""
         from .serialisation import save
@@ -423,6 +442,9 @@ class Base(eqx.Module):
                 parameters = [parameters]
         new_parameters, new_values = _format(parameters, values)
 
+        # Freeze descendant shortcuts before tree_at replaces leaves with wrappers.
+        new_parameters = [_structural_path(self, path) for path in new_parameters]
+
         # Define 'where' function and update pytree
         def leaves_fn(pytree):
             return _get_leaves(pytree, new_parameters)
@@ -472,6 +494,9 @@ class Base(eqx.Module):
             for value, leaf in zip(new_values, _get_leaves(self, new_parameters))
         ]
 
+        # Freeze descendant shortcuts before tree_at replaces leaves with wrappers.
+        new_parameters = [_structural_path(self, path) for path in new_parameters]
+
         # Define 'where' function and update pytree
         def leaves_fn(pytree):
             return _get_leaves(pytree, new_parameters)
@@ -519,6 +544,9 @@ class Base(eqx.Module):
             for value, leaf in zip(new_values, _get_leaves(self, new_parameters))
         ]
 
+        # Freeze descendant shortcuts before tree_at replaces leaves with wrappers.
+        new_parameters = [_structural_path(self, path) for path in new_parameters]
+
         # Define 'where' function and update pytree
         def leaves_fn(pytree):
             return _get_leaves(pytree, new_parameters)
@@ -565,6 +593,9 @@ class Base(eqx.Module):
             leaf / value
             for value, leaf in zip(new_values, _get_leaves(self, new_parameters))
         ]
+
+        # Freeze descendant shortcuts before tree_at replaces leaves with wrappers.
+        new_parameters = [_structural_path(self, path) for path in new_parameters]
 
         # Define 'where' function and update pytree
         def leaves_fn(pytree):
@@ -614,6 +645,9 @@ class Base(eqx.Module):
             for value, leaf in zip(new_values, _get_leaves(self, new_parameters))
         ]
 
+        # Freeze descendant shortcuts before tree_at replaces leaves with wrappers.
+        new_parameters = [_structural_path(self, path) for path in new_parameters]
+
         # Define 'where' function and update pytree
         def leaves_fn(pytree):
             return _get_leaves(pytree, new_parameters)
@@ -662,6 +696,9 @@ class Base(eqx.Module):
             np.minimum(leaf, value)
             for value, leaf in zip(new_values, _get_leaves(self, new_parameters))
         ]
+
+        # Freeze descendant shortcuts before tree_at replaces leaves with wrappers.
+        new_parameters = [_structural_path(self, path) for path in new_parameters]
 
         # Define 'where' function and update pytree
         def leaves_fn(pytree):
@@ -713,6 +750,9 @@ class Base(eqx.Module):
             for value, leaf in zip(new_values, _get_leaves(self, new_parameters))
         ]
 
+        # Freeze descendant shortcuts before tree_at replaces leaves with wrappers.
+        new_parameters = [_structural_path(self, path) for path in new_parameters]
+
         # Define 'where' function and update pytree
         def leaves_fn(pytree):
             return _get_leaves(pytree, new_parameters)
@@ -724,7 +764,7 @@ class Base(eqx.Module):
 
 # Module imports Base, so Base must be defined before importing it here. The
 # wrappers below retain their Module inheritance and their existing location.
-from .module import Module  # noqa: E402
+from .module import Module, _structural_path  # noqa: E402
 
 
 def build_wrapper(pytree: PyTree, filter_fn: callable = eqx.is_array):

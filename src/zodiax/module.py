@@ -2,11 +2,13 @@
 
 Python reads ordinary attributes first. For a missing public name, Module checks
 its aliases, then searches its children one level at a time. Aliases name a fixed
-path; descendant lookup finds a name wherever it is uniquely nearest.
+path; descendant lookup prefers populated fields, then falls back to defaults.
+Within each group, the uniquely nearest match wins.
 """
 
 from collections.abc import Mapping
 from difflib import get_close_matches
+from dataclasses import MISSING
 import keyword
 from typing import Any
 
@@ -161,17 +163,25 @@ def _attribute_names(value: Any) -> set[str]:
     return {name for name in names if not name.startswith("_")}
 
 
-def _resolve_raised_attribute(owner: Any, key: str) -> Any:
-    """Find a uniquely nearest descendant attribute using breadth-first search."""
+def _resolve_raised_attribute(owner: Any, key: str, *, return_path=False) -> Any:
+    """Find the nearest non-default match, falling back to the nearest default.
+
+    Only None and equal explicitly static defaults are deferred. Dynamic numbers
+    remain populated, even when equal to their default: JIT may trace their values.
+    Exact attributes and explicit aliases have already been handled by the caller.
+    """
     available = _attribute_names(owner)
     frontier = []
     for name, child in _children(owner):
         frontier.append((child, str(name), frozenset({id(owner)})))
 
+    default_matches = []
+
     # Each pass examines one complete depth. Returning at the first individual
     # match would silently choose whichever child happened to be stored first.
     while frontier:
         matches = []
+        defaults = []
         following = []
         for value, path, ancestors in frontier:
             # Object identities let us stop if a container leads back to itself.
@@ -189,7 +199,20 @@ def _resolve_raised_attribute(owner: Any, key: str) -> Any:
                     except AttributeError:
                         pass
                     else:
-                        matches.append((f"{path}.{key}", result))
+                        field = type(value).__dataclass_fields__.get(key)
+                        default = MISSING if field is None else field.default
+                        match = (f"{path}.{key}", result)
+                        is_default = default is None and result is None
+
+                        # Compare static metadata by value, not Python identity.
+                        # Never turn an array comparison into a Python condition.
+                        if field is not None and field.metadata.get("static", False):
+                            if default is not MISSING:
+                                is_default = (result == default) is True
+                        if is_default:
+                            defaults.append(match)
+                        else:
+                            matches.append(match)
                 elif isinstance(value, Module):
                     target = _local_alias(value, key)
                     if target is not None:
@@ -202,8 +225,14 @@ def _resolve_raised_attribute(owner: Any, key: str) -> Any:
             for name, child in _children(value):
                 following.append((child, f"{path}.{name}", child_ancestors))
 
+        # Remember the nearest defaults, but keep searching for a populated field.
+        if not default_matches:
+            default_matches = defaults
+        if not following and not matches:
+            matches = default_matches
         if len(matches) == 1:
-            return matches[0][1]
+            path, result = matches[0]
+            return path if return_path else result
         if len(matches) > 1:
             paths = ", ".join(repr(path) for path, _ in sorted(matches))
             raise AttributeError(
@@ -218,6 +247,32 @@ def _resolve_raised_attribute(owner: Any, key: str) -> Any:
         names = ", ".join(repr(name) for name in suggestions)
         message += f" Did you mean {names}?"
     raise AttributeError(message)
+
+
+def _structural_path(owner: Any, keys: list[str]) -> list[str]:
+    """Expand shortcuts before Equinox temporarily wraps leaves during updates.
+
+    The chosen route is fixed using the original object. tree_at can then follow
+    ordinary fields without repeating value-dependent default selection.
+    """
+    path = []
+    pending = list(keys)
+    while pending:
+        key = pending.pop(0)
+        if isinstance(owner, Module) and not _declares_attribute(owner, key):
+            target = _local_alias(owner, key)
+            if target is None:
+                target = _resolve_raised_attribute(owner, key, return_path=True)
+            pending = target.split(".") + pending
+            continue
+        if isinstance(owner, Mapping):
+            owner = owner[key]
+        elif isinstance(owner, (list, tuple)):
+            owner = owner[int(key)]
+        else:
+            owner = getattr(owner, key)
+        path.append(key)
+    return path
 
 
 def _validate_aliases(owner: Any) -> None:
@@ -269,7 +324,8 @@ class Module(Base):
     """An immutable model with aliases and convenient access to its descendants.
 
     Ordinary attributes take precedence, followed by local aliases, then the
-    nearest matching descendant. Equally near matches require a qualified path.
+    nearest non-default descendant, then the nearest default-valued descendant.
+    Equally near matches in the selected group require a qualified path.
     Inherited Base methods use these same paths for getting and updating values.
 
     ``resolve`` prepares numerical fields while retaining the model's class.
