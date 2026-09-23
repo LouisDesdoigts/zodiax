@@ -486,8 +486,11 @@ def test_save_rejects_unsupported_static_callable():
 
 
 def test_save_rejects_static_array():
-    with pytest.warns(UserWarning):
-        original = StaticExpression(np.ones(1), np.ones(1))
+    original = StaticExpression(np.ones(1), None)
+
+    # Simulate invalid state that bypassed the constructor's static-field check.
+    # Saving must still reject it rather than silently omit the array.
+    object.__setattr__(original, "metadata", np.ones(1))
 
     with pytest.raises(TypeError):
         zdx.save(BytesIO(), original)
