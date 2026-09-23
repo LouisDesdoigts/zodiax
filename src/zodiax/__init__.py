@@ -4,7 +4,7 @@ from . import derivatives, numerics, serialisation
 from . import optimisation
 
 name = "zodiax"
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 # Dynamically import symbols into the top-level namespace
 for _module in [

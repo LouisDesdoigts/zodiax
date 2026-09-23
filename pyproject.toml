@@ -1,6 +1,6 @@
 [project]
 name = "zodiax"
-version = "0.5.0"
+version = "0.6.0"
 description = "Equinox extension for scientific programming."
 readme = "README.md"
 requires-python = ">=3.10" # Zensical requires 3.10+
