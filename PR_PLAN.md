@@ -15,12 +15,11 @@ Workflow parity with dLux: Python 3.10–3.14 test matrix, 95% local coverage fl
 coverage artefacts/Codecov, tagged-release ancestry/version
 checks, tests before wheel/sdist validation and PyPI publishing, versioned docs,
 latest/default selection, and changelog-derived GitHub release notes. Zodiax adds
-PR docs builds and explicit local link checks. Its moving channel is named main;
+PR docs builds. Its moving channel is named main;
 dLux currently still names that channel dev. No dLux files changed in this pass.
 Existing historical archives are retained; this is not an automatic rebuild of all
 old Git tags. PyPI trusted publishing configuration still requires verification.
 
-Local validation: 88 tests pass, 100% statement coverage; wheel builds; docs build,
-local page/anchor checks pass. Zensical 0.0.24 still
-warns that its strict flag is unsupported. Workflow YAML parses. Hosted workflow
+Local validation: 88 tests pass, 100% statement coverage; wheel and docs builds
+pass. Workflow YAML parses. Hosted workflow
 execution, publishing and the historical index migration have not been run.

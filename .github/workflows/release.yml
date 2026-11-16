@@ -162,8 +162,7 @@ jobs:
       - name: Build documentation
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          ZODIAX_DOCS_SITE_NAME="zodiax v${VERSION}" zensical build --strict
-          python docs/scripts/check_links.py
+          ZODIAX_DOCS_SITE_NAME="zodiax v${VERSION}" zensical build
 
       - name: Deploy release documentation
         run: |

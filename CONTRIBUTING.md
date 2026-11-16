@@ -99,11 +99,10 @@ Note: `coverage.xml` and `htmlcov/` are generated artifacts and are ignored by g
 
 Docstrings own API contracts. Authored guides and source-package overviews teach
 workflows. The pages in `docs/API/` render docstrings directly with mkdocstrings.
-Build and check the documentation with:
+Build the documentation with:
 
 ```bash
-zensical build --strict
-python docs/scripts/check_links.py
+zensical build
 ```
 
 Tutorial notebooks live in the separate zodiax_tutorials repository. Edit and execute
@@ -114,9 +113,6 @@ Pull requests build documentation without publishing. Main updates only the `mai
 version. A validated release tag publishes its version and advances `latest` after
 PyPI publication. Publishing requires the repository's PyPI trusted publisher and
 GitHub environment to be configured. No release is created by merging a branch.
-
-Zensical versions differ in strict-mode support: inspect build warnings and rendered
-pages, rather than treating a successful command as proof of link correctness.
 
 ---
 

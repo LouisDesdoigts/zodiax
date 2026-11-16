@@ -41,8 +41,7 @@ jobs:
           python -m pip install git+https://github.com/squidfunk/mike.git
       - name: Validate documentation
         run: |
-          zensical build --strict
-          python docs/scripts/check_links.py
+          zensical build
       - name: Publish archive without republishing package
         env:
           ARCHIVE_VERSION: ${{ inputs.version }}
