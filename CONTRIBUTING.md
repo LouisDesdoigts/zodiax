@@ -1,155 +1,104 @@
 # Contributing Guide
 
-Thanks for your interest in contributing to `zodiax`.
+Zodiax is an open-source framework and as such is very welcoming to contributions via pull requests! If you would like to contribute but are unfamiliar with any of this process, as I imagine many coming from a science background will be, please feel free to reach out to me at my [email](mailto:louis.desdoigts@sydney.edu.au) or on [twitter](https://twitter.com/gradientrider) and I will be happy to help you through the process!
 
 ---
 
 ## Getting Started
 
-1. Fork the repository on GitHub.
-2. Clone your fork locally.
-3. Create a feature branch.
+Firstly, you will need to fork the repository to your own github account. This will allow you to make changes to the code and then submit a pull request to the main repository. To do this, click the fork button in the top right of the repository page. This will create a copy of the repository in your own account that you can make changes to and then request to merge with the main repository.
+
+Next, you will need to clone the repository to your local machine. To do this, open a terminal and navigate to the directory you would like to clone the repository to. Then run the following command:
 
 ```bash
-git clone https://github.com/<your-username>/zodiax.git
+git clone https://github.com/your-username-here/zodiax.git
 cd zodiax
-git checkout -b my-feature
+pip install -e '.[dev]'
 ```
 
-Install development dependencies:
-
-```bash
-pip install -e ".[dev]"
-```
-
-The editable install (`-e`) is recommended so local changes in `src/zodiax` are immediately used when running tests.
-
----
-
-## Pre-commit (Formatting and Linting)
-
-Install hooks once:
+Then you will need to install the pre-commit hooks. This will ensure that the code is formatted correctly and linted before you can commit your changes. To do this, run the following command:
 
 ```bash
 pre-commit install
 ```
 
-Run them manually on all files at any time:
-
-```bash
-pre-commit run --all-files
-```
-
-Current hooks include `black` and `ruff` (with autofix where possible).
+This will ensure that any changes you make will adhere to the code style and formatting guidelines of the rest of the package!
 
 ---
 
-## Testing
+## Making Changes
 
-Run all tests:
+Next you can start to make any changes you desire!
 
-```bash
-pytest -q tests
-```
+**Unit Tests**
 
-Run one file:
+It is important that any changes you make are tested to ensure that they work as intended and do not break any existing functionality. If you are creating _new_ functionality you will need to create some new unit tests, otherwise you should be able to modify the existing tests. Test files mirror the package structure, with one test file for each source file.
 
-```bash
-pytest -q tests/test_base.py
-```
-
-Run one test:
+To ensure that everything is working as expected, you can run the unit tests by running the following command:
 
 ```bash
-pytest -q tests/test_base.py::TestBase::test_get
+python -m pytest
 ```
 
-If you are not using an editable install, you can run with:
+This will run the full test suite in the `tests` directory. If you would like to run a specific test, you can run the following command:
 
 ```bash
-PYTHONPATH=src pytest -q tests
+python -m pytest tests/test_file.py
 ```
 
----
+Tests should exercise the public functionality in eager and transformed JAX execution where appropriate.
 
-## Code Coverage
-
-Run tests with coverage:
+Code coverage is measured locally with `pytest-cov` using the configuration in `pyproject.toml`. To run the same coverage measurement used in continuous integration, run:
 
 ```bash
-pytest --cov=zodiax --cov-report=term-missing --cov-report=xml --cov-report=html tests -q
+python -m pytest --cov --cov-report=term-missing --cov-report=xml --cov-report=html
 ```
 
-This produces:
-- terminal coverage summary
-- `coverage.xml` (used by Codecov in CI)
-- `htmlcov/` (local HTML report)
+This prints missing lines in the terminal and writes `coverage.xml` and the browsable `htmlcov/` report. The project line-coverage target is 95%. Codecov consumes the same XML report in continuous integration and reports project and patch coverage on pull requests. Patch coverage is informational; tests should probe useful functionality rather than exist only to execute lines.
 
-Open the HTML report locally:
+Note that just because the tests pass on your local machine, that does not mean that they will necessarily pass on all others! This can be due to a number of reasons such as a different operating system, Python version, or dependencies. This is why github actions are used to run the unit tests on multiple Python versions. This should help ensure that the code works as expected across the supported environments.
 
-```bash
-open htmlcov/index.html
-```
+**Documentation**
 
-Note: `coverage.xml` and `htmlcov/` are generated artifacts and are ignored by git.
+Any changes you make should also be appropriately documented! For small API changes this shouldn't require any changes, however if you are adding new functionality you will need to add some documentation. This can be done by modifying the appropriates files in the `docs` directory.
 
----
-
-## Documentation
-
-Docstrings own API contracts. Authored guides and source-package overviews teach
-workflows. The pages in `docs/API/` render docstrings directly with mkdocstrings.
-Build the documentation with:
+The API reference renders the package docstrings directly with mkdocstrings.
+Build the documentation before opening a pull request:
 
 ```bash
 zensical build
 ```
 
-Tutorial notebooks live in the separate zodiax_tutorials repository. Edit and execute
-the notebook there, export it with export.py, then synchronise Markdown and assets;
-do not hand-edit exported tutorial pages. Run affected examples before publishing.
-
-Pull requests build documentation without publishing. Main updates only the `main`
-version. A validated release tag publishes its version and advances `latest` after
-PyPI publication. Publishing requires the repository's PyPI trusted publisher and
-GitHub environment to be configured. No release is created by merging a branch.
+Use `zensical serve` to inspect the documentation locally at `localhost:8000`.
 
 ---
 
-## CI Expectations
+## Contributing the Changes
 
-GitHub Actions runs tests across a Python version matrix and uploads coverage.
-
-Before opening a PR, aim to have:
-- pre-commit checks passing
-- relevant tests added/updated
-- local tests passing
-- local coverage run for significant changes
+After these steps have been completed, you can commit your changes and push them to your forked repository. These changes should have its formatting and linting checked by the pre-commit hooks. If there are any issues, you will need to fix them before you can commit your changes. Once you have pushed your changes to your forked repository, you can submit a pull request to the main repository. This will allow the maintainers to review your changes and merge them into the main repository!
 
 ---
 
-## Pull Requests
+## Package Updates
 
-When opening a PR, please include:
-- a short summary of what changed
-- why the change was needed
-- test coverage for new behavior
-- any doc updates (if applicable)
+Package releases are published to PyPI from tagged commits on `main`.
 
-Keep PRs focused and small when possible; this makes review much easier.
+1. Update the version in `pyproject.toml` and add the user-facing changes to `CHANGELOG.md`.
+2. Open a pull request and wait for the remote tests to pass before merging.
+3. Update the local `main` branch:
 
----
+    ```bash
+    git switch main
+    git pull --ff-only origin main
+    ```
 
-## Questions / Help
+4. Tag and push the release:
 
-If you are unsure about implementation details, test strategy, or API direction, open a draft PR early and ask for feedback.
+    ```bash
+    git tag -a v0.6.0 -m "Zodiax v0.6.0"
+    git push origin v0.6.0
+    ```
 
-## Archiving the pre-numerics documentation
+5. Check the release workflow and approve the PyPI deployment.
 
-Merge this workflow-only branch before the numerics changes. Run **Archive current
-main documentation** with version `0.5.0`; it verifies main still reports that version,
-archives its docs and sets the default to that archive. If the version directory
-already exists, it registers those existing pages without overwriting them. This does not create a tag,
-publish to PyPI or recreate a GitHub release. Verify the deployed version before
-merging numerics. Normal main pushes update only `/main/` thereafter.
-Existing archives remain available; old releases are not automatically rebuilt.
+The tag and `pyproject.toml` version must match. Published versions and release tags should not be reused.
