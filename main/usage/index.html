@@ -1,0 +1,1168 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation for Zodiax.">
+      
+      
+        <meta name="author" content="Louis Desdoigts">
+      
+      
+        <link rel="canonical" href="https://louisdesdoigts.github.io/zodiax/main/usage/">
+      
+      
+      
+        <link rel="prev" href="./..">
+      
+      
+        <link rel="next" href="../optimisation_tools/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="zensical-0.1.1">
+    
+    
+      
+        <title>Building Classes - Zodiax main</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../assets/stylesheets/modern/main.ebb7f775.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.b60ce83d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="amber" data-md-color-accent="orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-hidden="true"></label>
+    <div data-md-component="skip">
+      <a href="#__skip" class="md-skip">
+        Skip to content
+      </a>
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="./.." title="Zodiax main" class="md-header__button md-logo" aria-label="Zodiax main" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+      <span class="md-visually-hidden">Navigation</span>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Zodiax main
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Building Classes
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="amber" data-md-color-accent="orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="slate" data-md-color-primary="amber" data-md-color-accent="orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+          <span class="md-visually-hidden">Search</span>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/LouisDesdoigts/zodiax" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+  </div>
+  <div class="md-source__repository">
+    LouisDesdoigts/zodiax
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="./.." title="Zodiax main" class="md-nav__button md-logo" aria-label="Zodiax main" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
+
+    </a>
+    Zodiax main
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/LouisDesdoigts/zodiax" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+  </div>
+  <div class="md-source__repository">
+    LouisDesdoigts/zodiax
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="./.." class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Overview
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Using Zodiax
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Using Zodiax
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Building Classes
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Building Classes
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Resources
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#zodiax-basics" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Zodiax Basics
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Zodiax Basics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#constructing-a-zodiax-class" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Constructing a Zodiax class
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <strong>Paths</strong>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#class-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <strong>Class Methods</strong>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multiple-paths-and-nesting" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <strong>Multiple Paths and Nesting</strong>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#alternative-input-styles" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <strong>Alternative Input Styles</strong>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../optimisation_tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Optimisation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  API
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  API
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API/base/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Base
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API/optimisation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Optimisation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API/stats/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Stats
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API/diffops/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  DiffOps
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Previous Versions
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_4">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Previous Versions
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://louisdesdoigts.github.io/zodiax/0.4.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  v0.4.1
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  FAQ
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Changelog
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Contributing
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                <a id="__skip" tabindex="-1"></a>
+                
+                  
+
+  
+    <a href="https://github.com/LouisDesdoigts/zodiax/edit/main/docs/usage.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-pen" viewBox="0 0 24 24"><path d="M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"/></svg>
+    </a>
+  
+  
+    
+      
+    
+    <a href="https://github.com/LouisDesdoigts/zodiax/raw/main/docs/usage.md" title="View source of this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-code-2" viewBox="0 0 24 24"><path d="M4 12.15V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.706.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2h-3.35"/><path d="M14 2v5a1 1 0 0 0 1 1h5M5 16l-3 3 3 3M9 22l3-3-3-3"/></svg>
+    </a>
+  
+
+
+<h1 id="using-zodiax">Using Zodiax<a class="headerlink" href="#using-zodiax" title="Permanent link">¤</a></h1>
+<hr />
+<h2 id="resources">Resources<a class="headerlink" href="#resources" title="Permanent link">¤</a></h2>
+<p><em>Zodiax</em> is built from both <em>Jax</em> and <em>Equinox</em>, so if you are unfamiliar with those packages you should go through their docs and tutorials first! Here are some resources to get you started:</p>
+<ul>
+<li><a href="https://jax.readthedocs.io/en/latest/jax-101/index.html">Jax 101 tutorials</a></li>
+<li><a href="https://jax.readthedocs.io/en/latest/pytrees.html">Jax Pytrees</a></li>
+<li><a href="https://docs.kidger.site/equinox/all-of-equinox/">All of Equinox</a></li>
+</ul>
+<hr />
+<h2 id="zodiax-basics">Zodiax Basics<a class="headerlink" href="#zodiax-basics" title="Permanent link">¤</a></h2>
+<p><code>zodiax.Base</code> is the core class of Zodiax that registers instances of the class as a Pytree which is a native Jax object. Zodiax is also designed to ease working with complex nested class structures often nessecitated by large physical models common to scientific programming. To do this, <code>zodiax.Base</code> has a series of class methods that reflect the <code>jax</code> array update methods, along with introducing the concept of paths that can be used to access and update the leaves of a pytree.</p>
+<h3 id="constructing-a-zodiax-class">Constructing a Zodiax class<a class="headerlink" href="#constructing-a-zodiax-class" title="Permanent link">¤</a></h3>
+<p>Let's examine how these methods work by looking at an example class structure. We will start with a simple class that models a normal distribution and then build a class that contains multiple instances of this class:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">zodiax</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">zdx</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.scipy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">scp</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Normal</span><span class="p">(</span><span class="n">zdx</span><span class="o">.</span><span class="n">Base</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Basic class for modelling a normal distribution"""</span>
+    <span class="n">mean</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">scale</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">amplitude</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">amplitude</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Constructor for the Normal class"""</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">amplitude</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Evaluates the normal distribution"""</span>
+        <span class="n">xs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">width</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span> <span class="o">*</span> <span class="n">scp</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">)</span>
+</code></pre></div>
+<p>This class simply models a normal distribution with a mean, scale and amplitude, and has a <code>.__call__()</code> method that is used to actually perform the calculation of the normal distribution.</p>
+<div class="admonition info">
+<p class="admonition-title">Declaring attributes: <code>mean : np.ndarray</code></p>
+<p>When using <code>equinox</code> or <code>zodiax</code> the attibutes of the class must be
+declared in the class definition to determine the structure of the
+pytree that is created when the class is instantiated. This is done by
+adding a type hint to the attribute which can be any valid python type
+and is <strong>not</strong> type checked!</p>
+</div>
+<p>Now we construct a class to store and model a set of multiple normals.</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">NormalSet</span><span class="p">(</span><span class="n">zdx</span><span class="o">.</span><span class="n">Base</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Basic class for modelling a set of normal distributions"""</span>
+    <span class="n">normals</span><span class="p">:</span> <span class="nb">dict</span>
+    <span class="n">width</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">means</span><span class="p">,</span> <span class="n">scales</span><span class="p">,</span> <span class="n">amplitude</span><span class="p">,</span> <span class="n">names</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Constructor for the NormalSet class"""</span>
+        <span class="n">normals</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)):</span>
+            <span class="n">normals</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="n">means</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">scales</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">amplitude</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normals</span> <span class="o">=</span> <span class="n">normals</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">width</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Allows us to access the individual normals by their dictionary key"""</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">normals</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">normals</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> not in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">normals</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Evaluates the set of normal distributions"""</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">normal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">)</span> <span class="k">for</span> <span class="n">normal</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">normals</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+
+<span class="n">sources</span> <span class="o">=</span> <span class="n">NormalSet</span><span class="p">([</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">],</span> <span class="p">[</span><span class="s2">"alpha"</span><span class="p">,</span> <span class="s2">"beta"</span><span class="p">])</span>
+</code></pre></div>
+<p>This <code>NormalSet</code> class now lets us store an arbitrary number of <code>Normal</code> objects in a dictionary, and allows us to access them by their dictionary key. We can also model the sum of all the normals using the <code>.__call__()</code> method.</p>
+<p>This is all the class set-up we need, now we can look at how to perform different types of optimisation and inference using this model.</p>
+<div class="admonition question">
+<p class="admonition-title">Whats with the <code>__getattr__</code> method?</p>
+<p>This method eases working with nested structures and canbe used to raise parameters from the lowst level of the class structure up to the top. In this example it allows us to access the individual <code>Normal</code> objects by their dictionary key. Using this method, these two lines are equivalent:</p>
+<div class="highlight"><pre><span></span><code><span class="n">mu</span> <span class="o">=</span> <span class="n">sources</span><span class="o">.</span><span class="n">normals</span><span class="p">[</span><span class="s1">'alpha'</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span>
+<span class="n">mu</span> <span class="o">=</span> <span class="n">sources</span><span class="o">.</span><span class="n">alpha</span><span class="o">.</span><span class="n">mean</span>
+</code></pre></div>
+<p>These methods can be chained together with multiple nested classes to make accessing parameters across large models much simpler!</p>
+<p>It is strongly reccomended that your classes have a <code>__getattr__</code> method implemented as it makes working with nested structures <em>much</em> easier! When doing so it is important to ensure that the method raises the correct error when the attribute is not found. This is done by raising an <code>AttributeError</code> with a message that includes the name of the attribute that was not found. </p>
+</div>
+<p>Let's print this object to have a look at what it looks like:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">print</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span>
+</code></pre></div>
+<pre><code>NormalSet(
+  normals={
+    'alpha': Normal(mean=f32[], scale=f32[], amplitude=f32[]),
+    'beta': Normal(mean=f32[], scale=f32[], amplitude=f32[])
+  },
+  width=f32[]
+)
+</code></pre>
+<div class="admonition question">
+<p class="admonition-title">Whats with the f32[2]?</p>
+<p>The <code>f32[2]</code> is the <code>jax</code> representation of a <code>numpy</code> array. The <code>f32</code> is the dtype and the <code>[2]</code> is the shape. The <code>jax</code> representation of a scalar is <code>f32[]</code>.</p>
+</div>
+<hr />
+<h3 id="paths"><strong>Paths</strong><a class="headerlink" href="#paths" title="Permanent link">¤</a></h3>
+<p>Paths are a simple concept that allows us to index a particular leaf of the pytree. The path is a string that is constructed by concatenating the names of the attributes that lead to the leaf. Regardless of the data type of the node, the path is always a string and joined by a period '.', here are some paths for the <code>source</code> class instance:</p>
+<div class="highlight"><pre><span></span><code><span class="s2">"normals.alpha.mean"</span>
+<span class="s2">"normals.alpha.scale"</span>
+<span class="s2">"normals.beta.amplitude"</span>
+</code></pre></div>
+<p>Since we have constructed the <code>__getattr__</code> method, these paths can be simplified to:</p>
+<div class="highlight"><pre><span></span><code><span class="s2">"alpha.mean"</span>
+<span class="s2">"alpha.scale"</span>
+<span class="s2">"beta.amplitude"</span>
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Path Uniqueness</p>
+<p>Paths must be unique
+Paths should not have spaces in them to work properly with the <code>__getattrr__</code></p>
+</div>
+<h3 id="class-methods"><strong>Class Methods</strong><a class="headerlink" href="#class-methods" title="Permanent link">¤</a></h3>
+<p>Zodiax adds a series of methods that can be used to manipulate the nodes or leaves of these pytrees that mirror and expand the functionality of the <code>jax.Array.at[]</code> <a href="https://jax.readthedocs.io/en/latest/_autosummary/jax.numpy.ndarray.at.html?highlight=.at">method</a>. The main methods are <code>get</code>, <code>set</code>, <code>add</code>, <code>multiply</code>, <code>divide</code>, <code>power</code>, <code>min</code>, <code>max</code>, <code>apply</code> and <code>apply_args</code>. The first argument to these methods is a path and methods that manipulate leaves also take in a values parameter. They all essentially follow the same syntax so let's look at some examples of how we would perform basic operations to Zodiax obejcts.</p>
+<p>Let's change our 'alpha` source to a unit normal:</p>
+<div class="highlight"><pre><span></span><code><span class="n">sources</span> <span class="o">=</span> <span class="n">sources</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">"alpha.mean"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+<span class="n">sources</span> <span class="o">=</span> <span class="n">sources</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">"alpha.scale"</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+<span class="n">sources</span> <span class="o">=</span> <span class="n">sources</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">"alpha.amplitude"</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">sources</span><span class="o">.</span><span class="n">alpha</span><span class="p">)</span>
+</code></pre></div>
+<pre><code>Normal(mean=0.0, scale=1.0, amplitude=1.0)
+</code></pre>
+<div class="admonition question">
+<p class="admonition-title">Wait where did the <code>f32[]</code> go?</p>
+<p>This is because we have replaced the <code>jax</code> array with a python float!. It is important to note that the <code>set</code> method does not perform any type checking and will simply replace the leaf with whatever is passed in. Be careful when setting leaves to make sure they are the correct type and that you dont get unexpected errors down the line!</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Immutability</p>
+<p>Since Jax is immutable, Zodiax is also immutable. All this means is we can not update values in place and instead create a new instance of an object with the updated value.</p>
+<p>In regular (mutable) python if we wanted to update the value of some parameter in a class we would do something like this:</p>
+<div class="highlight"><pre><span></span><code><span class="n">sources</span><span class="o">.</span><span class="n">alpha</span><span class="o">.</span><span class="n">mean</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">sources</span><span class="o">.</span><span class="n">alpha</span><span class="o">.</span><span class="n">mean</span> <span class="o">+=</span> <span class="mi">2</span>
+</code></pre></div>
+<p>However in Zodiax this will throw a <code>FrozenInstanceError</code>, what gives! Let's see how we can use Zodiax to achieve the same thing:</p>
+<div class="highlight"><pre><span></span><code><span class="n">sources</span> <span class="o">=</span> <span class="n">sources</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">'alpha.mean'</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<span class="n">sources</span> <span class="o">=</span> <span class="n">sources</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">'alpha.mean'</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<h3 id="multiple-paths-and-nesting"><strong>Multiple Paths and Nesting</strong><a class="headerlink" href="#multiple-paths-and-nesting" title="Permanent link">¤</a></h3>
+<p>Zodiax is very flexible in how you can use the paths to access and manipulate the leaves of the pytree. You can use a single path to access a single leaf, or you can use a list of paths to access multiple leaves. You can also use nested paths to access nested leaves. Let's see some examples:</p>
+<p>Let's add all of the paths to the means together so we can have a simple variable that we can use to globally shift all of the <code>sources</code> at the same time.</p>
+<div class="highlight"><pre><span></span><code><span class="n">means</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"alpha.mean"</span><span class="p">,</span> <span class="s2">"beta.mean"</span><span class="p">]</span>
+<span class="n">shifted_sources</span> <span class="o">=</span> <span class="n">sources</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">means</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">)</span>
+</code></pre></div>
+<p>It's that easy! We can also nest paths in order to perform complex operations simply. Let's say we want to change the scale of both the 'alpha' and 'beta' source together and the 'gamma' source independently.</p>
+<div class="highlight"><pre><span></span><code><span class="n">scales</span> <span class="o">=</span> <span class="p">[[</span><span class="s2">"alpha.scale"</span><span class="p">,</span> <span class="s2">"beta.scale"</span><span class="p">],</span> <span class="s2">"beta.mean"</span><span class="p">]</span>
+<span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">]</span>
+<span class="n">scaled_sources</span> <span class="o">=</span> <span class="n">sources</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">scales</span><span class="p">,</span> <span class="n">values</span><span class="p">)</span>
+</code></pre></div>
+<p>This concept applies to <strong>all</strong> of Zodiax and can be used with any of its methods. Similarly, Zodiax is designed so that every update operation is performed <strong>simultaneously</strong>. This prevents the unnecessary overhead of copying the entire contents of the pytree for every update, which is especially beneficial for large models.</p>
+<h3 id="alternative-input-styles"><strong>Alternative Input Styles</strong><a class="headerlink" href="#alternative-input-styles" title="Permanent link">¤</a></h3>
+<p>So far we have used the explicit <code>(paths, values)</code> style. Zodiax also supports two additional input styles for update methods like <code>set</code>, <code>add</code>, <code>multiply</code>, <code>divide</code>, <code>power</code>, <code>min</code>, and <code>max</code>:</p>
+<ul>
+<li><strong>Dictionary style</strong>: pass <code>{path: value}</code>.</li>
+<li><strong>Keyword style</strong>: pass <code>param=value</code> (and for nested paths use <code>**{"nested.path": value}</code>).</li>
+</ul>
+<p>These are equivalent ways to express the same operations, so you can choose whichever is most readable in your workflow.</p>
+<div class="admonition tip">
+<p class="admonition-title">When to use which style?</p>
+<p>Dictionary style is often nicest when building updates programmatically.
+Keyword style is often nicest for quick, explicit updates in notebooks.</p>
+</div>
+<p>Here is a minimal example of both styles:</p>
+<div class="highlight"><pre><span></span><code><span class="n">sources</span> <span class="o">=</span> <span class="n">sources</span><span class="o">.</span><span class="n">set</span><span class="p">({</span><span class="s2">"alpha.mean"</span><span class="p">:</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">,</span> <span class="s2">"beta.amplitude"</span><span class="p">:</span> <span class="mf">3.0</span><span class="p">})</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span>
+</code></pre></div>
+<pre><code>NormalSet(
+  normals={
+    'alpha': Normal(mean=-0.5, scale=1.0, amplitude=1.0),
+    'beta': Normal(mean=f32[], scale=f32[], amplitude=3.0)
+  },
+  width=f32[]
+)
+</code></pre>
+<div class="highlight"><pre><span></span><code><span class="n">sources</span> <span class="o">=</span> <span class="n">sources</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="s2">"beta.scale"</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">})</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span>
+</code></pre></div>
+<pre><code>NormalSet(
+  normals={
+    'alpha': Normal(mean=-0.5, scale=1.0, amplitude=1.0),
+    'beta': Normal(mean=f32[], scale=f32[], amplitude=3.0)
+  },
+  width=f32[]
+)
+</code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://zensical.org/" target="_blank" rel="noopener">
+      Zensical
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["navigation.top","navigation.indexes","content.code.copy","toc.integrate","content.action.edit","content.action.view"],"redirect":null,"search":"../assets/javascripts/workers/search.719e0d91.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":{"provider":"mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.3cb411a8.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
