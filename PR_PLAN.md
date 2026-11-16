@@ -7,11 +7,11 @@ Updated 16 November 2026. Local branch preparation only; no push or merge perfor
 | Work | Branch / PR | Dependency | Status |
 | --- | --- | --- | --- |
 | Numerical foundation and derivatives | `numerics`, PR #89 | main | Serialisation extracted; local default/x64 tests pass |
-| Serialisation | `codex/serialisation` | numerical foundation | Preserved as a separate stacked branch |
-| Optimisation compatibility | planned `codex/optimisation-followup` | derivatives merged | Existing three-file working diff preserved on the local numerics checkout |
-| Documentation and packaging | planned `codex/docs-package` | final public API | Planned; mirror dLux overhaul practices |
+| Serialisation | `serialisation` | numerical foundation | Preserved as a separate stacked branch |
+| Optimisation compatibility | planned `optimisation-followup` | derivatives merged | Existing three-file working diff preserved on the local numerics checkout |
+| Documentation and packaging | planned `docs-package` | final public API | Planned; mirror dLux overhaul practices |
 
-Safety reference: `codex/numerics-before-serialisation-split` preserves the original
+Safety reference: `numerics-before-serialisation-split` preserves the original
 committed tree at 769c981. The serialisation branch restores that implementation
 on top of the split numerics branch. Existing numerics/derivatives documentation
 and version metadata stay with the core; broader documentation changes are deferred.
