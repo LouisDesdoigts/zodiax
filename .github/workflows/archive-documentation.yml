@@ -41,7 +41,6 @@ jobs:
           python -m pip install git+https://github.com/squidfunk/mike.git
       - name: Validate documentation
         run: |
-          python docs/scripts/generate_api.py --check
           zensical build --strict
           python docs/scripts/check_links.py
       - name: Publish archive without republishing package

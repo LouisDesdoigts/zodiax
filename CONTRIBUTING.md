@@ -98,11 +98,10 @@ Note: `coverage.xml` and `htmlcov/` are generated artifacts and are ignored by g
 ## Documentation
 
 Docstrings own API contracts. Authored guides and source-package overviews teach
-workflows. `docs/API/generated/` is generated from public exports; regenerate it with:
+workflows. The pages in `docs/API/` render docstrings directly with mkdocstrings.
+Build and check the documentation with:
 
 ```bash
-python docs/scripts/generate_api.py
-python docs/scripts/generate_api.py --check
 zensical build --strict
 python docs/scripts/check_links.py
 ```

@@ -74,7 +74,6 @@ extra_css:
   - stylesheets/api.css
 
 extra_javascript:
-  - javascripts/api-navigation.js
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
 # Navigation map
@@ -85,7 +84,6 @@ nav:
       - Building Classes: usage.md
       - Optimisation: optimisation_tools.md
   - API:
-      - Generated Reference: API/generated/index.md
       - Base: API/base.md
       - Optimisation: API/optimisation.md
       - Stats: API/stats.md

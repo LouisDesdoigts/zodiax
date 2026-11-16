@@ -1,4 +1,4 @@
-/* Present each generated API member as one self-contained panel. */
+/* Present each API member as one self-contained panel. */
 .doc-object.doc-function,
 .doc-object.doc-attribute {
   margin: 1.5rem 0;
@@ -37,47 +37,4 @@
   font-size: 0.72rem;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-}
-
-/* Keep sidebar links separate from their keyboard-accessible collapse buttons. */
-.api-nav-row {
-  display: flex;
-  align-items: center;
-}
-
-.api-nav-row > .md-nav__link {
-  flex: 1;
-  min-width: 0;
-}
-
-.api-nav-toggle {
-  flex: 0 0 1.6rem;
-  height: 1.6rem;
-  color: inherit;
-  cursor: pointer;
-  border-radius: 0.2rem;
-}
-
-.api-nav-toggle::before {
-  content: "";
-  display: inline-block;
-  width: 0.35rem;
-  height: 0.35rem;
-  border-right: 0.1rem solid currentColor;
-  border-bottom: 0.1rem solid currentColor;
-  transform: rotate(-45deg);
-}
-
-.api-nav-toggle[aria-expanded="true"]::before {
-  transform: rotate(45deg);
-}
-
-.api-nav-toggle:hover,
-.api-nav-toggle:focus-visible {
-  background: var(--md-default-fg-color--lightest);
-}
-
-/* Override the theme rule that forces the active integrated TOC to display. */
-.md-nav.api-nav-collapsed {
-  display: none !important;
 }

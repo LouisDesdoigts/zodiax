@@ -21,9 +21,8 @@ jobs:
           python-version: '3.11'
       - name: Install documentation dependencies
         run: python -m pip install ".[dev]"
-      - name: Verify generated API and build documentation
+      - name: Build documentation
         run: |
-          python docs/scripts/generate_api.py --check
           zensical build --strict
           python docs/scripts/check_links.py
   deploy:

@@ -162,8 +162,6 @@ jobs:
       - name: Build documentation
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          python docs/scripts/generate_api.py --check
-          git diff --exit-code -- docs/API mkdocs.yml
           ZODIAX_DOCS_SITE_NAME="zodiax v${VERSION}" zensical build --strict
           python docs/scripts/check_links.py
 

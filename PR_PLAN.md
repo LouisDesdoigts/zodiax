@@ -12,7 +12,7 @@
 5. Keep serialisation and optimisation as the previously planned follow-up PRs.
 
 Workflow parity with dLux: Python 3.10–3.14 test matrix, 95% local coverage floor,
-coverage artefacts/Codecov, generated API checks, tagged-release ancestry/version
+coverage artefacts/Codecov, tagged-release ancestry/version
 checks, tests before wheel/sdist validation and PyPI publishing, versioned docs,
 latest/default selection, and changelog-derived GitHub release notes. Zodiax adds
 PR docs builds and explicit local link checks. Its moving channel is named main;
@@ -21,6 +21,6 @@ Existing historical archives are retained; this is not an automatic rebuild of a
 old Git tags. PyPI trusted publishing configuration still requires verification.
 
 Local validation: 88 tests pass, 100% statement coverage; wheel builds; docs build,
-generated-reference check and local page/anchor checks pass. Zensical 0.0.24 still
+local page/anchor checks pass. Zensical 0.0.24 still
 warns that its strict flag is unsupported. Workflow YAML parses. Hosted workflow
 execution, publishing and the historical index migration have not been run.
