@@ -6,7 +6,7 @@ Updated 16 November 2026. Local branch preparation only; no push or merge perfor
 
 | Work | Branch / PR | Dependency | Status |
 | --- | --- | --- | --- |
-| Numerical foundation and derivatives | `numerics`, PR #89 | main | Serialisation extracted; fresh validation pending |
+| Numerical foundation and derivatives | `numerics`, PR #89 | main | Serialisation extracted; local default/x64 tests pass |
 | Serialisation | `codex/serialisation` | numerical foundation | Preserved as a separate stacked branch |
 | Optimisation compatibility | planned `codex/optimisation-followup` | derivatives merged | Existing three-file working diff preserved on the local numerics checkout |
 | Documentation and packaging | planned `codex/docs-package` | final public API | Planned; mirror dLux overhaul practices |
@@ -22,7 +22,8 @@ and version metadata stay with the core; broader documentation changes are defer
   derivatives and decompositions, their contracts and tests.
 - [x] Remove serialisation source, exports, Base convenience methods, archive-only
   tests and documentation promises from the core tree.
-- [ ] Run committed-source tests in default and x64 precision; check remote CI.
+- [x] Run committed-source tests in default and x64 precision.
+- [ ] Check remote CI before merge.
 - [ ] Review changes from main, especially the diffops replacement and public exports.
 - [ ] Update PR #89 scope and merge after review.
 
@@ -32,7 +33,8 @@ and version metadata stay with the core; broader documentation changes are defer
   Base.save/load, exports, documentation and all existing archive integration tests.
 - [ ] After core merge, rebase onto main (if squash-merged, transplant only the
   serialisation restoration commit, not the full numerical history).
-- [ ] Run archive suites and full integration tests under default and x64 precision.
+- [x] Run archive suites and full integration tests under default and x64 precision.
+- [ ] Repeat remote CI after publishing/rebasing the branch.
 - [ ] Review supported types, class resolution, template/version policy, failed
   writes and malformed archives; publish and merge the separate PR.
 
@@ -64,3 +66,17 @@ Reference: /Users/louis/Projects/Software/dLux/repo, overhaul branch.
   the intended Zodiax release before coordinating publication.
 
 Update this checklist with actual PR links and verification results as work lands.
+
+## Split verification — 16 November 2026
+
+Clean git-archive snapshots excluded the three uncommitted optimisation files.
+Python 3.14.3, JAX 0.7.2, Equinox 0.13.4, local macOS CPU:
+
+| Snapshot | Default precision | JAX_ENABLE_X64=True |
+| --- | --- | --- |
+| Core numerics (57e3151) | 517 passed | 517 passed |
+| Serialisation restored (ab9a35e tree) | 719 passed | 719 passed |
+
+The restored source/tests/docs match the pre-split committed tree exactly;
+only this plan is additional. Core commit formatting/lint hooks passed. Remote CI,
+documentation builds and package builds were not run in this split pass.
