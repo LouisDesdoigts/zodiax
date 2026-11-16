@@ -21,110 +21,26 @@
 
 ## Object model
 
-The tree below includes every public numerical class. Methods shown on a parent
+The table below includes every public numerical class. Methods shown on a parent
 are inherited by its children; concrete transforms supply their local formula.
 
-```mermaid
-classDiagram
-    class Base {
-        +get(paths)
-        +set(paths, values)
-    }
-    class Module {
-        +alias
-        +resolve(context)
-        +populate()
-        +validate_aliases()
-    }
-    class Expression {
-        +evaluate(context)
-        +resolve_children(context)
-        +__call__(context)
-    }
-    class Transform {
-        +x
-        +evaluate(context)
-        +fwd(x, context)
-        +inv(y, context)
-        +apply(value, inverse, context)
-        +__call__(value, inverse, context)
-        +initialise(y, context)
-    }
-    class Map {
-        +s
-        +M
-        +b
-        +fwd(x)
-        +inv(y)
-    }
-    class Mask {
-        +mask
-        +size
-        +shape
-        +fwd(x)
-        +inv(y)
-    }
-    class Operation {
-        <<abstract>>
-    }
-    class Exp {
-        +base
-        +fwd(x)
-        +inv(y)
-    }
-    class Log {
-        +base
-        +fwd(x)
-        +inv(y)
-    }
-    class Pow {
-        +p
-        +fwd(x)
-    }
-    class Unit {
-        +unit
-        +unit_out
-        +factor
-        +category
-        +to(unit, **context) Array
-        +fwd(x)
-        +inv(y)
-    }
-    class Linked {
-        +value
-        +key
-        +defer()
-        +evaluate(context)
-    }
-    class Deferred {
-        +key
-        +evaluate(context)
-    }
-    class State {
-        +values
-        +value(path)
-        +ref(path)
-        +step(dt)
-    }
-    class StateRef {
-        +path
-        +evaluate(state)
-    }
-    Base <|-- Module
-    Module <|-- State
-    Module <|-- Expression
-    Expression <|-- Transform
-    Expression <|-- Linked
-    Expression <|-- Deferred
-    Expression <|-- StateRef
-    Transform <|-- Map
-    Transform <|-- Mask
-    Transform <|-- Operation
-    Operation <|-- Exp
-    Operation <|-- Log
-    Operation <|-- Pow
-    Operation <|-- Unit
-```
+| Class | Parent | Fields and methods |
+| --- | --- | --- |
+| `Base` | Equinox Module | `get(paths)`, `set(paths, values)` |
+| `Module` | `Base` | `alias`, `resolve(context)`, `populate()`, `validate_aliases()` |
+| `Expression` | `Module` | `evaluate(context)`, `resolve_children(context)`, `__call__(context)` |
+| `Transform` | `Expression` | `x`, `evaluate(context)`, `fwd(x, context)`, `inv(y, context)`, `apply(value, inverse, context)`, `__call__(value, inverse, context)`, `initialise(y, context)` |
+| `Map` | `Transform` | `s`, `M`, `b`, `fwd(x)`, `inv(y)` |
+| `Mask` | `Transform` | `mask`, `size`, `shape`, `fwd(x)`, `inv(y)` |
+| `Operation` | `Transform` |  |
+| `Exp` | `Operation` | `base`, `fwd(x)`, `inv(y)` |
+| `Log` | `Operation` | `base`, `fwd(x)`, `inv(y)` |
+| `Pow` | `Operation` | `p`, `fwd(x)` |
+| `Unit` | `Operation` | `unit`, `unit_out`, `factor`, `category`, `to(unit, **context) Array`, `fwd(x)`, `inv(y)` |
+| `Linked` | `Expression` | `value`, `key`, `defer()`, `evaluate(context)` |
+| `Deferred` | `Expression` | `key`, `evaluate(context)` |
+| `State` | `Module` | `values`, `value(path)`, `ref(path)`, `step(dt)` |
+| `StateRef` | `Expression` | `path`, `evaluate(state)` |
 
 Here `context` abbreviates named scientific inputs passed as `**context`;
 `inverse` is the optional keyword argument on `apply` and explicit calls.
