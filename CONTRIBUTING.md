@@ -97,21 +97,27 @@ Note: `coverage.xml` and `htmlcov/` are generated artifacts and are ignored by g
 
 ## Documentation
 
-If your change affects behavior or public API, update docs in `docs/`.
-
-Serve docs locally:
+Docstrings own API contracts. Authored guides and source-package overviews teach
+workflows. `docs/API/generated/` is generated from public exports; regenerate it with:
 
 ```bash
-zensical serve
+python docs/scripts/generate_api.py
+python docs/scripts/generate_api.py --check
+zensical build --strict
+python docs/scripts/check_links.py
 ```
 
-Then open `http://localhost:8000`.
+Tutorial notebooks live in the separate zodiax_tutorials repository. Edit and execute
+the notebook there, export it with export.py, then synchronise Markdown and assets;
+do not hand-edit exported tutorial pages. Run affected examples before publishing.
 
-Versioned docs are deployed automatically in CI using `mike`:
-- pushes to `main` update the `dev` and `latest` aliases
-- pushes of tags matching `v*` publish a versioned docs build (e.g. `v0.5.0`)
+Pull requests build documentation without publishing. Main updates only the `main`
+version. A validated release tag publishes its version and advances `latest` after
+PyPI publication. Publishing requires the repository's PyPI trusted publisher and
+GitHub environment to be configured. No release is created by merging a branch.
 
-You generally do not need to run `mike` manually unless you are testing versioned deployment behavior.
+Zensical versions differ in strict-mode support: inspect build warnings and rendered
+pages, rather than treating a successful command as proof of link correctness.
 
 ---
 
@@ -142,3 +148,13 @@ Keep PRs focused and small when possible; this makes review much easier.
 ## Questions / Help
 
 If you are unsure about implementation details, test strategy, or API direction, open a draft PR early and ask for feedback.
+
+## Archiving the pre-numerics documentation
+
+Merge this workflow-only branch before the numerics changes. Run **Archive current
+main documentation** with version `0.5.0`; it verifies main still reports that version,
+archives its docs and sets the default to that archive. If the version directory
+already exists, it registers those existing pages without overwriting them. This does not create a tag,
+publish to PyPI or recreate a GitHub release. Verify the deployed version before
+merging numerics. Normal main pushes update only `/main/` thereafter.
+Existing archives remain available; old releases are not automatically rebuilt.
