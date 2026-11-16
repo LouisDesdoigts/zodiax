@@ -253,8 +253,7 @@ src/zodiax/
 │   ├── transforms.py
 │   ├── units.py
 │   └── overview.md
-├── derivatives/
-└── serialisation/
+└── derivatives/
 ```
 
 | Numerical module | Public responsibilities |

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from io import BytesIO
 
 import equinox as eqx
 import jax.numpy as np
@@ -319,17 +318,6 @@ def test_module_populate_convenience():
 
     assert np.allclose(output.owner, 2.0)
     assert np.allclose(output.reference, 2.0)
-
-
-def test_base_save_and_template_load_convenience(create_base):
-    original = create_base()
-    file = BytesIO()
-
-    original.save(file)
-    file.seek(0)
-    loaded = original.load(file)
-
-    assert eqx.tree_equal(loaded, original, typematch=True)
 
 
 class Foo(zdx.WrapperHolder):

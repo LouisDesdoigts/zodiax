@@ -27,8 +27,4 @@ Use [Module](module.md) for composite numerical models that need aliases, neares
 named descendants, shared-value population, or expression resolution. Module
 inherits these Base path operations.
 
-`Base.save(path)` writes a validated Zodiax archive. Calling `template.load(path)`
-loads through the same format while using `template` to verify the expected class and
-field structure.
-
 ::: zodiax.base

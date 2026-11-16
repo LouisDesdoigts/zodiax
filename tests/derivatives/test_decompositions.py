@@ -5,7 +5,6 @@ Reference identities use the represented matrix and explicit coordinate maps.
 
 from __future__ import annotations
 
-from io import BytesIO
 
 import equinox as eqx
 import jax
@@ -63,12 +62,6 @@ def test_decomposition_family_preserves_fields_and_immutable_updates(kind):
     assert type(updated) is type(result)
     assert np.array_equal(updated.get(path), 2 * original_array)
     assert np.array_equal(result.get(path), original_array)
-
-    file = BytesIO()
-    zdx.save(file, result)
-    restored = zdx.load(file)
-    assert isinstance(restored, zdx.Decomposition)
-    assert eqx.tree_equal(restored, result, typematch=True)
 
 
 def test_eigh_uses_numpy_orientation_and_reconstructs_matrix():
@@ -313,38 +306,6 @@ def test_eigh_remains_differentiable_for_distinct_eigenvalues():
         return zdx.Hessian(matrix, layout).eigh().values[-1]
 
     assert np.isfinite(jax.grad(largest)(np.asarray(2.0)))
-
-
-def test_projection_roundtrips_through_archive():
-    original = _fisher().projection()
-    file = BytesIO()
-    zdx.save(file, original)
-    file.seek(0)
-    loaded = zdx.load(file)
-
-    assert isinstance(loaded, zdx.ParameterProjection)
-    assert loaded.method == original.method
-    assert loaded.layout.compatible(original.layout)
-    assert np.array_equal(loaded.retained, original.retained)
-    assert np.allclose(loaded.matrix, original.matrix)
-    assert np.allclose(loaded.eigenvalues, original.eigenvalues)
-
-
-def test_local_parameterisation_roundtrips_through_archive():
-    origin = {
-        "a": np.asarray([1.0, -2.0]),
-        "b": np.asarray(0.5, dtype=np.float32),
-    }
-    original = _fisher().parameterise(origin)
-    file = BytesIO()
-    zdx.save(file, original)
-    file.seek(0)
-    loaded = zdx.load(file)
-
-    assert isinstance(loaded, zdx.LocalParameterisation)
-    assert jax.tree.all(
-        jax.tree.map(np.allclose, loaded(np.ones(3)), original(np.ones(3)))
-    )
 
 
 def test_decomposition_and_projection_validate_inputs():
@@ -690,12 +651,6 @@ def test_local_parameterisation_preserves_module_class_aliases_and_static_metada
     assert np.array_equal(origin.weights, np.array([3.0, 4.0]))
     assert isinstance(geometry.variance, Calibration)
     assert np.allclose(geometry.variance.weights, np.array([1 / 9, 1 / 16]))
-
-    file = BytesIO()
-    zdx.save(file, geometry)
-    restored = zdx.load(file)
-    assert isinstance(restored.origin, Calibration)
-    assert jax.tree.all(jax.tree.map(np.allclose, restored(np.ones(3)), result))
 
 
 @pytest.mark.parametrize("method", ["eigh", "cholesky", "projection"])

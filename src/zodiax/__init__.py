@@ -1,6 +1,6 @@
 # Import modules in dependency order
 from . import base, module, stats
-from . import derivatives, numerics, serialisation
+from . import derivatives, numerics
 from . import optimisation
 
 name = "zodiax"
@@ -13,7 +13,6 @@ for _module in [
     stats,
     numerics,
     derivatives,
-    serialisation,
     optimisation,
 ]:
     globals().update({name: getattr(_module, name) for name in _module.__all__})
@@ -25,6 +24,5 @@ __all__ = (
     + stats.__all__
     + numerics.__all__
     + derivatives.__all__
-    + serialisation.__all__
     + optimisation.__all__
 )

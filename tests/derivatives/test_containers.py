@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from io import BytesIO
 from typing import Any
 
 import equinox as eqx
@@ -48,7 +47,7 @@ def test_public_exports():
 
 
 @pytest.mark.parametrize("result_type", [zdx.Jacobian, zdx.Hessian, zdx.GaussNewton])
-def test_derivative_family_preserves_construction_updates_and_archives(result_type):
+def test_derivative_family_preserves_construction_and_updates(result_type):
     layout = zdx.TreeLayout.from_tree({"weights": np.ones(2)})
     result = result_type([[1.0, 2.0], [0.0, 3.0]], layout)
 
@@ -65,12 +64,6 @@ def test_derivative_family_preserves_construction_updates_and_archives(result_ty
     assert type(updated) is result_type
     assert np.array_equal(updated.matrix, 2 * expected)
     assert np.array_equal(result.matrix, expected)
-
-    file = BytesIO()
-    zdx.save(file, result)
-    restored = zdx.load(file)
-    assert isinstance(restored, zdx.Derivative)
-    assert eqx.tree_equal(restored, result, typematch=True)
 
 
 def test_fisher_is_a_symmetric_matrix_outside_the_derivative_family():

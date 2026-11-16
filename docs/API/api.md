@@ -19,13 +19,6 @@ model = model.min(paths, values)
 model = model.max(paths, values)
 ```
 
-The same class exposes general archive helpers:
-
-```python
-model.save("model.zdx")
-loaded = model.load("model.zdx")
-```
-
 ## `Module` and aliases
 
 Module adds model preparation and concise parameter lookup to Base's path operations.
@@ -202,6 +195,4 @@ Cholesky, projection, and local-parameterisation results. Derivative operations
 derive backend coordinate tracking from the supplied parameter PyTree automatically;
 `TreeLayout` is the lower-level metadata object that records those paths and shapes.
 Every supplied leaf is included and non-floating leaves are rejected rather than
-silently filtered. `ObjectDefinition` separately records the complete supported
-object topology for validated `.zdx` archives and is generated automatically by
-`save` and `load`.
+silently filtered.

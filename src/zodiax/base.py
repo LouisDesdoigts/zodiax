@@ -343,18 +343,6 @@ class Base(eqx.Module):
                     "for static metadata."
                 )
 
-    def save(self, file_or_path: Any) -> None:
-        """Save this object to a validated Zodiax archive."""
-        from .serialisation import save
-
-        save(file_or_path, self)
-
-    def load(self, file_or_path: Any, *, strict: bool = True) -> Any:
-        """Load an archive using this object as its structural template."""
-        from .serialisation import load
-
-        return load(file_or_path, like=self, strict=strict)
-
     def get(
         self: PyTree,
         parameters: Params,

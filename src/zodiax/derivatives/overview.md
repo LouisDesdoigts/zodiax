@@ -496,7 +496,6 @@ Numerical methods use ordinary JAX calculations; explicit diagnostics have separ
 | Differentiating eigen projection construction | Domain-limited derivatives | Rank crossings and repeated eigenvalues unsupported; fixed projection application is separate. |
 | Differentiating `solve` | Linear in its right-hand side | Factor derivatives inherit SVD limits at repeated singular values. |
 | Invalid numerical domains | Python/JAX errors, NaNs, or infinities | No runtime numerical-validation callbacks. |
-| Supported derivative object serialisation | Restored fields, layouts, behaviour | Store arrays and definitions; no derivative/reconstruction closures. |
 
 `hessian_to_pytree` remains the deprecated main-API compatibility route for an exact
 PyTree-of-PyTrees result. New code uses `H.blocks(nested=True)`. That returns

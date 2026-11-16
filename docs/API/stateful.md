@@ -119,9 +119,7 @@ sample = noise.resolve(key=jr.key(0))
 
 More specialised classes may store a `StateRef`, derive keys using `split` or
 `fold_in`, or accept a key from call context. Those choices remain explicit and
-natively interoperable with JAX. For serialisation, keep the random function call
-inside `evaluate`, as above, and store only supported model data in declared fields.
-Standalone functions and function-valued fields are not serialised.
+natively interoperable with JAX.
 
 ::: zodiax.numerics.arrays
 
