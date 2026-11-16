@@ -34,18 +34,6 @@ def pages():
         filename = "_".join(relative.parts[1:]) + ".md"
         index.append(f"- [{module_name}]({filename})")
         lines = [NOTICE, f"# {module_name}", ""]
-        classes = [
-            getattr(module, name)
-            for name in names
-            if inspect.isclass(getattr(module, name))
-        ]
-        if classes:
-            lines.extend(["```mermaid", "classDiagram"])
-            for cls in classes:
-                for base in cls.__bases__:
-                    if base is not object:
-                        lines.append(f"    {base.__name__} <|-- {cls.__name__}")
-            lines.extend(["```", ""])
         for name in names:
             obj = getattr(module, name)
             lines.extend([f"::: {module_name}.{name}"])

@@ -2,13 +2,6 @@
 
 # zodiax.base
 
-```mermaid
-classDiagram
-    Module <|-- Base
-    Base <|-- EquinoxWrapper
-    Base <|-- WrapperHolder
-```
-
 ::: zodiax.base.Base
     options:
       merge_init_into_class: true

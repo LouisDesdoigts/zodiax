@@ -58,11 +58,7 @@ extra:
 markdown_extensions:
   - admonition           # Support for !!! note "Title" blocks
   - pymdownx.details     # Support for collapsible ??? note blocks
-  - pymdownx.superfences:
-      custom_fences:
-        - name: mermaid
-          class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.superfences
   - pymdownx.snippets:
       base_path: [".", "docs"] # Look in the root AND the docs folder
   - pymdownx.arithmatex: # Required for LaTeX math
