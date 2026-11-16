@@ -1,4 +1,4 @@
-site_name: Zodiax
+site_name: !ENV [ZODIAX_DOCS_SITE_NAME, "Zodiax"]
 site_url: https://louisdesdoigts.github.io/zodiax/
 site_description: Documentation for Zodiax.
 site_author: Louis Desdoigts
@@ -47,6 +47,7 @@ plugins:
   - mkdocstrings:        # Auto-generate API docs from code
       handlers:
         python:
+          paths: [src]
           options:
             docstring_style: "numpy"
             show_root_heading: true      # Highly recommended for module-level docs
@@ -57,7 +58,7 @@ extra:
 markdown_extensions:
   - admonition           # Support for !!! note "Title" blocks
   - pymdownx.details     # Support for collapsible ??? note blocks
-  - pymdownx.superfences # Allows nesting code inside other blocks
+  - pymdownx.superfences
   - pymdownx.snippets:
       base_path: [".", "docs"] # Look in the root AND the docs folder
   - pymdownx.arithmatex: # Required for LaTeX math
@@ -70,14 +71,13 @@ markdown_extensions:
 
 # MathJax setup for LaTeX rendering
 extra_javascript:
-  - javascripts/mathjax.js
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
 # Navigation map
 nav:
-  - Overview: 
+  - Overview:
       - index.md
-  - Using Zodiax: 
+  - Using Zodiax:
       - Building Classes: usage.md
       - Numerics: numerics.md
       - Derivatives: derivatives.md
@@ -95,4 +95,5 @@ nav:
   - Previous Versions:
       - v0.4.1: https://louisdesdoigts.github.io/zodiax/0.4.1/
   - FAQ: faq.md
-  - Changelog: CHANGELOG.md
+  - Changelog: changelog.md
+  - Contributing: contributing.md

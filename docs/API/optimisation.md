@@ -1,5 +1,7 @@
 # Optimisation
 
-The `zodiax.optimisation` module contains functions to provide a simple interface to apply Optax optimisers to individual leaves!
-
 ::: zodiax.optimisation
+    options:
+      show_root_heading: false
+      show_root_toc_entry: false
+      heading_level: 2

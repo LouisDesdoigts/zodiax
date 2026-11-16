@@ -30,6 +30,7 @@ Development installation:
 ```bash
 pip install "zodiax[dev]"
 ```
+
 ---
 
 ### Quickstart

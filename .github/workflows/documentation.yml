@@ -1,70 +1,48 @@
 name: Documentation
 on:
+  pull_request:
   push:
-    branches:
-      - main
-      - docs-patch # For docs deployment testing off main
-    tags:
-      - 'v*' # Triggers a new versioned archive when you push a git tag
+    branches: [main]
+
+concurrency:
+  group: documentation-publish
+  cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  documentation:
+  build:
     runs-on: ubuntu-latest
-    steps: 
-      - name: Checkout repository
-        uses: actions/checkout@v4 # Updated to v4 for 2026 compatibility
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          fetch-depth: 0      # Essential: mike needs full history to push to gh-pages
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11' # Zensical requires 3.10+
-
-      - name: Install environment
+          python-version: '3.11'
+      - name: Install documentation dependencies
+        run: python -m pip install ".[dev]"
+      - name: Build documentation
         run: |
-          python -m pip install --upgrade pip
+          zensical build
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install documentation publishing dependencies
+        run: |
           python -m pip install ".[dev]"
-          python -m pip install zensical mkdocstrings-python
-
-      - name: Verify docs environment
+          python -m pip install git+https://github.com/squidfunk/mike.git
+      - name: Deploy main documentation
         run: |
-          python -m pip show zensical mkdocs
-          python -c "import zensical, mkdocs; print('Docs deps OK')"
-
-      - name: Build Documentation
-        run: zensical build --strict
-
-      - name: Prepare publish directory
-        run: |
-          rm -rf .publish
-          mkdir -p .publish
-          cp -R site/. .publish/
-
-          # If this is a normal push to main, update the 'dev' and 'latest' aliases
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            mkdir -p .publish/dev .publish/latest
-            cp -R site/. .publish/dev/
-            cp -R site/. .publish/latest/
-          fi
-          
-          # If this is a tag (e.g. v0.5.0), create permanent versioned folders
-          # with and without the 'v' prefix for robust backwards compatibility.
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            VERSION_TAG=${GITHUB_REF#refs/tags/}
-            VERSION=${VERSION_TAG#v}
-            mkdir -p ".publish/$VERSION_TAG" ".publish/$VERSION" .publish/latest
-            cp -R site/. ".publish/$VERSION_TAG/"
-            cp -R site/. ".publish/$VERSION/"
-            cp -R site/. .publish/latest/
-          fi
-
-      - name: Deploy Documentation
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .publish
-          keep_files: true
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          ZODIAX_DOCS_SITE_NAME="Zodiax main" mike deploy --config-file mkdocs.yml --push main
