@@ -32,17 +32,27 @@ def pages():
         if not names:
             continue
         filename = "_".join(relative.parts[1:]) + ".md"
-        index.append(f"- [{module_name}]({filename})")
-        lines = [NOTICE, f"# {module_name}", ""]
+        index.append(f"- [{module_name}](../{filename})")
+        title = {"diffops": "DiffOps"}.get(
+            relative.parts[-1], relative.parts[-1].title()
+        )
+        lines = [NOTICE, f"# {title}", ""]
         for name in names:
             obj = getattr(module, name)
-            lines.extend([f"::: {module_name}.{name}"])
+            lines.extend(
+                [
+                    f'??? info "{name}"',
+                    f"    ::: {module_name}.{name}",
+                    "        options:",
+                    "          heading_level: 2",
+                    "          show_root_full_path: false",
+                ]
+            )
             if inspect.isclass(obj):
                 lines.extend(
                     [
-                        "    options:",
-                        "      merge_init_into_class: true",
-                        "      inherited_members: [__init__]",
+                        "          merge_init_into_class: true",
+                        "          inherited_members: [__init__]",
                     ]
                 )
             lines.append("")

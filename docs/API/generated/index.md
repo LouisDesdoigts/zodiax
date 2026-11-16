@@ -4,7 +4,7 @@
 
 Reference pages follow the package's public exports.
 
-- [zodiax.base](base.md)
-- [zodiax.diffops](diffops.md)
-- [zodiax.optimisation](optimisation.md)
-- [zodiax.stats](stats.md)
+- [zodiax.base](../base.md)
+- [zodiax.diffops](../diffops.md)
+- [zodiax.optimisation](../optimisation.md)
+- [zodiax.stats](../stats.md)

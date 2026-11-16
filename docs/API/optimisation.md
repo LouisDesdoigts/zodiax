@@ -1,5 +1,1 @@
-# Optimisation
-
-The `zodiax.optimisation` module contains functions to provide a simple interface to apply Optax optimisers to individual leaves!
-
-::: zodiax.optimisation
+--8<-- "docs/API/generated/optimisation.md"
