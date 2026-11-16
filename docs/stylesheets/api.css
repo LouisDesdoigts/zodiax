@@ -77,6 +77,7 @@
   background: var(--md-default-fg-color--lightest);
 }
 
+/* Override the theme rule that forces the active integrated TOC to display. */
 .md-nav.api-nav-collapsed {
-  display: none;
+  display: none !important;
 }
