@@ -195,9 +195,9 @@ jobs:
       - name: Extract release notes
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          awk -v heading="## V${VERSION}" '
+          awk -v heading="## ${VERSION}" '
             $0 == heading { found = 1; next }
-            found && /^## V[0-9]/ { exit }
+            found && /^## / { exit }
             found { print }
             END { if (!found) exit 1 }
           ' CHANGELOG.md > release-notes.md
