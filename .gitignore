@@ -7,3 +7,10 @@ zodiax.egg-info/
 coverage.xml
 htmlcov/
 site/
+.coverage
+.coverage.*
+.pytest_cache/
+.ruff_cache/
+.cache/
+.venv/
+*.egg-info/

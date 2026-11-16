@@ -1,0 +1,76 @@
+name: Archive current main documentation
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Current main package version to archive before numerical changes
+        required: true
+        default: '0.5.0'
+permissions:
+  contents: write
+concurrency:
+  group: documentation-publish
+  cancel-in-progress: false
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify archive version
+        env:
+          ARCHIVE_VERSION: ${{ inputs.version }}
+        run: |
+          python - <<'PYCODE'
+          import os, re, tomllib
+          version = os.environ['ARCHIVE_VERSION']
+          if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version):
+              raise SystemExit('Use a numeric major.minor.patch version.')
+          actual = tomllib.load(open('pyproject.toml', 'rb'))['project']['version']
+          if version != actual:
+              raise SystemExit(f'Main is {actual}, not requested archive {version}.')
+          PYCODE
+      - name: Install documentation tools
+        run: |
+          python -m pip install ".[dev]"
+          python -m pip install git+https://github.com/squidfunk/mike.git
+      - name: Validate documentation
+        run: |
+          zensical build
+      - name: Publish archive without republishing package
+        env:
+          ARCHIVE_VERSION: ${{ inputs.version }}
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git fetch origin gh-pages
+          if git cat-file -e "origin/gh-pages:${ARCHIVE_VERSION}/index.html" 2>/dev/null; then
+            # Register an archive created by the previous deployment workflow.
+            # Preserve every archived page; change only the version index.
+            git worktree add /tmp/zodiax-doc-history origin/gh-pages
+            python - <<'PYCODE'
+          import json, os
+          from pathlib import Path
+          path = Path('/tmp/zodiax-doc-history/versions.json')
+          versions = json.loads(path.read_text()) if path.exists() else []
+          version = os.environ['ARCHIVE_VERSION']
+          if not any(item['version'] == version for item in versions):
+              versions.append({'version': version, 'title': version, 'aliases': []})
+              path.write_text(json.dumps(versions, indent=2) + '\n')
+          PYCODE
+            git -C /tmp/zodiax-doc-history add versions.json
+            if ! git -C /tmp/zodiax-doc-history diff --cached --quiet; then
+              git -C /tmp/zodiax-doc-history commit -m "Register existing documentation archive"
+              git -C /tmp/zodiax-doc-history push origin HEAD:gh-pages
+            fi
+            git fetch origin gh-pages
+            mike set-default --config-file mkdocs.yml --push "$ARCHIVE_VERSION"
+            exit 0
+          fi
+          ZODIAX_DOCS_SITE_NAME="Zodiax ${ARCHIVE_VERSION}" mike deploy --config-file mkdocs.yml --push --update-aliases "$ARCHIVE_VERSION" latest
+          mike set-default --config-file mkdocs.yml --push latest
