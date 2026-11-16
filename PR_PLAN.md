@@ -23,8 +23,8 @@ and version metadata stay with the core; broader documentation changes are defer
 - [x] Remove serialisation source, exports, Base convenience methods, archive-only
   tests and documentation promises from the core tree.
 - [x] Run committed-source tests in default and x64 precision.
-- [ ] Check remote CI before merge.
-- [ ] Review changes from main, especially the diffops replacement and public exports.
+- [ ] Push the split branch and check CI on its exact head before merge; resolve the Codecov status policy.
+- [x] Review core changes from main, including the diffops replacement and public exports.
 - [ ] Update PR #89 scope and merge after review.
 
 ## Serialisation PR
@@ -80,3 +80,44 @@ Python 3.14.3, JAX 0.7.2, Equinox 0.13.4, local macOS CPU:
 The restored source/tests/docs match the pre-split committed tree exactly;
 only this plan is additional. Core commit formatting/lint hooks passed. Remote CI,
 documentation builds and package builds were not run in this split pass.
+
+## Core merge-readiness review — 16 November 2026
+
+Reviewed local head 8df281c against main 828234e. No new code blocker identified
+in the reviewed resolution, links, Module lookup/update, transform, state, derivative
+and decomposition paths. This is not a proof of correctness for every downstream use.
+The source tree is unchanged since the split validation; subsequent commits update
+only this plan. Uncommitted optimisation work remains excluded.
+
+Additional verification:
+
+- Built a 0.6.0 wheel with pip wheel --no-deps --no-build-isolation.
+- Installed that wheel into an isolated temporary target and verified its import
+  location; all 517 tests passed against that installed package, with pytest's
+  source-path override disabled. Coverage: 1903/1955 statements, 97.34%.
+- Checked that every public __all__ name exists. The new derivative return types
+  and replacement of zodiax.diffops are documented in docs/API/derivatives.md.
+- Documentation build completed with Zensical 0.0.24, but the tool warns that
+  strict mode is unsupported. This is a build check, not validated strict/link QA.
+- Git diff whitespace checks passed. No production code changes were needed.
+
+Remote status inspected on PR #89: GitHub still has 769c981 (before extraction),
+base 828234e, mergeable, no inline review threads and no PR description. Python
+3.10–3.13 jobs pass. Codecov patch fails at 95.79% against a 100% target; project
+fails at 96.17% against main's 100%. These results do not cover the local split.
+Do not treat old green test jobs as approval of the current local head. Do not
+silently weaken coverage targets; inspect the refreshed report and agree the policy.
+
+Before merging:
+
+1. Push numerics and preserve/publish serialisation separately as needed.
+2. Update PR #89 to describe numerical model composition and structured derivatives,
+   explicitly excluding serialisation and the pending optimisation changes.
+3. Run the remote matrix on the split head and address its coverage status.
+4. Merge only after those checks and review are accepted.
+
+Deferred documentation issue: docs/optimisation_tools.md already imports the
+nonexistent batching module on main and uses the old Hessian tuple API. The pending
+optimisation edits touch that page; repair and execute those examples in the planned
+follow-up. The separate API migration section describes the new contract now.
+No push, merge, publication or coverage-configuration change was performed.
