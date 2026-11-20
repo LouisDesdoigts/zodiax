@@ -1,50 +1,99 @@
-# Derivatives
+--8<-- "src/zodiax/derivatives/overview.md"
 
-`zodiax.derivatives` returns numerical derivative objects with parameter layouts.
-The [walkthrough](../derivatives.md) contains executable examples and the complete
-class hierarchy; the [factor reference](../decompositions.md) defines local
-coordinate and gradient equations.
+## Matrix factors and local parameter coordinates
 
-## Calculations
+The [Linear walkthrough](#2-use-the-curvature-for-factors-and-parameter-steps)
+calculates `H`, `projection`, and `geometry` from one parameter dictionary. This
+reference summarises the operations used in that example.
 
-| API | Function and parameter contract | Result |
+### 1. Factor the curvature
+
+Factors reuse a symmetric matrix for reconstruction, linear solves, and parameter steps.
+
+| Object | Meaning | Main operations |
 |---|---|---|
-| `jacobian(f, x, nbatches=1, jit=True, checkpoint=False)` | Floating dynamic parameter leaves; one floating array output | Jacobian with `.matrix.shape == f(x).shape + (n,)` |
-| `hessian(f, x, nbatches=1, jit=True, checkpoint=False, *, method="fwd-rev")` | Floating parameter leaves; one floating scalar objective | Hessian with `.matrix.shape == (n, n)` |
-| `gauss_newton(residual_fn, x, *, std=None, cov=None, inv_cov=None, nbatches=1, jit=True, checkpoint=False)` | Floating parameters; unreduced floating residuals; fixed local noise weighting | GaussNewton with `.matrix.shape == (n, n)` |
-| `J.fisher(*, std=None, covariance=None)` | Gaussian model Jacobian with parameter-independent noise | Fisher on J's layout |
+| EigenDecomposition | Eigenvalues and column eigenvectors of a symmetric matrix | `H.eigh()`, `reconstruct()` |
+| CholeskyDecomposition | Lower factor `L`, with `H.matrix == L @ L.T` | `H.cholesky()`, `solve(value)`, `log_determinant` |
+| ParameterProjection | Matrix `P` mapping a latent vector into a parameter step | `H.projection()`, `apply(latent)`, `solve(step)` |
+| LocalParameterisation | A projection bound to the original parameter dictionary | `projection.bind(parameters)`, call, `step`, `encode` |
 
-`n` counts every scalar in the trainable parameter leaves. Fixed configuration
-belongs outside those dynamic leaves. Function outputs are checked during derivative
-tracing; calculations and decompositions require at least one parameter coordinate.
+All four belong to the Decomposition family. Eigen decomposition supports
+indefinite Hessians. Cholesky requires positive definiteness; an eigen projection
+requires positive semidefiniteness. The optional eager `H.check(method)` validates
+the corresponding numerical domain. Factor methods never call it implicitly.
 
-Noise arguments are mutually exclusive within each API. `std` broadcasts to the
-output/residual shape and must be positive. Covariance is a symmetric
-positive-definite `(m, m)` matrix, where `m` is the flattened output size; supplied
-precision is symmetric positive semidefinite. Real numerical noise and stored-result
-inputs, including integers, convert to the configured default floating dtype.
-Trainable integer parameters remain unsupported.
+For a full-rank, undamped positive matrix `M`, the projection satisfies
+`P.T @ M @ P == I` and `P @ P.T == inv(M)`, within floating-point accuracy.
+It is a coordinate map, rather than an idempotent orthogonal projector.
 
-## Stored results and factors
+### 2. Choose rank and damping
 
-| Classes | Purpose and main accessors |
-|---|---|
-| Derivative | Shared matrix/layout base of Jacobian, Hessian, and GaussNewton; Fisher is separate |
-| Decomposition | Field-free family of all four factor/coordinate-map classes |
-| TreeLayout | Static coordinate order/shapes; `from_tree`, `from_paths`, `flatten`, `unflatten`, `split_axis` |
-| TreeVector | Flat parameter values; `flat_dict`, `nested_dict` |
-| TreeMatrix | Square parameter matrix; `rows`, `columns`, `blocks`, `diagonal`, norms, diagnostics, `check` |
-| Jacobian | Arbitrary output axes plus a parameter axis; `columns`, norms, `fisher` |
-| Hessian, GaussNewton, Fisher | Symmetric matrices; `eigh`, `cholesky`, `projection`, `parameterise` |
-| EigenDecomposition | Ascending eigenvalues and column eigenvectors; `reconstruct` |
-| CholeskyDecomposition | Lower factor; `reconstruct`, `solve`, `log_determinant` |
-| ParameterProjection | Latent-to-parameter factor; `apply`, `solve`, `pullback`, natural-gradient methods, `bind` |
-| LocalParameterisation | Bound origin tree; call, `step`, `encode`, gradient methods, variance and standard deviation |
+Projection options determine which directions are represented and how strongly they are scaled.
 
-Matrix `is_*` diagnostics return scalar JAX booleans. `check(method)` makes an
-explicit eager validation decision; numerical methods do not call it implicitly.
-See the [typed developer contracts](../derivatives.md#5-developer-reference) for
-shape, dtype, rank, and transformation details and their associated test files.
+By default, `equilibrate=True` rescales positive diagonal entries towards one before
+factorisation. Nonpositive diagonal entries use unit scale. `equilibrate=False`
+factors in the original parameter units.
+
+| Option | Eigen method `"eigh"` | Cholesky method `"cholesky"` |
+|---|---|---|
+| `rtol` | Retain positive eigenvalues above `rtol * largest_eigenvalue` | Ignored; all modes retained |
+| `damping` | Add `damping * largest_eigenvalue` to retained eigenvalues | Add `damping` directly to the scaled diagonal |
+| Required matrix | Positive semidefinite | Positive definite after damping |
+
+Damping acts after scaling and changes the represented inverse metric. The two
+methods use different damping conventions; eigen damping does not restore discarded
+modes. `rtol` and `damping` are finite nonnegative Python scalars, and all options
+are fixed during JAX tracing.
+
+Discarded columns remain zero so shapes stay fixed. A nonempty zero metric has rank
+zero: steps, recovered latent coordinates, and represented covariance are zero.
+Factorisation entry points reject empty parameter spaces.
+
+The induced covariance is `P @ P.T`. With truncation and equilibration it is
+generally not the Euclidean Moore–Penrose inverse of the original matrix.
+Zero contribution from a discarded direction does not imply zero statistical
+uncertainty in an unconstrained parameter.
+
+### 3. Apply steps and transform gradients
+
+Parameter steps and gradients have different coordinate transformations.
+
+| Method | Calculation | Result |
+|---|---|---|
+| `projection.apply(u)` | `P @ u` | Parameter TreeVector |
+| `projection.solve(v)` | Minimum-norm least-squares solution of `P @ u = v` | Latent Array |
+| `geometry(u)` | Original parameters plus `P @ u` | Parameter dictionary |
+| `geometry.step(u)` | `P @ u` | Parameter-step dictionary |
+| `geometry.encode(parameters)` | Solve for the change from the origin | Latent Array |
+| `geometry.pullback(gradient)` | `P.T @ gradient` | Latent gradient Array |
+| `geometry.natural_gradient(gradient)` | `P @ P.T @ gradient` | Parameter-gradient dictionary |
+| `geometry.natural_norm(gradient)` | Square root of `gradient.T @ P @ P.T @ gradient` | Scalar Array |
+
+The solve trusts the originally selected rank and keeps discarded latent entries
+zero. A manually constructed projection must therefore have independent retained
+columns and zero discarded columns.
+
+The walkthrough uses dictionaries; LocalParameterisation also preserves supported
+PyTree structures and static metadata. Numerical outputs use JAX's configured
+default float. `variance` and `standard_deviation` return the diagonal of the
+represented covariance and its square root in that structure. Reconstruction
+functions are temporary and are not stored on the objects.
+
+### 4. Differentiate within the supported domain
+
+Applying a fixed factor is separate from differentiating its construction.
+
+Applying a projection, or differentiating a fixed-factor solve with respect to its
+right-hand side, follows ordinary JAX differentiation. Rank changes are discrete.
+Eigenvector derivatives can be undefined at repeated eigenvalues, including those
+introduced by equilibration. Differentiating `solve` with respect to its factor
+also inherits SVD limits at repeated singular values.
+
+Cholesky construction is smooth on its positive-definite domain. A mathematically
+smooth covariance does not guarantee smooth derivatives through a chosen spectral
+factorisation. The [typed contracts](#54-decompositions-and-coordinate-maps)
+and `tests/derivatives/test_decompositions.py` define the supported shape, dtype,
+rank, and transformation behaviours.
 
 ## Migration from the main API
 

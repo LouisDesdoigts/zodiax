@@ -106,7 +106,7 @@ then resolve it for calculation.
 
 `resolve` connects shared links by default and retains expressions whose required
 context is unavailable. `populate` performs only structural link replacement.
-See the [numerics walkthrough](../numerics.md) for partial evaluation and local context.
+See the [numerics overview](numerics.md) for partial evaluation and local context.
 
 ## 4. Updating several models
 

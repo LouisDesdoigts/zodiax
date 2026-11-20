@@ -79,12 +79,9 @@ nav:
       - index.md
   - Using Zodiax:
       - Building Classes: usage.md
-      - Numerics: numerics.md
-      - Derivatives: derivatives.md
-      - Decompositions: decompositions.md
-      - Numerics Design Lab: numerics_design.md
       - Optimisation: optimisation_tools.md
   - API:
+      - Overview: API/api.md
       - Base: API/base.md
       - Module: API/module.md
       - Optimisation: API/optimisation.md

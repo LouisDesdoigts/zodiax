@@ -119,7 +119,7 @@ input in a new definition.
 Automatic link population covers the tree supplied to `resolve`. Resolve the
 containing Module or complete unbound operator before explicit calls involving
 references across operands. See the [numerics reference](numerics.md) for the
-class contracts and [design](../numerics_design.md) for the full hierarchy.
+class contracts and hierarchy.
 
 Optional numerical operands have a dataclass default of `None`. As with
 `alias=None`, Equinox's ordinary representation omits them, so the printed object

@@ -180,7 +180,7 @@ print(geometry.standard_deviation)
 without choosing a sign or step size. Here the standard deviations have the local
 Gaussian uncertainty interpretation. Discarded modes contribute zero to the
 represented covariance; this does not mean an unconstrained parameter has zero
-uncertainty. The [factor reference](decompositions.md) gives the equations,
+uncertainty. The [factor reference](#matrix-factors-and-local-parameter-coordinates) gives the equations,
 rank-selection rules, and differentiation limits.
 
 ## 3. Inspect named results and Fisher information
@@ -500,4 +500,4 @@ Numerical methods use ordinary JAX calculations; explicit diagnostics have separ
 `hessian_to_pytree` remains the deprecated main-API compatibility route for an exact
 PyTree-of-PyTrees result. New code uses `H.blocks(nested=True)`. That returns
 dictionaries, so its structure is not a drop-in replacement for every legacy
-list, tuple, or Module tree. See [API migration notes](API/derivatives.md).
+list, tuple, or Module tree. See [API migration notes](#migration-from-the-main-api).
