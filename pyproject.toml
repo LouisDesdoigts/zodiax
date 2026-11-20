@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "zodiax"
-version = "0.5.0"
+version = "0.6.0"
 description = "Equinox extension for scientific programming."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -16,6 +16,8 @@ dependencies = [
     "jaxlib",
     "equinox",
     "optax",
+    "numpy",
+    "wadler-lindig>=0.1.3",
 ]
 
 classifiers = [
@@ -52,7 +54,7 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = ["-ra", "--strict-markers"]
+addopts = ["-ra", "--strict-markers", "--import-mode=importlib"]
 
 [tool.coverage.run]
 source = ["zodiax"]

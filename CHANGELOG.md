@@ -2,6 +2,19 @@
 
 ## 0.6.0
 
+- Expose reusable array broadcasting, matrix contraction solving, and numerical
+  matrix predicates independently of derivative containers.
+
+- Add `Module` for composing numerical models, with parameter aliases, named
+  descendant lookup, and immutable multi-parameter updates.
+- Add numerical expressions, transforms, array conversion, units, shared-value
+  links, and state containers, with staged resolution and JAX transformations.
+- Replace `diffops` with structured Jacobian, Hessian, Fisher, and covariance
+  operations, including reusable matrix decompositions. Derivative results now
+  expose named containers rather than the previous tuple-based interface.
+- Add numerical modelling and derivative guides, API references, and tests for
+  eager execution, JIT compilation, differentiation, and precision handling.
+
 - Add versioned documentation, with a moving `main` version, release-specific
   archives, and a `latest` release alias. Existing documentation archives can be
   registered without rebuilding or overwriting them.

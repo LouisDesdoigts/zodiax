@@ -1,7 +1,17 @@
 from __future__ import annotations
 
+import jax
 import pytest
 import zodiax
+
+
+@pytest.fixture
+def x64_context():
+    """Return JAX's scoped precision setting under its current or older public name."""
+    enable_x64 = getattr(jax, "enable_x64", None)
+    if enable_x64 is None:
+        enable_x64 = jax.experimental.enable_x64
+    return enable_x64
 
 
 def pytest_configure(config):
