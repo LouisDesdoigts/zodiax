@@ -195,41 +195,45 @@ def test_gauss_newton_validates_weighting():
         zodiax.gauss_newton(_vector_fn, x, std=np.ones(3), jit=False)
 
 
-def test_gauss_newton_result_crosses_outer_jit_boundary():
+@pytest.mark.parametrize("weighting", ["cov", "std"])
+def test_gauss_newton_result_crosses_outer_jit_boundary(weighting):
     calculate = eqx.filter_jit(
-        lambda x, cov: zodiax.gauss_newton(
-            _vector_fn,
-            x,
-            cov=cov,
-            nbatches=2,
+        lambda x, noise: zodiax.gauss_newton(
+            _vector_fn, x, nbatches=2, **{weighting: noise}
         )
     )
-    matrix = calculate(_make_x(), np.eye(2))
+    # Change noise alone, then parameters alone, without changing input shapes.
+    for a, scale in [([1.0, 2.0], 1.0), ([1.0, 2.0], 2.0), ([3.0, -1.0], 2.0)]:
+        x = {"a": np.asarray(a), "b": np.asarray([3.0])}
+        jacobian = np.asarray([[a[1], a[0], 1.0], [2 * a[0], 0.0, 2.0]])
+        covariance = scale * np.asarray([[2.0, 0.5], [0.5, 1.5]])
+        noise = covariance if weighting == "cov" else scale * np.asarray([2.0, 4.0])
+        if weighting == "std":
+            covariance = np.diag(noise**2)
+        expected = jacobian.T @ np.linalg.solve(covariance, jacobian)
 
-    assert isinstance(matrix, zodiax.GaussNewton)
-    assert matrix.matrix.shape == (3, 3)
-    assert matrix.layout.paths == ("a", "b")
+        result = calculate(x, noise)
 
-    independent = eqx.filter_jit(
-        lambda x, std: zodiax.gauss_newton(
-            _vector_fn,
-            x,
-            std=std,
-            nbatches=2,
-        )
-    )(_make_x(), np.asarray([2.0, 4.0]))
-    assert np.all(np.isfinite(independent.matrix))
+        assert isinstance(result, zodiax.GaussNewton)
+        assert result.matrix.shape == (3, 3)
+        assert result.layout.paths == ("a", "b")
+        assert np.allclose(result.matrix, expected, rtol=2e-6, atol=2e-6)
 
 
 def test_jacobian_result_crosses_outer_jit_boundary():
     calculate = eqx.filter_jit(
         lambda x: zodiax.derivatives.jacobian(_vector_fn, x, nbatches=2)
     )
-    jacobian = calculate(_make_x())
+    for a, expected in [
+        ([1.0, 2.0], [[2.0, 1.0, 1.0], [2.0, 0.0, 2.0]]),
+        ([3.0, -1.0], [[-1.0, 3.0, 1.0], [6.0, 0.0, 2.0]]),
+    ]:
+        result = calculate({"a": np.asarray(a), "b": np.asarray([3.0])})
 
-    assert isinstance(jacobian, zodiax.Jacobian)
-    assert jacobian.matrix.shape == (2, 3)
-    assert jacobian.layout.paths == ("a", "b")
+        assert isinstance(result, zodiax.Jacobian)
+        assert result.matrix.shape == (2, 3)
+        assert result.layout.paths == ("a", "b")
+        assert np.allclose(result.matrix, np.asarray(expected), rtol=2e-6, atol=2e-6)
 
 
 def test_hessian_to_pytree_structure_and_values():

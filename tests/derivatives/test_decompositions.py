@@ -305,7 +305,11 @@ def test_eigh_remains_differentiable_for_distinct_eigenvalues():
         matrix = np.asarray([[value, 0.25], [0.25, 1.0]])
         return zdx.Hessian(matrix, layout).eigh().values[-1]
 
-    assert np.isfinite(jax.grad(largest)(np.asarray(2.0)))
+    derivative = jax.jit(jax.grad(largest))
+    for value in [0.5, 2.0, 4.0]:
+        # Differentiate (value + 1 + sqrt((value - 1)**2 + 4 * 0.25**2)) / 2.
+        expected = 0.5 * (1 + (value - 1) / np.sqrt((value - 1) ** 2 + 0.25))
+        assert np.allclose(derivative(np.asarray(value)), expected, rtol=2e-6)
 
 
 def test_decomposition_and_projection_validate_inputs():
@@ -439,76 +443,68 @@ def test_eager_check_accepts_valid_contracts_and_reports_failures():
     assert not empty.is_positive_definite()
 
 
-def test_decomposition_constructors_validate_storage():
-    layout = zdx.TreeLayout(("x",), ((2,),))
+@pytest.mark.parametrize(
+    "constructor",
+    [zdx.EigenDecomposition, zdx.CholeskyDecomposition, zdx.ParameterProjection],
+)
+def test_decomposition_constructors_require_layout(constructor):
+    if constructor is zdx.EigenDecomposition:
+        args, kwargs = (np.ones(2), np.eye(2), object()), {}
+    elif constructor is zdx.CholeskyDecomposition:
+        args, kwargs = (np.eye(2), object()), {}
+    else:
+        args, kwargs = (np.eye(2), np.ones(2), object()), {"method": "cholesky"}
+    with pytest.raises(TypeError, match="layout must be a TreeLayout"):
+        constructor(*args, **kwargs)
 
-    with pytest.raises(TypeError):
-        zdx.EigenDecomposition(np.ones(2), np.eye(2), object())
-    with pytest.raises(ValueError):
-        zdx.EigenDecomposition(np.ones(3), np.eye(2), layout)
-    with pytest.raises(ValueError):
-        zdx.EigenDecomposition(np.ones(2), np.ones((2, 3)), layout)
-    with pytest.raises(TypeError):
-        zdx.CholeskyDecomposition(np.eye(2), object())
-    with pytest.raises(ValueError):
+
+@pytest.mark.parametrize(
+    "field, value", [("values", np.ones(3)), ("vectors", np.ones((2, 3)))]
+)
+def test_eigen_decomposition_rejects_incompatible_shapes(field, value):
+    arguments = dict(
+        values=np.ones(2), vectors=np.eye(2), layout=zdx.TreeLayout(("x",), ((2,),))
+    )
+    arguments[field] = value
+    with pytest.raises(ValueError, match=f"{field} must have shape"):
+        zdx.EigenDecomposition(**arguments)
+
+
+def test_cholesky_decomposition_rejects_incompatible_factor_shape():
+    layout = zdx.TreeLayout(("x",), ((2,),))
+    with pytest.raises(ValueError, match="factor must have shape"):
         zdx.CholeskyDecomposition(np.ones((2, 3)), layout)
 
-    with pytest.raises(TypeError):
-        zdx.ParameterProjection(
-            np.eye(2),
-            np.ones(2, dtype=bool),
-            object(),
-            method="eigh",
-            eigenvalues=np.ones(2),
-        )
-    with pytest.raises(ValueError):
-        zdx.ParameterProjection(
-            np.eye(2),
-            np.ones(2, dtype=bool),
-            layout,
-            method="svd",
-        )
-    with pytest.raises(ValueError):
-        zdx.ParameterProjection(
-            np.ones((2, 3)),
-            np.ones(2, dtype=bool),
-            layout,
-            method="cholesky",
-        )
-    converted = zdx.ParameterProjection(
+
+@pytest.mark.parametrize(
+    "changes, message",
+    [
+        ({"method": "svd"}, "method must be"),
+        ({"matrix": np.ones((2, 3))}, "matrix must have shape"),
+        ({"retained": np.ones(3)}, "retained must have shape"),
+        ({"method": "eigh", "eigenvalues": np.ones(3)}, "eigenvalues must have shape"),
+        ({"method": "eigh"}, "eigenvalues are required"),
+        ({"eigenvalues": np.ones(2)}, "eigenvalues must be None"),
+    ],
+)
+def test_projection_constructor_rejects_invalid_storage(changes, message):
+    arguments = dict(
+        matrix=np.eye(2),
+        retained=np.ones(2, dtype=bool),
+        layout=zdx.TreeLayout(("x",), ((2,),)),
+        method="cholesky",
+    )
+    arguments.update(changes)
+    with pytest.raises(ValueError, match=message):
+        zdx.ParameterProjection(**arguments)
+
+
+def test_projection_constructor_converts_retained_mask_to_boolean():
+    layout = zdx.TreeLayout(("x",), ((2,),))
+    projection = zdx.ParameterProjection(
         np.eye(2), np.ones(2), layout, method="cholesky"
     )
-    assert converted.retained.dtype == np.dtype(bool)
-    with pytest.raises(ValueError):
-        zdx.ParameterProjection(
-            np.eye(2),
-            np.ones(3, dtype=bool),
-            layout,
-            method="cholesky",
-        )
-    with pytest.raises(ValueError):
-        zdx.ParameterProjection(
-            np.eye(2),
-            np.ones(2, dtype=bool),
-            layout,
-            method="eigh",
-            eigenvalues=np.ones(3),
-        )
-    with pytest.raises(ValueError):
-        zdx.ParameterProjection(
-            np.eye(2),
-            np.ones(2, dtype=bool),
-            layout,
-            method="eigh",
-        )
-    with pytest.raises(ValueError):
-        zdx.ParameterProjection(
-            np.eye(2),
-            np.ones(2, dtype=bool),
-            layout,
-            method="cholesky",
-            eigenvalues=np.ones(2),
-        )
+    assert projection.retained.dtype == np.dtype(bool)
 
 
 @pytest.mark.parametrize("scale", [1e-16, 1.0, 1e16])
