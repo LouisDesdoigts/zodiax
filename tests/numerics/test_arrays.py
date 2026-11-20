@@ -111,3 +111,21 @@ def test_conversion_remains_usable_inside_a_differentiated_compiled_calculation(
     values = jnp.array([2.0, 3.0])
     np.testing.assert_allclose(energy(values), 13.0)
     np.testing.assert_allclose(jax.grad(energy)(values), [4.0, 6.0])
+
+
+@pytest.mark.parametrize("dtype", [int, float, complex])
+def test_broadcast_flatten_preserves_dtype_and_row_major_values(dtype):
+    value = jnp.asarray([[1], [2]], dtype=dtype)
+    result = jax.jit(lambda x: zdx.broadcast_flatten(x, (2, 3)))(value)
+    np.testing.assert_array_equal(result, [1, 1, 1, 2, 2, 2])
+    assert result.dtype == value.dtype
+
+
+def test_broadcast_flatten_scalar_cast_gradient_and_shape_error():
+    np.testing.assert_array_equal(zdx.broadcast_flatten(3, ()), [3])
+    result = zdx.broadcast_flatten([1, 2], (2, 2), dtype=float)
+    assert result.dtype == jnp.asarray(0.0).dtype
+    gradient = jax.jit(jax.grad(lambda x: zdx.broadcast_flatten(x, (2, 3)).sum()))
+    np.testing.assert_allclose(gradient(2.0), 6.0)
+    with pytest.raises(ValueError, match="broadcast to output shape"):
+        zdx.broadcast_flatten([1, 2], (3,))

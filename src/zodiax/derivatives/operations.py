@@ -16,13 +16,12 @@ import jax.numpy as np
 from jax import Array
 from jax.flatten_util import ravel_pytree
 
-from ..numerics.arrays import as_array
+from ..numerics.arrays import as_array, broadcast_flatten
 from .containers import (
     GaussNewton,
     Hessian,
     Jacobian,
     TreeLayout,
-    _standard_deviation,
 )
 
 PyTree = Any
@@ -343,7 +342,7 @@ def gauss_newton(
 
         # Whiten before differentiating, so both sides of J.T @ J are scaled.
         # Forming std**2 first can overflow or underflow for finite noise scales.
-        noise = _standard_deviation(std, output.shape)
+        noise = broadcast_flatten(std, output.shape, dtype=float)
         return output.reshape(-1) / noise
 
     residuals = jax.checkpoint(residuals) if checkpoint else residuals

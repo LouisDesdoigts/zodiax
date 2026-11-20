@@ -19,7 +19,8 @@ from jax.errors import ConcretizationTypeError
 from jax import tree_util as jtu
 
 from ..base import Base, _validate_mapping_keys
-from ..numerics.arrays import as_array
+from ..numerics.arrays import as_array, broadcast_flatten
+from .. import stats
 
 # Both modules refer to the other through module attributes at call time.
 from . import decompositions
@@ -91,25 +92,6 @@ def _shape(value: Any, path: str) -> tuple[int, ...]:
     except (TypeError, ValueError) as error:
         raise TypeError(f"Leaf {path!r} must be real and array-like.") from error
     return tuple(int(size) for size in array.shape)
-
-
-def _standard_deviation(value: Any, shape: tuple[int, ...]) -> Array:
-    """Broadcast independent-noise standard deviations to an output shape."""
-    value = as_array(value, dtype=float)
-    try:
-        value = np.broadcast_to(value, shape)
-    except ValueError as error:
-        raise ValueError(f"std must broadcast to output shape {shape}.") from error
-    return value.reshape(-1)
-
-
-def _eigenvalue_bounds(matrix: Array, rtol: float, atol: float) -> tuple[Array, Array]:
-    """Return the smallest symmetric eigenvalue and its numerical tolerance."""
-    # JAX's default (matrix + matrix.T) / 2 can overflow finite large entries.
-    symmetric = matrix / 2 + matrix.T / 2
-    eigenvalues = np.linalg.eigvalsh(symmetric, symmetrize_input=False)
-    tolerance = np.maximum(atol, rtol * np.max(np.abs(eigenvalues)))
-    return eigenvalues[0], tolerance
 
 
 def _static_shape(shape: Sequence[int]) -> tuple[int, ...]:
@@ -570,44 +552,17 @@ class TreeMatrix(Base):
         atol: float = 1e-8,
     ) -> Array:
         """Return whether the matrix is numerically symmetric."""
-        return np.allclose(
-            self.matrix,
-            self.matrix.T,
-            rtol=rtol,
-            atol=atol,
-        )
+        return stats.is_symmetric(self.matrix, rtol=rtol, atol=atol)
 
     def is_positive_semidefinite(
-        self,
-        *,
-        rtol: float = 1e-5,
-        atol: float = 1e-8,
+        self, *, rtol: float = 1e-5, atol: float = 1e-8
     ) -> Array:
-        """Return whether the matrix is finite, symmetric, and numerically PSD."""
-        if self.matrix.size == 0:
-            return np.asarray(False)
-        minimum, tolerance = _eigenvalue_bounds(self.matrix, rtol, atol)
-        return (
-            self.is_finite()
-            & self.is_symmetric(rtol=rtol, atol=atol)
-            & (minimum >= -tolerance)
-        )
+        """Delegate to `zodiax.stats.is_positive_semidefinite`."""
+        return stats.is_positive_semidefinite(self.matrix, rtol=rtol, atol=atol)
 
-    def is_positive_definite(
-        self,
-        *,
-        rtol: float = 1e-5,
-        atol: float = 1e-8,
-    ) -> Array:
-        """Return whether the matrix is finite, symmetric, and numerically PD."""
-        if self.matrix.size == 0:
-            return np.asarray(False)
-        minimum, tolerance = _eigenvalue_bounds(self.matrix, rtol, atol)
-        return (
-            self.is_finite()
-            & self.is_symmetric(rtol=rtol, atol=atol)
-            & (minimum > tolerance)
-        )
+    def is_positive_definite(self, *, rtol: float = 1e-5, atol: float = 1e-8) -> Array:
+        """Delegate to `zodiax.stats.is_positive_definite`."""
+        return stats.is_positive_definite(self.matrix, rtol=rtol, atol=atol)
 
     def check(
         self,
@@ -665,10 +620,13 @@ class TreeMatrix(Base):
             if method == "eigh":
                 return self
 
-            minimum, tolerance = _eigenvalue_bounds(self.matrix, rtol, atol)
-            if method == "cholesky" and bool(minimum <= tolerance):
+            if method == "cholesky" and not bool(
+                self.is_positive_definite(rtol=rtol, atol=atol)
+            ):
                 raise ValueError("matrix must be positive definite for Cholesky.")
-            if method == "projection" and bool(minimum < -tolerance):
+            if method == "projection" and not bool(
+                self.is_positive_semidefinite(rtol=rtol, atol=atol)
+            ):
                 raise ValueError("matrix must be positive semidefinite for projection.")
         except ConcretizationTypeError as error:
             raise TypeError(
@@ -775,7 +733,7 @@ class Jacobian(Derivative):
         output_size = prod(self.output_shape)
         jacobian = self.matrix.reshape((output_size, self.layout.size))
         if std is not None:
-            std = _standard_deviation(std, self.output_shape)
+            std = broadcast_flatten(std, self.output_shape, dtype=float)
             weighted = jacobian / std[:, None]
             matrix = weighted.T @ weighted
         elif covariance is not None:
@@ -797,7 +755,7 @@ class _SymmetricTreeMatrix(TreeMatrix):
     def eigh(self) -> "decompositions.EigenDecomposition":
         """Return the symmetric eigendecomposition of this matrix.
 
-        Eigenvalues follow :func:`jax.numpy.linalg.eigh` and are stored in
+        Eigenvalues follow `jax.numpy.linalg.eigh` and are stored in
         ascending order. The corresponding eigenvectors are the columns of the
         returned ``vectors`` matrix.
         """
@@ -867,7 +825,7 @@ class Hessian(_SymmetricTreeMatrix, Derivative):
     """Symmetric Hessian on one tree-structured parameter space.
 
     Hessians may be indefinite. Construction enforces exact symmetry by storing
-    ``(matrix + matrix.T) / 2``. :func:`zodiax.hessian` consumes rather than stores
+    ``(matrix + matrix.T) / 2``. `zodiax.hessian` consumes rather than stores
     the differentiated function and temporary JAX transformation closures.
     """
 

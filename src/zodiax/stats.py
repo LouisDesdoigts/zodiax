@@ -1,7 +1,7 @@
 import jax.numpy as np
 from jax.scipy import stats
 from jax.flatten_util import ravel_pytree
-from jax import lax, Array
+from jax import Array
 
 __all__ = [
     "z_score",
@@ -13,6 +13,9 @@ __all__ = [
     "chi2r_from_z",
     "calc_entropy",
     "ddof",
+    "is_symmetric",
+    "is_positive_semidefinite",
+    "is_positive_definite",
     "check_symmetric",
     "check_positive_semi_definite",
     "gauss_hessian",
@@ -193,45 +196,79 @@ def ddof(params: Array, data: Array) -> int:
     return Y.size - X.size
 
 
-def check_symmetric(mat: Array) -> bool:
+def is_symmetric(matrix: Array, *, rtol: float = 1e-5, atol: float = 1e-8) -> Array:
+    """Return a scalar JAX Boolean testing numerical symmetry of a real matrix.
+
+    Non-square inputs return False. Tolerances follow ``jax.numpy.allclose``.
+    This predicate can be used inside JIT.
     """
-    Checks if a matrix is symmetric.
+    matrix = np.asarray(matrix)
+    if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
+        return np.asarray(False)
+    return np.allclose(matrix, matrix.T, rtol=rtol, atol=atol)
 
-    Parameters
-    ----------
-    mat : Array
-        The matrix to check.
 
-    Returns
-    -------
-    is_symmetric : bool
-        ``True`` if the matrix is symmetric within numerical tolerance,
-        otherwise ``False``.
+def _eigenvalue_bounds(matrix: Array, rtol: float, atol: float) -> tuple[Array, Array]:
+    # Nonfinite inputs fail the caller's predicate; avoid feeding them to LAPACK.
+    matrix = np.where(np.isfinite(matrix), matrix, 0)
+    # Halve before adding to avoid overflowing finite large diagonal entries.
+    symmetric = matrix / 2 + matrix.T / 2
+    eigenvalues = np.linalg.eigvalsh(symmetric, symmetrize_input=False)
+    tolerance = np.maximum(atol, rtol * np.max(np.abs(eigenvalues)))
+    return eigenvalues[0], tolerance
+
+
+def is_positive_semidefinite(
+    matrix: Array, *, rtol: float = 1e-5, atol: float = 1e-8
+) -> Array:
+    """Test whether a real matrix is finite, symmetric and numerically PSD.
+
+    Accepts eigenvalues >= -max(atol, rtol * max(abs(eigenvalues))). Empty and
+    non-square inputs return False. Returns a scalar JAX Boolean, including in JIT.
     """
-    return np.allclose(mat, mat.T)
-
-
-def check_positive_semi_definite(mat: Array) -> bool:
-    """
-    Checks if a matrix is positive semi-definite.
-
-    Parameters
-    ----------
-    mat : Array
-        The matrix to check.
-
-    Returns
-    -------
-    is_positive_semi_definite : bool
-        ``True`` if all eigenvalues are non-negative and the matrix contains no
-        NaN values, otherwise ``False``.
-    """
-    return lax.cond(
-        np.isnan(mat).any(),
-        lambda x: False,
-        lambda x: np.all(np.linalg.eigvals(mat) >= 0),
-        mat,
+    matrix = np.asarray(matrix)
+    if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1] or matrix.size == 0:
+        return np.asarray(False)
+    minimum, tolerance = _eigenvalue_bounds(matrix, rtol, atol)
+    return (
+        np.all(np.isfinite(matrix))
+        & is_symmetric(matrix, rtol=rtol, atol=atol)
+        & (minimum >= -tolerance)
     )
+
+
+def is_positive_definite(
+    matrix: Array, *, rtol: float = 1e-5, atol: float = 1e-8
+) -> Array:
+    """Test whether a real matrix is finite, symmetric and numerically PD.
+
+    Requires eigenvalues > max(atol, rtol * max(abs(eigenvalues))). Empty and
+    non-square inputs return False. Returns a scalar JAX Boolean, including in JIT.
+    """
+    matrix = np.asarray(matrix)
+    if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1] or matrix.size == 0:
+        return np.asarray(False)
+    minimum, tolerance = _eigenvalue_bounds(matrix, rtol, atol)
+    return (
+        np.all(np.isfinite(matrix))
+        & is_symmetric(matrix, rtol=rtol, atol=atol)
+        & (minimum > tolerance)
+    )
+
+
+def check_symmetric(mat: Array) -> Array:
+    """Compatibility spelling of `is_symmetric`."""
+    return is_symmetric(mat)
+
+
+def check_positive_semi_definite(mat: Array) -> Array:
+    """Test PSD with a strict zero eigenvalue threshold.
+
+    Retains the existing spelling and threshold; use
+    `is_positive_semidefinite` for configurable numerical tolerances.
+    Nonfinite or asymmetric matrices return False.
+    """
+    return is_positive_semidefinite(mat, rtol=0.0, atol=0.0)
 
 
 def gauss_hessian(J: Array, cov: Array = None) -> Array:

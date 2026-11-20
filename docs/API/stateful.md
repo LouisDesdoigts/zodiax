@@ -124,3 +124,12 @@ natively interoperable with JAX.
 ::: zodiax.numerics.arrays
 
 ::: zodiax.numerics.state
+
+
+## Broadcasting arrays
+
+`broadcast_flatten(value, shape, dtype=None)` broadcasts realised numerical input
+and flattens it in row-major order. It preserves dtype unless a cast is requested;
+noise weighting is one use, but the operation is independent of statistics.
+
+::: zodiax.numerics.arrays.broadcast_flatten

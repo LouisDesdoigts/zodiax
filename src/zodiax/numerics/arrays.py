@@ -9,7 +9,7 @@ from jax import Array
 
 from .expressions import Expression
 
-__all__ = ["as_array"]
+__all__ = ["as_array", "broadcast_flatten"]
 
 
 def as_array(value: Any, *, dtype: type | None = None) -> Array | Expression | None:
@@ -32,3 +32,19 @@ def as_array(value: Any, *, dtype: type | None = None) -> Array | Expression | N
     # operands. Supplying the inferred dtype explicitly removes that weak_type
     # flag without choosing a different precision for the stored array.
     return np.asarray(array, dtype=array.dtype)
+
+
+def broadcast_flatten(
+    value: Any, shape: tuple[int, ...], *, dtype: type | None = None
+) -> Array:
+    """Broadcast an array-like value to ``shape`` and flatten in row-major order.
+
+    Preserves the inferred dtype unless ``dtype`` is supplied. Unlike ``as_array``,
+    this operation requires realised numerical values, not deferred expressions.
+    The target shape must be static when used inside JIT.
+    """
+    value = np.asarray(value, dtype=dtype)
+    try:
+        return np.broadcast_to(value, shape).reshape(-1)
+    except ValueError as error:
+        raise ValueError(f"value must broadcast to output shape {shape}.") from error

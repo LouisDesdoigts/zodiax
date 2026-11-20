@@ -2,6 +2,9 @@
 
 ## 0.6.0
 
+- Expose reusable array broadcasting, matrix contraction solving, and numerical
+  matrix predicates independently of derivative containers.
+
 - Add `Module` for composing numerical models, with parameter aliases, named
   descendant lookup, and immutable multi-parameter updates.
 - Add numerical expressions, transforms, array conversion, units, shared-value

@@ -34,6 +34,7 @@ from .expressions import Expression, _missing_context, Unresolved, resolve
 __all__ = [
     "Transform",
     "matmul",
+    "solve_matmul",
     "Mask",
     "Map",
 ]
@@ -73,8 +74,14 @@ def matmul(x: Any, M: Any = None, **context: Any) -> Array:
     return np.tensordot(x, M, axes=((-1,), (0,)))
 
 
-def _solve_matmul(y: Any, M: Any) -> Array:
-    """Return a minimum-norm input for :func:`matmul`."""
+def solve_matmul(y: Any, M: Any) -> Array:
+    """Return the minimum-norm least-squares input for :func:`matmul`.
+
+    For ``M.shape == (input_size, *output_shape)``, ``y`` must end in
+    ``output_shape``; leading batch axes are preserved. A one-dimensional ``M``
+    maps scalar outputs to input vectors. Inputs must be realised arrays.
+    Singular matrices use JAX's pseudoinverse and its default rank tolerance.
+    """
     y = as_array(y)
     M = as_array(M)
     if M.ndim == 0:
@@ -328,7 +335,7 @@ class Map(Transform):
 
         M = resolve(self.M, **context)
         if M is not None:
-            y = _solve_matmul(y, M)
+            y = solve_matmul(y, M)
 
         s = resolve(self.s, **context)
         if s is not None:

@@ -419,3 +419,22 @@ def test_mask_compact_and_full_shapes_must_match_the_selection_layout():
         transform.apply(jnp.ones(3))
     with pytest.raises(ValueError):
         transform.apply(jnp.ones(4), inverse=True)
+
+
+def test_public_solve_matmul_handles_sampled_bases_and_batched_inputs():
+    matrix = jnp.array([[[1.0, 0.0], [0.0, 1.0]], [[0.0, 1.0], [1.0, 0.0]]])
+    values = jnp.array([[2.0, 5.0], [3.0, 7.0]])
+    output = zdx.matmul(values, matrix)
+    recovered = jax.jit(zdx.solve_matmul)(output, matrix)
+    np.testing.assert_allclose(recovered, values, rtol=2e-6, atol=2e-6)
+
+
+def test_public_solve_matmul_has_known_rank_deficient_solution_and_derivative():
+    matrix = jnp.array([[1.0, 2.0], [2.0, 4.0]])
+    solve = lambda y: zdx.solve_matmul(y, matrix)
+    np.testing.assert_allclose(solve(jnp.array([3.0, 6.0])), [0.6, 1.2], rtol=2e-6)
+    np.testing.assert_allclose(
+        jax.jit(jax.jacrev(solve))(jnp.array([3.0, 6.0])),
+        [[0.04, 0.08], [0.08, 0.16]],
+        rtol=2e-6,
+    )
